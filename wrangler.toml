@@ -32,6 +32,17 @@ bucket_name = "nebulakit-files"
 # Note: queues.consumers is not supported by Cloudflare Pages
 # If you need queue consumers, use a separate Cloudflare Worker
 
+# Workers AI
+# Free tier: https://developers.cloudflare.com/workers-ai/
+[ai]
+binding = "AI"
+
+# Cron Triggers (Monday 9am UTC — generates weekly content calendar)
+# Note: For Cloudflare Pages, deploy a standalone Worker that calls /api/cron/content
+# with Authorization: Bearer <CRON_SECRET>
+[triggers]
+crons = ["0 9 * * 1"]
+
 # Environment Variables
 # For production, set these in Cloudflare Pages settings
 # For local dev, use .env file (see .env.example)
@@ -40,3 +51,4 @@ bucket_name = "nebulakit-files"
 # GITHUB_OWNER_ID - Set this to your GitHub user ID to enable admin access
 # To find your GitHub ID: visit https://api.github.com/users/YOUR_USERNAME
 # GITHUB_OWNER_ID = "YOUR_GITHUB_USER_ID_HERE"
+# CRON_SECRET - Random secret for authorizing the /api/cron/content endpoint

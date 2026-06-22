@@ -21,12 +21,14 @@ declare global {
 				KV: KVNamespace;
 				BUCKET: R2Bucket;
 				QUEUE: Queue;
+				AI: { run(model: string, inputs: Record<string, unknown>): Promise<{ response?: string; [k: string]: unknown }> };
 				TURNSTILE_SECRET_KEY: string;
 				GITHUB_CLIENT_ID?: string;
 				GITHUB_CLIENT_SECRET?: string;
 				GITHUB_OWNER_ID?: string;
 				DISCORD_CLIENT_ID?: string;
 				DISCORD_CLIENT_SECRET?: string;
+				CRON_SECRET?: string;
 			};
 			context: {
 				waitUntil(promise: Promise<any>): void;

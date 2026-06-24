@@ -11,8 +11,10 @@ import type { RequestHandler } from './$types';
 import {
   generateDevToPost,
   generateLinkedInUpdate,
+  generateVideoScript,
   type ContentBrand
 } from '$lib/services/content-generator';
+import { generateVideo, googleKvKey } from '$lib/services/video/veo3';
 
 interface RequestBody {
   brandId: string;
@@ -70,6 +72,24 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
         body_text = update.text;
         title = topic;
         type = 'update';
+      } else if (plt === 'youtube' || plt === 'tiktok' || plt === 'generic') {
+        const scriptResult = await generateVideoScript(ai, contentBrand, topic);
+        title = scriptResult.title;
+        body_text = scriptResult.script;
+        type = 'video';
+
+        // Optionally kick off Veo 3 if a Google API key is configured
+        const googleKey = await platform!.env.KV.get(googleKvKey(locals.user.id));
+        if (googleKey) {
+          const veoResult = await generateVideo(googleKey, scriptResult.script, {
+            durationSeconds: scriptResult.durationSeconds
+          }).catch(() => null);
+          if (veoResult?.operationName) {
+            body_text = veoResult.operationName;
+          } else if (veoResult?.videoUrl) {
+            body_text = veoResult.videoUrl;
+          }
+        }
       } else {
         failures.push({ platform: plt, error: 'Unsupported platform' });
         continue;

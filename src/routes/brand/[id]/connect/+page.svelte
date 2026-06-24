@@ -42,6 +42,45 @@
 		}
 	}
 
+	// ─── Google AI ────────────────────────────────────────────────────
+
+	let googleSuccess = data.googleConnected;
+	let googleKey = '';
+	let googleSaving = false;
+	let googleError: string | null = null;
+
+	async function saveGoogleKey() {
+		if (!googleKey.trim() || googleSaving) return;
+		googleSaving = true;
+		googleError = null;
+		try {
+			const res = await fetch('/api/connect/google', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ apiKey: googleKey.trim() })
+			});
+			if (!res.ok) {
+				const err = await res.json().catch(() => ({}));
+				throw new Error((err as { message?: string }).message ?? 'Failed to save API key');
+			}
+			googleSuccess = true;
+			googleKey = '';
+		} catch (err) {
+			googleError = err instanceof Error ? err.message : 'Failed to save';
+		} finally {
+			googleSaving = false;
+		}
+	}
+
+	async function removeGoogle() {
+		try {
+			await fetch('/api/connect/google', { method: 'DELETE' });
+			googleSuccess = false;
+		} catch {
+			googleError = 'Failed to disconnect';
+		}
+	}
+
 	// ─── LinkedIn ─────────────────────────────────────────────────────
 
 	let linkedinSuccess = data.linkedinConnected;
@@ -208,6 +247,58 @@
 				</div>
 			{/if}
 		</div>
+		<!-- Google AI -->
+		<div class="account-card">
+			<div class="account-header">
+				<span class="account-icon">&#x1F3A5;</span>
+				<div>
+					<h2 class="account-name">Google AI (Veo 3)</h2>
+					<p class="account-desc">Generate short-form videos with Google Veo 3</p>
+				</div>
+				{#if googleSuccess}
+					<span class="status-badge connected">Connected</span>
+				{:else}
+					<span class="status-badge">Not connected</span>
+				{/if}
+			</div>
+
+			{#if googleSuccess}
+				<div class="connected-state">
+					<p class="connected-note">Your Google AI API key is stored securely. Videos are generated via Veo 3.</p>
+					<a href="/brand/{data.brandProfileId}/videos" class="videos-link">Open Video Studio</a>
+					<button class="disconnect-btn" on:click={removeGoogle}>Disconnect</button>
+				</div>
+			{:else}
+				<div class="connect-form">
+					<p class="form-note">
+						Get your API key from
+						<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">
+							aistudio.google.com/apikey
+						</a>
+					</p>
+					<label class="form-label">
+						API Key
+						<input
+							type="password"
+							bind:value={googleKey}
+							placeholder="Enter your Google AI API key"
+							class="form-input"
+							autocomplete="off"
+						/>
+					</label>
+					{#if googleError}
+						<p class="field-error">{googleError}</p>
+					{/if}
+					<button
+						class="connect-btn"
+						on:click={saveGoogleKey}
+						disabled={!googleKey.trim() || googleSaving}
+					>
+						{googleSaving ? 'Saving…' : 'Connect Google AI'}
+					</button>
+				</div>
+			{/if}
+		</div>
 	</div>
 </div>
 
@@ -323,6 +414,18 @@
 		font-size: 0.8rem;
 		color: var(--color-text-secondary);
 		margin: 0;
+	}
+
+	.videos-link {
+		align-self: flex-start;
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--color-primary);
+		text-decoration: none;
+	}
+
+	.videos-link:hover {
+		text-decoration: underline;
 	}
 
 	.disconnect-btn {

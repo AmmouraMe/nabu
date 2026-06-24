@@ -33,6 +33,12 @@ export interface CalendarEntry {
   platforms: string[];
 }
 
+export interface VideoScript {
+  title: string;
+  script: string;
+  durationSeconds: number;
+}
+
 export interface AiBinding {
   run(model: string, inputs: Record<string, unknown>): Promise<{ response?: string; [k: string]: unknown }>;
 }
@@ -184,6 +190,41 @@ export async function generateContentCalendar(
       ? (entry.platforms as unknown[]).map(String)
       : ['linkedin']
   }));
+}
+
+export async function generateVideoScript(
+  ai: AiBinding,
+  brand: ContentBrand,
+  topic: string,
+  durationSeconds = 5
+): Promise<VideoScript> {
+  const system = [
+    'You are a video script writer. Write concise, visual video scripts.',
+    `Return ONLY valid JSON with keys: title (string), script (string, a visual description/narration for a ${durationSeconds}-second video), durationSeconds (number).`,
+    'No explanation, just JSON.'
+  ].join(' ');
+
+  const user = [
+    `Write a ${durationSeconds}-second video script about: "${topic}"`,
+    '',
+    brandContext(brand),
+    '',
+    'Requirements:',
+    `- Title: concise, under 60 characters`,
+    `- Script: vivid visual description suitable as a video generation prompt, ${durationSeconds * 20}-${durationSeconds * 30} words`,
+    '- Focus on visual elements, motion, and atmosphere',
+    '',
+    `Return as JSON: {"title":"...","script":"...","durationSeconds":${durationSeconds}}`
+  ].join('\n');
+
+  const raw = await runAi(ai, system, user);
+  const parsed = parseJson<{ title?: string; script?: string; durationSeconds?: number }>(raw);
+
+  return {
+    title: String(parsed.title ?? topic),
+    script: String(parsed.script ?? topic),
+    durationSeconds: typeof parsed.durationSeconds === 'number' ? parsed.durationSeconds : durationSeconds
+  };
 }
 
 // ─── Prompt Builders (exported for testing) ───────────────────────

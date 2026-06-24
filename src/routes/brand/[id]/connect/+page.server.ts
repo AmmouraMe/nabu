@@ -17,13 +17,14 @@ export const load: ServerLoad = async ({ platform, locals, params }) => {
 
   if (!profile) throw error(404, 'Brand not found');
 
-  // Check which accounts are already connected
   const devtoKey = `devto:apikey:${locals.user.id}`;
   const linkedinKey = `linkedin:token:${locals.user.id}`;
+  const googleKey = `google:apikey:${locals.user.id}`;
 
-  const [devtoRaw, linkedinRaw] = await Promise.all([
+  const [devtoRaw, linkedinRaw, googleRaw] = await Promise.all([
     kv.get(devtoKey),
-    kv.get(linkedinKey)
+    kv.get(linkedinKey),
+    kv.get(googleKey)
   ]);
 
   return {
@@ -31,6 +32,7 @@ export const load: ServerLoad = async ({ platform, locals, params }) => {
     brandProfileId: params.id,
     brandName: profile.brand_name ?? 'Untitled Brand',
     devtoConnected: !!devtoRaw,
-    linkedinConnected: !!linkedinRaw
+    linkedinConnected: !!linkedinRaw,
+    googleConnected: !!googleRaw
   };
 };

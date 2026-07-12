@@ -14,6 +14,8 @@
 	$: githubConfigured = data.configuredProviders?.github ?? false;
 	$: discordConfigured = data.configuredProviders?.discord ?? false;
 	$: hasAnyProvider = githubConfigured || discordConfigured;
+	// Dev-only virtual login (no OAuth keys required)
+	$: devLoginEnabled = data.devLoginEnabled ?? false;
 
 	// Map error codes to user-friendly messages
 	const errorMessages: Record<string, string> = {
@@ -75,6 +77,19 @@
 			<h1>Welcome Back</h1>
 			<p>Sign in to your account</p>
 		</div>
+
+		{#if devLoginEnabled}
+			<div class="dev-login">
+				<span class="dev-login-badge">DEV</span>
+				<a class="dev-login-button" href="/api/auth/dev" data-sveltekit-reload>
+					⚡ Virtual login (no keys)
+				</a>
+				<a class="dev-login-secondary" href="/api/auth/dev?admin=0" data-sveltekit-reload>
+					Log in as a non-admin user
+				</a>
+			</div>
+			<div class="divider"><span>or</span></div>
+		{/if}
 
 		<div class="sso-buttons">
 			{#if githubConfigured}
@@ -155,6 +170,60 @@
 </div>
 
 <style>
+	.dev-login {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-sm);
+		padding: var(--spacing-md);
+		margin-bottom: var(--spacing-md);
+		border: 1px dashed var(--color-border);
+		border-radius: var(--radius-md);
+		background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+	}
+
+	.dev-login-badge {
+		position: absolute;
+		top: -0.6rem;
+		left: var(--spacing-md);
+		padding: 0 var(--spacing-xs);
+		font-size: 0.65rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		color: var(--color-background);
+		background: var(--color-primary);
+		border-radius: var(--radius-sm);
+	}
+
+	.dev-login-button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--spacing-sm);
+		padding: var(--spacing-sm) var(--spacing-md);
+		font-weight: 600;
+		text-decoration: none;
+		color: var(--color-background);
+		background: var(--color-primary);
+		border-radius: var(--radius-md);
+		transition: opacity 0.15s ease;
+	}
+
+	.dev-login-button:hover {
+		opacity: 0.9;
+	}
+
+	.dev-login-secondary {
+		text-align: center;
+		font-size: 0.85rem;
+		color: var(--color-text-secondary);
+		text-decoration: none;
+	}
+
+	.dev-login-secondary:hover {
+		text-decoration: underline;
+	}
+
 	.auth-page {
 		min-height: calc(100vh - 64px);
 		display: flex;

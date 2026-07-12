@@ -67,10 +67,15 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 		isProviderConfigured(platform, 'discord')
 	]);
 
+	// Dev-only virtual login: available under `vite dev` (import.meta.env.DEV),
+	// or on a deployed dev/staging Worker that opts in with ALLOW_DEV_LOGIN=true.
+	const devLoginEnabled = import.meta.env.DEV || platform?.env?.ALLOW_DEV_LOGIN === 'true';
+
 	return {
 		configuredProviders: {
 			github: githubConfigured,
 			discord: discordConfigured
-		}
+		},
+		devLoginEnabled
 	};
 };

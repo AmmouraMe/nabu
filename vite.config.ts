@@ -3,6 +3,11 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
 	plugins: [sveltekit()],
+	server: {
+		// Allow Cloudflare tunnel hosts (dev-nabu-<hash>.ammoura.me) through
+		// Vite 5's dev-server host check; without this the tunnel 403s.
+		allowedHosts: ['.ammoura.me']
+	},
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}'],
 		exclude: ['node_modules', 'tests/e2e/**'],

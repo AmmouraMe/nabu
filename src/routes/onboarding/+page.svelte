@@ -26,8 +26,8 @@
 				<span class="notice-icon">⚙️</span>
 				<h2>AI Provider Required</h2>
 				<p>
-					The Brand Architect needs an AI provider to work. Please configure an OpenAI API key in
-					the admin panel first.
+					The Brand Architect needs an AI provider to work. Please connect an AI provider in the
+					admin panel first — the keyless Cloudflare Workers AI option needs no API key.
 				</p>
 				<a href="/admin" class="admin-link">Go to Admin Panel →</a>
 			</div>

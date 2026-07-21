@@ -8,8 +8,7 @@ import type {
 	BrandProfile,
 	OnboardingMessage,
 	OnboardingStep,
-	OnboardingStepConfig,
-	BrandStyleGuide
+	OnboardingStepConfig
 } from '$lib/types/onboarding';
 import type { ChatMessage, ChatMessageContentPart } from '$lib/services/openai-chat';
 import type { D1Database } from '@cloudflare/workers-types';
@@ -1260,7 +1259,16 @@ export function parseExtractionResponse(response: string): ExtractedFields | nul
 	try {
 		parsed = JSON.parse(text);
 	} catch {
-		return null;
+		// Some providers (e.g. Workers AI models) may wrap the JSON in prose despite
+		// instructions. Fall back to the outermost {...} span and try again.
+		const start = text.indexOf('{');
+		const end = text.lastIndexOf('}');
+		if (start === -1 || end <= start) return null;
+		try {
+			parsed = JSON.parse(text.slice(start, end + 1));
+		} catch {
+			return null;
+		}
 	}
 
 	if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {

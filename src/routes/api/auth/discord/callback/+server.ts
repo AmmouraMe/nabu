@@ -1,3 +1,4 @@
+import { externalOrigin, isSecureRequest } from '$lib/server/origin';
 import { mergeAccounts } from '$lib/services/account-merge';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -36,7 +37,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 			throw redirect(302, '/auth/login?error=not_configured');
 		}
 
-		const callbackUrl = `${url.origin}/api/auth/discord/callback`;
+		const callbackUrl = `${externalOrigin(url)}/api/auth/discord/callback`;
 
 		// Exchange code for access token
 		const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
@@ -163,7 +164,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 					return new Response(null, {
 						status: 302,
 						headers: {
-							Location: new URL('/profile?linked=discord', url.origin).toString()
+							Location: new URL('/profile?linked=discord', externalOrigin(url)).toString()
 						}
 					});
 				}
@@ -221,7 +222,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 							.replace(/\//g, '_')
 							.replace(/=+$/, '');
 
-						const isSecure = url.protocol === 'https:';
+						const isSecure = isSecureRequest(url);
 						const cookieParts = [
 							`session=${sessionCookie}`,
 							'Path=/',
@@ -236,7 +237,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 						return new Response(null, {
 							status: 302,
 							headers: {
-								Location: new URL('/', url.origin).toString(),
+								Location: new URL('/', externalOrigin(url)).toString(),
 								'Set-Cookie': cookieParts.join('; ')
 							}
 						});
@@ -326,7 +327,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 
 		// Redirect to home
 		const redirectUrl = '/';
-		const absoluteRedirectUrl = new URL(redirectUrl, url.origin).toString();
+		const absoluteRedirectUrl = new URL(redirectUrl, externalOrigin(url)).toString();
 
 		// Build cookie string manually for proper handling
 		const isSecure = url.protocol === 'https:';

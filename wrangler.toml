@@ -2,6 +2,10 @@ name = "nebulakit"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 
+# StarSpace account — required so the local Workers AI binding can pick an
+# account non-interactively (the OAuth login exposes multiple accounts).
+account_id = "f6dece8a25710d1e02a529144cfc3344"
+
 # D1 Database
 # Create with: wrangler d1 create nebulakit-db
 # Then replace the database_id below with the actual ID

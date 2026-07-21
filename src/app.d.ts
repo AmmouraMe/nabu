@@ -33,6 +33,11 @@ declare global {
 				GITHUB_OWNER_ID?: string;
 				DISCORD_CLIENT_ID?: string;
 				DISCORD_CLIENT_SECRET?: string;
+				// Google Cloud OAuth client used by admin-side API-key provisioning
+				// (see src/lib/server/gcp-provision.ts). Falls back to KV
+				// `auth_config:gcp` when unset, like the GitHub/Discord routes.
+				GCP_CLIENT_ID?: string;
+				GCP_CLIENT_SECRET?: string;
 				CRON_SECRET?: string;
 				// Opt-in flag to enable the dev-only virtual login on a deployed
 				// dev/staging Worker. Never set this in production.

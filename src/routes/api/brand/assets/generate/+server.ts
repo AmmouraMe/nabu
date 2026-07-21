@@ -8,7 +8,9 @@ import {
 	getAIGenerationsByBrand,
 	updateAIGenerationStatus,
 	AI_IMAGE_MODELS,
-	AI_AUDIO_MODELS
+	AI_AUDIO_MODELS,
+	isWorkersAIModel,
+	runWorkersAIImage
 } from '$lib/services/ai-media-generation';
 import { createBrandMedia } from '$lib/services/brand-assets';
 import { logMediaActivity, createMediaRevision } from '$lib/services/media-history';
@@ -97,9 +99,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	let generation;
 
 	if (type === 'image') {
-		// Image generation requires an OpenAI key
-		const apiKey = await getOpenAIKey(platform);
-		if (!apiKey) {
+		// Workers AI runs on the account's `AI` binding, so it needs no API key at
+		// all — only the OpenAI models do.
+		const useWorkersAI = isWorkersAIModel(body.model);
+
+		const apiKey = useWorkersAI ? null : await getOpenAIKey(platform);
+		if (!useWorkersAI && !apiKey) {
 			throw error(400, 'No OpenAI API key configured. Add one in Admin → AI Keys.');
 		}
 
@@ -114,6 +119,115 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			category: body.category || 'brand_elements',
 			name: body.name || 'AI Generated Image'
 		});
+
+		// ── Workers AI (keyless) ──────────────────────────────────────────
+		if (useWorkersAI) {
+			const model = body.model as string;
+			const [width, height] = (body.size || '1024x1024').split('x').map((n: string) => parseInt(n));
+
+			try {
+				// flux-1-schnell returns { image: <base64 jpeg> }; steps caps at 8.
+				// Retries the nondeterministic NSFW false positives — see runWorkersAIImage.
+				const result = await runWorkersAIImage(platform.env.AI, model, {
+					prompt,
+					steps: Math.min(Number(body.steps) || 4, 8)
+				});
+
+				if (!result?.image) {
+					const errMsg = 'Workers AI returned no image';
+					await updateAIGenerationStatus(platform.env.DB, generation.id, {
+						status: 'failed',
+						errorMessage: errMsg
+					});
+					return json(
+						{ generation: { ...generation, status: 'failed', errorMessage: errMsg } },
+						{ status: 200 }
+					);
+				}
+
+				// base64 → bytes, without Buffer (not available on Workers).
+				const binary = atob(result.image);
+				const imageBuffer = new Uint8Array(binary.length);
+				for (let i = 0; i < binary.length; i++) imageBuffer[i] = binary.charCodeAt(i);
+
+				const r2Key = `brands/${brandProfileId}/image/${generation.id}.jpg`;
+				await platform.env.BUCKET.put(r2Key, imageBuffer, {
+					httpMetadata: { contentType: 'image/jpeg' }
+				});
+
+				const assetName = body.name || 'AI Generated Image';
+				const media = await createBrandMedia(platform.env.DB, {
+					brandProfileId,
+					mediaType: 'image',
+					category: body.category || 'brand_elements',
+					name: assetName,
+					description: `AI-generated: ${prompt}`,
+					r2Key,
+					mimeType: 'image/jpeg',
+					fileSize: imageBuffer.byteLength,
+					width,
+					height,
+					metadata: { aiGenerated: true, prompt, model }
+				});
+
+				// Free allocation covers this; cost stays 0 until the daily
+				// Neuron budget is exhausted.
+				await updateAIGenerationStatus(platform.env.DB, generation.id, {
+					status: 'complete',
+					r2Key,
+					brandMediaId: media.id,
+					cost: 0,
+					progress: 100
+				});
+
+				await createMediaRevision(platform.env.DB, {
+					brandMediaId: media.id,
+					r2Key,
+					mimeType: 'image/jpeg',
+					fileSize: imageBuffer.byteLength,
+					width,
+					height,
+					source: 'ai_generated',
+					userId: locals.user.id,
+					changeNote: `AI generated with ${model}: ${prompt.substring(0, 100)}`
+				});
+
+				await logMediaActivity(platform.env.DB, {
+					brandProfileId,
+					brandMediaId: media.id,
+					userId: locals.user.id,
+					action: 'ai_generated',
+					description: `AI generated image: ${assetName}`,
+					details: { model, prompt, cost: 0, size: `${width}x${height}` },
+					source: 'ai_generated'
+				});
+
+				return json(
+					{
+						generation: {
+							...generation,
+							status: 'complete',
+							r2Key,
+							brandMediaId: media.id,
+							cost: 0
+						},
+						media
+					},
+					{ status: 201 }
+				);
+			} catch (err) {
+				const errMsg = err instanceof Error ? err.message : 'Workers AI generation failed';
+				console.error('Workers AI image generation failed:', err);
+				await updateAIGenerationStatus(platform.env.DB, generation.id, {
+					status: 'failed',
+					errorMessage: errMsg
+				});
+				return json(
+					{ generation: { ...generation, status: 'failed', errorMessage: errMsg } },
+					{ status: 200 }
+				);
+			}
+		}
 
 		// Actually call OpenAI DALL-E API
 		try {

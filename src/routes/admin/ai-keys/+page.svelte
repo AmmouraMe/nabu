@@ -1,8 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
+	import GoogleProvisionPanel from '$lib/components/admin/GoogleProvisionPanel.svelte';
+	import WorkersAIPanel from '$lib/components/admin/WorkersAIPanel.svelte';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
+
+	// Pull the freshly provisioned key into the list without a full reload.
+	async function reloadKeys() {
+		await invalidateAll();
+		keys = data.keys || [];
+	}
 
 	interface ModelWithPricing {
 		id: string;
@@ -1037,6 +1046,10 @@
 			AI generation.
 		</p>
 	</header>
+
+	<WorkersAIPanel on:connected={reloadKeys} />
+
+	<GoogleProvisionPanel on:provisioned={reloadKeys} />
 
 	<div class="page-actions">
 		<button class="btn btn-primary" on:click={openAddForm}>

@@ -46,11 +46,20 @@
 	let generating = false;
 	let error = '';
 
-	// Image options
-	let imageSize: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024';
+	// Image options.
+	// Default to Workers AI: it runs on the account's `AI` binding, so it needs
+	// no API key and costs nothing inside Cloudflare's daily free allocation —
+	// image generation works out of the box, with DALL·E as an opt-in upgrade.
+	const WORKERS_AI_IMAGE_MODEL = '@cf/black-forest-labs/flux-1-schnell';
+	let imageSize: '1024x1024' | '1792x1024' | '1024x1792' | '512x512' = '1024x1024';
 	let imageStyle: 'vivid' | 'natural' = 'vivid';
 	let imageQuality: 'standard' | 'hd' = 'standard';
-	let imageModel = 'dall-e-3';
+	let imageModel = WORKERS_AI_IMAGE_MODEL;
+	$: isWorkersAI = imageModel === WORKERS_AI_IMAGE_MODEL;
+	// Keep the size valid when switching families (DALL·E has no 512, FLUX has no 1792).
+	$: if (isWorkersAI && (imageSize === '1792x1024' || imageSize === '1024x1792'))
+		imageSize = '1024x1024';
+	$: if (!isWorkersAI && imageSize === '512x512') imageSize = '1024x1024';
 
 	// Audio options
 	let audioVoice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' = 'alloy';
@@ -183,11 +192,13 @@
 
 	$: estimatedCost =
 		generationType === 'image'
-			? imageModel === 'dall-e-3'
-				? imageQuality === 'hd'
-					? '$0.08'
-					: '$0.04'
-				: '$0.02'
+			? isWorkersAI
+				? 'Free'
+				: imageModel === 'dall-e-3'
+					? imageQuality === 'hd'
+						? '$0.08'
+						: '$0.04'
+					: '$0.02'
 			: generationType === 'audio'
 				? audioModel === 'tts-1-hd'
 					? '~$0.03/1K chars'
@@ -370,6 +381,7 @@
 						<div class="field">
 							<label for="ai-img-model">Model</label>
 							<select id="ai-img-model" bind:value={imageModel}>
+								<option value={WORKERS_AI_IMAGE_MODEL}>FLUX.1 schnell — free, no key</option>
 								<option value="dall-e-3">DALL·E 3</option>
 								<option value="dall-e-2">DALL·E 2</option>
 							</select>
@@ -378,24 +390,31 @@
 							<label for="ai-img-size">Size</label>
 							<select id="ai-img-size" bind:value={imageSize}>
 								<option value="1024x1024">1024 × 1024</option>
-								<option value="1792x1024">1792 × 1024</option>
-								<option value="1024x1792">1024 × 1792</option>
+								{#if isWorkersAI}
+									<option value="512x512">512 × 512</option>
+								{:else}
+									<option value="1792x1024">1792 × 1024</option>
+									<option value="1024x1792">1024 × 1792</option>
+								{/if}
 							</select>
 						</div>
-						<div class="field">
-							<label for="ai-img-style">Style</label>
-							<select id="ai-img-style" bind:value={imageStyle}>
-								<option value="vivid">Vivid</option>
-								<option value="natural">Natural</option>
-							</select>
-						</div>
-						<div class="field">
-							<label for="ai-img-quality">Quality</label>
-							<select id="ai-img-quality" bind:value={imageQuality}>
-								<option value="standard">Standard</option>
-								<option value="hd">HD</option>
-							</select>
-						</div>
+						{#if !isWorkersAI}
+							<!-- style/quality are DALL·E-only knobs; Workers AI ignores them. -->
+							<div class="field">
+								<label for="ai-img-style">Style</label>
+								<select id="ai-img-style" bind:value={imageStyle}>
+									<option value="vivid">Vivid</option>
+									<option value="natural">Natural</option>
+								</select>
+							</div>
+							<div class="field">
+								<label for="ai-img-quality">Quality</label>
+								<select id="ai-img-quality" bind:value={imageQuality}>
+									<option value="standard">Standard</option>
+									<option value="hd">HD</option>
+								</select>
+							</div>
+						{/if}
 					</div>
 				{:else if generationType === 'audio'}
 					<div class="options-grid">

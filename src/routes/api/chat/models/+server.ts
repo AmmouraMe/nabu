@@ -5,6 +5,9 @@ import type { RequestHandler } from './$types';
  * Common chat models with display names
  */
 const CHAT_MODELS: Record<string, string> = {
+	// Workers AI — keyless, free within the daily Neuron allocation.
+	'@cf/meta/llama-3.3-70b-instruct-fp8-fast': 'Llama 3.3 70B (free)',
+	'@cf/meta/llama-3.1-8b-instruct-fast': 'Llama 3.1 8B (free, faster)',
 	'gpt-4o': 'GPT-4o',
 	'gpt-4o-mini': 'GPT-4o mini',
 	'gpt-4o-2024-11-20': 'GPT-4o (Nov 2024)',
@@ -28,6 +31,8 @@ const CHAT_MODELS: Record<string, string> = {
  * Model sort order (lower = higher priority)
  */
 const MODEL_ORDER = [
+	'@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+	'@cf/meta/llama-3.1-8b-instruct-fast',
 	'gpt-4o',
 	'gpt-4o-2024-11-20',
 	'gpt-4o-2024-08-06',
@@ -64,8 +69,10 @@ async function getEnabledModels(platform: App.Platform): Promise<string[]> {
 			const keyData = await platform.env.KV.get(`ai_key:${keyId}`);
 			if (keyData) {
 				const key = JSON.parse(keyData);
-				// Only consider enabled OpenAI keys
-				if (key.provider === 'openai' && key.enabled !== false) {
+				// OpenAI plus the keyless Workers AI binding. NOTE: 'anthropic' keys
+				// are chat-capable in openai-chat.ts but still absent here — their
+				// model display names aren't defined, so they'd render as raw ids.
+				if ((key.provider === 'openai' || key.provider === 'workers-ai') && key.enabled !== false) {
 					// Collect models from the key (support both array and legacy single model)
 					const models = key.models || (key.model ? [key.model] : []);
 					for (const model of models) {

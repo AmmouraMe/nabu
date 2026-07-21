@@ -32,6 +32,15 @@ export interface AIKey {
 	voiceModels?: string[];
 	// Legacy single voice model field (for backwards compatibility)
 	voiceModel?: string;
+	// Image models — kept separate from `models` so chat never selects one.
+	imageModels?: string[];
+	/**
+	 * Workers AI binding, attached at load time for `provider: 'workers-ai'`.
+	 * Not persisted — that provider authenticates via the binding rather than
+	 * an apiKey, and attaching it here keeps every existing call site of
+	 * streamChatCompletionWithFallback() unchanged.
+	 */
+	ai?: { run(model: string, inputs: Record<string, unknown>): Promise<unknown> };
 }
 
 export interface RealtimeSessionResponse {
@@ -58,7 +67,22 @@ export interface StreamChunk {
 }
 
 /** Providers that support text chat completions */
-const TEXT_CHAT_PROVIDERS = new Set(['openai', 'anthropic']);
+const TEXT_CHAT_PROVIDERS = new Set(['openai', 'anthropic', 'workers-ai']);
+
+/**
+ * Workers AI text models, offered by the keyless `AI` binding.
+ * llama-3.3-70b-instruct-fp8-fast is already the content generator's model
+ * (`content-generator.ts`), so it's the proven default here too.
+ */
+export const WORKERS_AI_TEXT_MODELS = [
+	'@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+	'@cf/meta/llama-3.1-8b-instruct-fast'
+];
+const WORKERS_AI_DEFAULT_TEXT_MODEL = WORKERS_AI_TEXT_MODELS[0];
+/** Workers AI image models are stored on the same key record but must never be
+ *  selected for chat — guards against a mis-shaped record reaching the model. */
+const isWorkersAITextModel = (m: string) =>
+	m.startsWith('@cf/') && !m.includes('black-forest-labs');
 
 /** Map short/legacy Anthropic model names to full API model IDs */
 const ANTHROPIC_MODEL_ALIASES: Record<string, string> = {
@@ -83,9 +107,15 @@ function getEffectiveModel(key: AIKey, requestedModel?: string): string {
 		switch (key.provider) {
 			case 'anthropic':
 				return 'claude-sonnet-4-20250514';
+			case 'workers-ai':
+				return WORKERS_AI_DEFAULT_TEXT_MODEL;
 			default:
 				return requestedModel || 'gpt-4o';
 		}
+	}
+	// A workers-ai record also carries image models; never chat with one.
+	if (key.provider === 'workers-ai' && !isWorkersAITextModel(model)) {
+		return WORKERS_AI_DEFAULT_TEXT_MODEL;
 	}
 	// Resolve short/legacy Anthropic names to full API IDs
 	if (key.provider === 'anthropic' && ANTHROPIC_MODEL_ALIASES[model]) {
@@ -111,6 +141,12 @@ export async function getAllEnabledAIKeys(platform: App.Platform): Promise<AIKey
 			if (keyData) {
 				const key = JSON.parse(keyData) as AIKey;
 				if (key.enabled !== false && TEXT_CHAT_PROVIDERS.has(key.provider)) {
+					// workers-ai authenticates via the binding, not a stored secret.
+					// Skip it when the binding is absent, so it can't be picked and fail.
+					if (key.provider === 'workers-ai') {
+						if (!platform.env.AI) continue;
+						key.ai = platform.env.AI;
+					}
 					keys.push(key);
 				}
 			}
@@ -564,6 +600,57 @@ export async function anthropicChatCompletion(
 }
 
 /**
+ * Non-streaming chat completion for Workers AI via the account's `AI` binding.
+ *
+ * Mirrors {@link streamWorkersAIChatCompletion} but returns the full text in one
+ * shot — used by the extraction/analysis calls that need a complete response.
+ * Workers AI has no universal `response_format` flag (unlike OpenAI), so JSON
+ * mode is enforced by instructing the model in the prompt, the same way
+ * {@link anthropicChatCompletion} does.
+ */
+export async function workersAIChatCompletion(
+	ai: NonNullable<AIKey['ai']>,
+	messages: ChatMessage[],
+	options: {
+		model?: string;
+		temperature?: number;
+		maxTokens?: number;
+		jsonMode?: boolean;
+	} = {}
+): Promise<string> {
+	const model = options.model || WORKERS_AI_DEFAULT_TEXT_MODEL;
+
+	const chatMessages = messages.map((m) => ({ role: m.role, content: m.content }));
+	if (options.jsonMode) {
+		// Nudge the model toward pure JSON. Append to the last system message if
+		// there is one, otherwise prepend a fresh system instruction.
+		const instruction =
+			'IMPORTANT: Respond with a single valid JSON object only — no markdown, no code fences, no commentary before or after.';
+		const lastSystem = [...chatMessages].reverse().find((m) => m.role === 'system');
+		if (lastSystem && typeof lastSystem.content === 'string') {
+			lastSystem.content = `${lastSystem.content}\n\n${instruction}`;
+		} else {
+			chatMessages.unshift({ role: 'system', content: instruction });
+		}
+	}
+
+	const inputs = {
+		messages: chatMessages,
+		...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
+		...(options.temperature !== undefined ? { temperature: options.temperature } : {})
+	};
+
+	const result = await ai.run(model, inputs);
+	const response = (result as { response?: unknown })?.response;
+	if (typeof response === 'string') return response;
+	// Some Workers AI models return an already-parsed object for `response`
+	// (notably when the prompt asks for JSON); hand it back as a JSON string so
+	// callers that expect text — and then re-parse — still work.
+	if (response && typeof response === 'object') return JSON.stringify(response);
+	return '';
+}
+
+/**
  * Provider-aware non-streaming chat completion.
  * Routes to the correct API based on the key's provider.
  */
@@ -583,6 +670,8 @@ export async function chatCompletionWithKey(
 	switch (key.provider) {
 		case 'anthropic':
 			return anthropicChatCompletion(key.apiKey, messages, effectiveOptions);
+		case 'workers-ai':
+			return workersAIChatCompletion(key.ai!, messages, effectiveOptions);
 		default:
 			return chatCompletion(key.apiKey, messages, effectiveOptions);
 	}
@@ -594,6 +683,75 @@ export async function chatCompletionWithKey(
  * Falls back to the next key if the current one fails.
  * Routes to the correct provider API based on each key's provider field.
  */
+/**
+ * Stream a chat completion from Workers AI via the account's `AI` binding.
+ *
+ * No API key: the binding authorises as the account, and usage lands inside
+ * Cloudflare's daily free Neuron allocation before it bills.
+ *
+ * Streaming is attempted first but is **not always available**: through
+ * wrangler's local platform proxy (`getPlatformProxy`, what `vite dev` uses)
+ * `stream: true` throws an opaque `false == true` — verified 2026-07-18 on
+ * wrangler 3.114. So a failure here is not fatal; we fall back to a single
+ * non-streaming call and emit the answer as one chunk. Local dev always takes
+ * the fallback path; a deployed Worker can stream properly.
+ */
+export async function* streamWorkersAIChatCompletion(
+	ai: NonNullable<AIKey['ai']>,
+	messages: ChatMessage[],
+	options: { model?: string; temperature?: number; maxTokens?: number } = {}
+): AsyncGenerator<StreamChunk, void, unknown> {
+	const model = options.model || WORKERS_AI_DEFAULT_TEXT_MODEL;
+	const inputs = {
+		messages: messages.map((m) => ({ role: m.role, content: m.content })),
+		...(options.maxTokens ? { max_tokens: options.maxTokens } : {}),
+		...(options.temperature !== undefined ? { temperature: options.temperature } : {})
+	};
+
+	let result: unknown;
+	try {
+		result = await ai.run(model, { ...inputs, stream: true });
+	} catch {
+		result = undefined; // streaming unsupported here — fall back below
+	}
+
+	// Non-streaming shape (or the streaming attempt failed) — one call, one chunk.
+	if (!(result instanceof ReadableStream)) {
+		const single = result ?? (await ai.run(model, inputs));
+		const text = (single as { response?: string })?.response;
+		if (text) yield { type: 'content', content: text, model };
+		return;
+	}
+
+	const reader = result.getReader();
+	const decoder = new TextDecoder();
+	let buffer = '';
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value, { stream: true });
+			// SSE frames are newline-delimited; keep the trailing partial line.
+			const lines = buffer.split('\n');
+			buffer = lines.pop() ?? '';
+			for (const line of lines) {
+				const trimmed = line.trim();
+				if (!trimmed.startsWith('data:')) continue;
+				const payload = trimmed.slice(5).trim();
+				if (!payload || payload === '[DONE]') continue;
+				try {
+					const parsed = JSON.parse(payload) as { response?: string };
+					if (parsed.response) yield { type: 'content', content: parsed.response, model };
+				} catch {
+					// A frame split across reads — ignore; the next read completes it.
+				}
+			}
+		}
+	} finally {
+		reader.releaseLock();
+	}
+}
+
 export async function* streamChatCompletionWithFallback(
 	keys: AIKey[],
 	messages: ChatMessage[],
@@ -646,7 +804,9 @@ export async function* streamChatCompletionWithFallback(
 			const streamer =
 				key.provider === 'anthropic'
 					? streamAnthropicChatCompletion(key.apiKey, messages, providerOptions)
-					: streamChatCompletion(key.apiKey, messages, providerOptions);
+					: key.provider === 'workers-ai'
+						? streamWorkersAIChatCompletion(key.ai!, messages, providerOptions)
+						: streamChatCompletion(key.apiKey, messages, providerOptions);
 
 			for await (const chunk of streamer) {
 				yield chunk;

@@ -211,7 +211,7 @@ export interface CreateMediaVariantParams {
 export type MediaSource = 'upload' | 'ai_generated' | 'url_import';
 
 /** AI provider used for generation */
-export type AIGenerationProvider = 'openai' | 'wavespeed';
+export type AIGenerationProvider = 'openai' | 'wavespeed' | 'workers-ai';
 
 /** Status of an AI generation job */
 export type AIGenerationStatus = 'pending' | 'processing' | 'complete' | 'failed';

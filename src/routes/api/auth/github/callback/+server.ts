@@ -1,3 +1,4 @@
+import { externalOrigin, isSecureRequest } from '$lib/server/origin';
 import { mergeAccounts } from '$lib/services/account-merge';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -36,7 +37,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 			throw redirect(302, '/auth/login?error=not_configured');
 		}
 
-		const callbackUrl = `${url.origin}/api/auth/github/callback`;
+		const callbackUrl = `${externalOrigin(url)}/api/auth/github/callback`;
 
 		// Exchange code for access token
 		const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
@@ -203,7 +204,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 					return new Response(null, {
 						status: 302,
 						headers: {
-							Location: new URL('/profile?linked=github', url.origin).toString()
+							Location: new URL('/profile?linked=github', externalOrigin(url)).toString()
 						}
 					});
 				}
@@ -244,7 +245,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 							.replace(/\//g, '_')
 							.replace(/=+$/, '');
 
-						const isSecure = url.protocol === 'https:';
+						const isSecure = isSecureRequest(url);
 						const cookieParts = [
 							`session=${sessionCookie}`,
 							'Path=/',
@@ -261,7 +262,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 						return new Response(null, {
 							status: 302,
 							headers: {
-								Location: new URL(redirectUrl, url.origin).toString(),
+								Location: new URL(redirectUrl, externalOrigin(url)).toString(),
 								'Set-Cookie': cookieParts.join('; ')
 							}
 						});
@@ -392,7 +393,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 		const redirectUrl = isOwner ? '/admin' : '/';
 
 		// Build the absolute redirect URL
-		const absoluteRedirectUrl = new URL(redirectUrl, url.origin).toString();
+		const absoluteRedirectUrl = new URL(redirectUrl, externalOrigin(url)).toString();
 
 		// Build cookie string manually for proper handling
 		const isSecure = url.protocol === 'https:';

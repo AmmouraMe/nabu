@@ -33,8 +33,70 @@ export interface AIModel {
 	};
 }
 
+/**
+ * Workers AI image models. These run on the `AI` binding, so they need **no API
+ * key** — Cloudflare bills them against the account's daily free Neuron
+ * allocation (10,000/day, resets 00:00 UTC) before charging anything.
+ * https://developers.cloudflare.com/workers-ai/platform/pricing/
+ */
+export const WORKERS_AI_IMAGE_MODELS: AIModel[] = [
+	{
+		id: '@cf/black-forest-labs/flux-1-schnell',
+		displayName: 'FLUX.1 [schnell] (free)',
+		provider: 'workers-ai',
+		type: 'image',
+		description: 'Fast 4-step image generation on Cloudflare Workers AI. No API key required.',
+		supportedSizes: ['1024x1024', '512x512'],
+		pricing: { estimatedCostPerGeneration: 0, currency: 'USD' }
+	}
+];
+
+/**
+ * Run a Workers AI image model, retrying the safety-filter false positives.
+ *
+ * FLUX's NSFW classifier (error 3030) is **nondeterministic** — verified
+ * 2026-07-18: the identical innocuous prompt passed twice and failed once, and
+ * "a blue circle" tripped it outright. Left unhandled, ordinary brand prompts
+ * fail at random with a message that reads like an accusation. Retries are
+ * cheap (a schnell generation is ~1.8s and free inside the daily allocation);
+ * a genuinely blocked prompt still fails after the last attempt, with the
+ * provider's own message surfaced.
+ */
+export async function runWorkersAIImage(
+	ai: { run(model: string, inputs: Record<string, unknown>): Promise<unknown> },
+	model: string,
+	inputs: Record<string, unknown>,
+	attempts = 3
+): Promise<{ image?: string }> {
+	let lastError: unknown;
+	for (let i = 0; i < attempts; i++) {
+		try {
+			const result = (await ai.run(model, inputs)) as { image?: string };
+			if (result?.image) return result;
+			lastError = new Error('Workers AI returned no image');
+		} catch (err) {
+			lastError = err;
+			// Only the stochastic safety filter is worth retrying; anything else
+			// (bad model id, quota, network) will fail the same way every time.
+			if (!String(err instanceof Error ? err.message : err).includes('3030')) break;
+		}
+	}
+	throw lastError instanceof Error ? lastError : new Error('Workers AI generation failed');
+}
+
+/** True when the model runs on the keyless Workers AI binding. */
+export function isWorkersAIModel(modelId: string | undefined): boolean {
+	return Boolean(modelId && WORKERS_AI_IMAGE_MODELS.some((m) => m.id === modelId));
+}
+
+/** Which provider a given image model belongs to. */
+export function providerForImageModel(modelId: string | undefined): AIGenerationProvider {
+	return isWorkersAIModel(modelId) ? 'workers-ai' : 'openai';
+}
+
 /** Available AI image generation models */
 export const AI_IMAGE_MODELS: AIModel[] = [
+	...WORKERS_AI_IMAGE_MODELS,
 	{
 		id: 'dall-e-3',
 		displayName: 'DALL·E 3',
@@ -113,7 +175,7 @@ export async function generateImage(
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
 	const model = params.model || 'dall-e-3';
-	const provider = 'openai';
+	const provider = providerForImageModel(model);
 
 	const parameters: Record<string, unknown> = {};
 	if (params.size) parameters.size = params.size;

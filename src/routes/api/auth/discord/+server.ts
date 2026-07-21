@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { externalOrigin } from '$lib/server/origin';
 import type { RequestHandler } from './$types';
 
 // GET - Redirect to Discord OAuth
@@ -32,7 +33,7 @@ export const GET: RequestHandler = async ({ platform, url }) => {
 
 	const params = new URLSearchParams({
 		client_id: clientId,
-		redirect_uri: `${url.origin}/api/auth/discord/callback`,
+		redirect_uri: `${externalOrigin(url)}/api/auth/discord/callback`,
 		response_type: 'code',
 		scope: 'identify email',
 		state

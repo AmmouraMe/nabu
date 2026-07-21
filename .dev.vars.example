@@ -14,3 +14,10 @@ DISCORD_CLIENT_SECRET=your_discord_client_secret_here
 
 # Note: .dev.vars is gitignored and should never be committed
 # These values are used by `wrangler dev` for local development
+
+# Cloudflare account for the local Workers AI binding.
+# `getPlatformProxy()` (used by `vite dev`) authenticates as your wrangler OAuth
+# login. If that login can see more than one Cloudflare account, the AI binding
+# fails with "More than one account available...". Set this to the account_id
+# whose Workers AI quota you want to use.
+CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id_here

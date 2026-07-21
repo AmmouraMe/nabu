@@ -4,7 +4,7 @@
 
 > _Named after the Babylonian god of writing and scribes_
 
-Nabu is a marketing automation platform with optional AI-generated content and AI assistance for those looking to create a new product from scratch. Part of the [Hermes](https://hermes.starspace.group) ecosystem.
+Nabu is a comprehensive brand platform and marketing automation tool with optional AI-generated content and AI assistance for those looking to create a new product from scratch. It lets you create and manage a complete brand identity — mission statement, name, logo, colors, fonts, and a full brand style guide — then turns that brand into automated marketing. Part of the [Hermes](https://hermes.starspace.group) ecosystem.
 
 ---
 
@@ -13,7 +13,7 @@ Nabu is a marketing automation platform with optional AI-generated content and A
 Nabu guides users from product conception to automated marketing:
 
 1. **AI Onboarding** - Assess your existing product or build one from scratch with AI assistance
-2. **Brand Creation** - Name, style guide, voice, positioning
+2. **Brand Creation** - Comprehensive brand platform: create and manage mission statement, name, logo, colors, fonts, voice, positioning, and a complete brand style guide
 3. **Content Strategy** - Optional AI-generated calendar, topics, and campaigns
 4. **Video Generation** - Optional AI-powered shorts/reels with voiceover
 5. **Review & Publish** - Drafts for approval before going live
@@ -23,6 +23,7 @@ Nabu guides users from product conception to automated marketing:
 ## 🚀 Features (Roadmap)
 
 ### Phase 1: AI Onboarding ✅ (In Progress)
+
 - [x] Clone NebulaKit base
 - [ ] AI chat interface for brand assessment
 - [ ] Brand profile creation (name, colors, voice)
@@ -30,24 +31,28 @@ Nabu guides users from product conception to automated marketing:
 - [ ] Save to database
 
 ### Phase 2: Content Strategy
+
 - [ ] AI content calendar generation
 - [ ] Topic/script creation
 - [ ] Voiceover text generation
 - [ ] Visual asset planning
 
 ### Phase 3: Video Generation Pipeline
+
 - [ ] Text-to-speech integration
 - [ ] Stock footage/AI image sourcing
 - [ ] Video composition (ffmpeg)
 - [ ] Brand template system
 
 ### Phase 4: Publishing & Scheduling
+
 - [ ] YouTube API (draft uploads)
 - [ ] TikTok API integration
 - [ ] Background job queue
 - [ ] Cron scheduling
 
 ### Phase 5: Review Dashboard
+
 - [ ] Video preview UI
 - [ ] Edit/regenerate controls
 - [ ] Publish management

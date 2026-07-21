@@ -66,7 +66,7 @@ const ANTHROPIC_MODEL_ALIASES: Record<string, string> = {
 	'claude-3-sonnet': 'claude-3-5-sonnet-20241022',
 	'claude-3-haiku': 'claude-3-haiku-20240307',
 	'claude-3.5-sonnet': 'claude-3-5-sonnet-20241022',
-	'claude-3.5-haiku': 'claude-3-5-haiku-20241022',
+	'claude-3.5-haiku': 'claude-3-5-haiku-20241022'
 };
 
 /**
@@ -236,12 +236,14 @@ export async function chatCompletion(
 		try {
 			const parsed = JSON.parse(errorBody);
 			detail = parsed?.error?.message || detail;
-		} catch { /* use statusText */ }
+		} catch {
+			/* use statusText */
+		}
 		throw new Error(`OpenAI API error (${response.status}): ${detail}`);
 	}
 
-	const json = await response.json() as {
-		choices: Array<{ message: { content: string; }; }>;
+	const json = (await response.json()) as {
+		choices: Array<{ message: { content: string } }>;
 	};
 
 	return json.choices?.[0]?.message?.content || '';
@@ -284,7 +286,9 @@ export async function* streamChatCompletion(
 		try {
 			const parsed = JSON.parse(errorBody);
 			detail = parsed?.error?.message || detail;
-		} catch { /* use statusText */ }
+		} catch {
+			/* use statusText */
+		}
 		if (response.status === 401) {
 			throw new Error('Invalid or expired OpenAI API key. Check your API key configuration.');
 		}
@@ -363,7 +367,7 @@ export async function* streamAnthropicChatCompletion(
 
 	// Extract system messages — Anthropic uses a top-level system parameter
 	let systemContent = '';
-	const chatMessages: Array<{ role: string; content: string | ChatMessageContentPart[]; }> = [];
+	const chatMessages: Array<{ role: string; content: string | ChatMessageContentPart[] }> = [];
 	for (const msg of messages) {
 		if (msg.role === 'system') {
 			if (typeof msg.content === 'string') {
@@ -499,7 +503,7 @@ export async function anthropicChatCompletion(
 
 	// Extract system messages
 	let systemContent = '';
-	const chatMessages: Array<{ role: string; content: string | ChatMessageContentPart[]; }> = [];
+	const chatMessages: Array<{ role: string; content: string | ChatMessageContentPart[] }> = [];
 	for (const msg of messages) {
 		if (msg.role === 'system') {
 			if (typeof msg.content === 'string') {
@@ -553,7 +557,7 @@ export async function anthropicChatCompletion(
 	}
 
 	const data = (await response.json()) as {
-		content: Array<{ type: string; text: string; }>;
+		content: Array<{ type: string; text: string }>;
 	};
 
 	return data.content?.[0]?.text || '';
@@ -727,7 +731,7 @@ export function formatMessagesForOpenAI(
 			size?: number;
 		}>;
 	}>,
-	options: { includeSystem?: boolean; } = {}
+	options: { includeSystem?: boolean } = {}
 ): ChatMessage[] {
 	const { includeSystem = true } = options;
 

@@ -28,12 +28,12 @@
 
 	let dragState: {
 		fromIndex: number;
-		currentIndex: number;      // where item would be inserted
+		currentIndex: number; // where item would be inserted
 		startY: number;
 		currentY: number;
 		clone: HTMLElement | null;
 		listEl: HTMLElement | null;
-		rects: DOMRect[];          // snapshot of card positions at drag start
+		rects: DOMRect[]; // snapshot of card positions at drag start
 		scrollInterval: number | null;
 	} | null = null;
 
@@ -67,7 +67,7 @@
 	function snapshotRects(): DOMRect[] {
 		if (!listEl) return [];
 		const cards = listEl.querySelectorAll<HTMLElement>('.key-card');
-		return Array.from(cards).map(c => c.getBoundingClientRect());
+		return Array.from(cards).map((c) => c.getBoundingClientRect());
 	}
 
 	/** Given a Y position, figure out which slot the item should drop into */
@@ -204,7 +204,11 @@
 		if (!dragState || !dragState.listEl) return;
 		dragState.rects = snapshotRects();
 		// Recalculate drop index with new rects
-		dragState.currentIndex = calcDropIndex(dragState.currentY, dragState.fromIndex, dragState.rects);
+		dragState.currentIndex = calcDropIndex(
+			dragState.currentY,
+			dragState.fromIndex,
+			dragState.rects
+		);
 	}
 
 	// Prevent native drag from interfering
@@ -340,26 +344,80 @@
 	let modelsLoadedFromApi = false;
 
 	const providers = [
-		{ value: 'openai', label: 'OpenAI', models: [] as Array<{id: string, displayName: string, pricing?: {input: number, output: number, cached?: number}}> },
+		{
+			value: 'openai',
+			label: 'OpenAI',
+			models: [] as Array<{
+				id: string;
+				displayName: string;
+				pricing?: { input: number; output: number; cached?: number };
+			}>
+		},
 		{
 			value: 'anthropic',
 			label: 'Anthropic',
 			models: [
-				{ id: 'claude-sonnet-4-20250514', displayName: 'Claude Sonnet 4', pricing: { input: 3, output: 15 } },
-				{ id: 'claude-3-5-sonnet-20241022', displayName: 'Claude 3.5 Sonnet', pricing: { input: 3, output: 15 } },
-				{ id: 'claude-3-5-haiku-20241022', displayName: 'Claude 3.5 Haiku', pricing: { input: 1, output: 5 } },
-				{ id: 'claude-3-opus-20240229', displayName: 'Claude 3 Opus', pricing: { input: 15, output: 75 } },
-				{ id: 'claude-3-haiku-20240307', displayName: 'Claude 3 Haiku', pricing: { input: 0.25, output: 1.25 } }
+				{
+					id: 'claude-sonnet-4-20250514',
+					displayName: 'Claude Sonnet 4',
+					pricing: { input: 3, output: 15 }
+				},
+				{
+					id: 'claude-3-5-sonnet-20241022',
+					displayName: 'Claude 3.5 Sonnet',
+					pricing: { input: 3, output: 15 }
+				},
+				{
+					id: 'claude-3-5-haiku-20241022',
+					displayName: 'Claude 3.5 Haiku',
+					pricing: { input: 1, output: 5 }
+				},
+				{
+					id: 'claude-3-opus-20240229',
+					displayName: 'Claude 3 Opus',
+					pricing: { input: 15, output: 75 }
+				},
+				{
+					id: 'claude-3-haiku-20240307',
+					displayName: 'Claude 3 Haiku',
+					pricing: { input: 0.25, output: 1.25 }
+				}
 			]
 		},
-		{ value: 'google', label: 'Google (Gemini)', models: [{id: 'gemini-pro', displayName: 'Gemini Pro'}, {id: 'gemini-pro-vision', displayName: 'Gemini Pro Vision'}] },
+		{
+			value: 'google',
+			label: 'Google (Gemini)',
+			models: [
+				{ id: 'gemini-pro', displayName: 'Gemini Pro' },
+				{ id: 'gemini-pro-vision', displayName: 'Gemini Pro Vision' }
+			]
+		},
 		{
 			value: 'mistral',
 			label: 'Mistral AI',
-			models: [{id: 'mistral-large', displayName: 'Mistral Large'}, {id: 'mistral-medium', displayName: 'Mistral Medium'}, {id: 'mistral-small', displayName: 'Mistral Small'}]
+			models: [
+				{ id: 'mistral-large', displayName: 'Mistral Large' },
+				{ id: 'mistral-medium', displayName: 'Mistral Medium' },
+				{ id: 'mistral-small', displayName: 'Mistral Small' }
+			]
 		},
-		{ value: 'cohere', label: 'Cohere', models: [{id: 'command', displayName: 'Command'}, {id: 'command-light', displayName: 'Command Light'}] },
-		{ value: 'wavespeed', label: 'WaveSpeed AI', models: [] as Array<{id: string, displayName: string, pricing?: {input: number, output: number, cached?: number}}> }
+		{
+			value: 'cohere',
+			label: 'Cohere',
+			models: [
+				{ id: 'command', displayName: 'Command' },
+				{ id: 'command-light', displayName: 'Command Light' }
+			]
+		},
+		{
+			value: 'wavespeed',
+			label: 'WaveSpeed AI',
+			models: [] as Array<{
+				id: string;
+				displayName: string;
+				pricing?: { input: number; output: number; cached?: number };
+			}>
+		}
 	];
 
 	// Format pricing for display
@@ -415,42 +473,87 @@
 			modelsError = 'Failed to load models. Using default list.';
 			// Fallback to static list
 			openaiChatModels = [
-				{ id: 'gpt-5.2', pricing: { input: 1.75, output: 14, cached: 0.175 }, ownedBy: 'openai', created: 0 },
-				{ id: 'gpt-5.1', pricing: { input: 1.25, output: 10, cached: 0.125 }, ownedBy: 'openai', created: 0 },
-				{ id: 'gpt-5', pricing: { input: 1.25, output: 10, cached: 0.125 }, ownedBy: 'openai', created: 0 },
-				{ id: 'gpt-5-mini', pricing: { input: 0.25, output: 2, cached: 0.025 }, ownedBy: 'openai', created: 0 },
-				{ id: 'gpt-4.1', pricing: { input: 2, output: 8, cached: 0.50 }, ownedBy: 'openai', created: 0 },
-				{ id: 'gpt-4.1-mini', pricing: { input: 0.40, output: 1.60, cached: 0.10 }, ownedBy: 'openai', created: 0 },
-				{ id: 'gpt-4o', pricing: { input: 2.5, output: 10, cached: 1.25 }, ownedBy: 'openai', created: 0 },
-				{ id: 'gpt-4o-mini', pricing: { input: 0.15, output: 0.6, cached: 0.075 }, ownedBy: 'openai', created: 0 },
-				{ id: 'o4-mini', pricing: { input: 1.10, output: 4.40, cached: 0.275 }, ownedBy: 'openai', created: 0 },
-				{ id: 'o3', pricing: { input: 2, output: 8, cached: 0.50 }, ownedBy: 'openai', created: 0 }
+				{
+					id: 'gpt-5.2',
+					pricing: { input: 1.75, output: 14, cached: 0.175 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'gpt-5.1',
+					pricing: { input: 1.25, output: 10, cached: 0.125 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'gpt-5',
+					pricing: { input: 1.25, output: 10, cached: 0.125 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'gpt-5-mini',
+					pricing: { input: 0.25, output: 2, cached: 0.025 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'gpt-4.1',
+					pricing: { input: 2, output: 8, cached: 0.5 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'gpt-4.1-mini',
+					pricing: { input: 0.4, output: 1.6, cached: 0.1 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'gpt-4o',
+					pricing: { input: 2.5, output: 10, cached: 1.25 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'gpt-4o-mini',
+					pricing: { input: 0.15, output: 0.6, cached: 0.075 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{
+					id: 'o4-mini',
+					pricing: { input: 1.1, output: 4.4, cached: 0.275 },
+					ownedBy: 'openai',
+					created: 0
+				},
+				{ id: 'o3', pricing: { input: 2, output: 8, cached: 0.5 }, ownedBy: 'openai', created: 0 }
 			];
 			openaiVoiceModels = [
 				{
 					id: 'gpt-realtime',
-					pricing: { input: 4, output: 16, cached: 0.40 },
+					pricing: { input: 4, output: 16, cached: 0.4 },
 					audioPricing: { input: 0.05, output: 0.19 },
 					ownedBy: 'openai',
 					created: 0
 				},
 				{
 					id: 'gpt-realtime-mini',
-					pricing: { input: 0.60, output: 2.40, cached: 0.06 },
+					pricing: { input: 0.6, output: 2.4, cached: 0.06 },
 					audioPricing: { input: 0.015, output: 0.06 },
 					ownedBy: 'openai',
 					created: 0
 				},
 				{
 					id: 'gpt-4o-realtime-preview-2024-12-17',
-					pricing: { input: 5, output: 20, cached: 2.50 },
+					pricing: { input: 5, output: 20, cached: 2.5 },
 					audioPricing: { input: 0.06, output: 0.24 },
 					ownedBy: 'openai',
 					created: 0
 				},
 				{
 					id: 'gpt-4o-mini-realtime-preview-2024-12-17',
-					pricing: { input: 0.60, output: 2.40, cached: 0.30 },
+					pricing: { input: 0.6, output: 2.4, cached: 0.3 },
 					audioPricing: { input: 0.015, output: 0.06 },
 					ownedBy: 'openai',
 					created: 0
@@ -467,7 +570,13 @@
 			? openaiChatModels.filter((m) => m.pricing)
 			: providers
 					.find((p) => p.value === formData.provider)
-					?.models.map((m) => ({ id: m.id, displayName: m.displayName, pricing: m.pricing, ownedBy: '', created: 0 })) || [];
+					?.models.map((m) => ({
+						id: m.id,
+						displayName: m.displayName,
+						pricing: m.pricing,
+						ownedBy: '',
+						created: 0
+					})) || [];
 
 	// Get voice models with pricing only
 	$: filteredVoiceModels = openaiVoiceModels.filter((m) => m.pricing || m.audioPricing);
@@ -486,30 +595,90 @@
 			displayName: 'Sora 2',
 			description: 'Fast video generation, ideal for iteration',
 			resolutions: '720p',
-			pricing: { perSecond: 0.10 }
+			pricing: { perSecond: 0.1 }
 		},
 		{
 			id: 'sora-2-pro',
 			displayName: 'Sora 2 Pro',
 			description: 'Higher quality, production-grade output',
 			resolutions: '720p / 1080p',
-			pricing: { perSecond: 0.30, perSecondHighRes: 0.50 }
+			pricing: { perSecond: 0.3, perSecondHighRes: 0.5 }
 		}
 	];
 
 	// WaveSpeed video/image model options
 	// Fallback pricing from https://wavespeed.ai/pricing — overridden by live API data when available
 	const wavespeedModelOptions = [
-		{ id: 'wan-2.1/t2v', displayName: 'Wan 2.1 T2V', description: 'Text-to-video, 480p–720p quality', category: 'video', fallbackPrice: 0.03 },
-		{ id: 'wan-2.1/i2v-720p', displayName: 'Wan 2.1 I2V 720p', description: 'Image-to-video, 720p quality', category: 'video', fallbackPrice: 0.04 },
-		{ id: 'wan-2.2/t2v', displayName: 'Wan 2.2 T2V', description: 'Latest Wan text-to-video', category: 'video', fallbackPrice: 0.04 },
-		{ id: 'wan-2.2/i2v-480p', displayName: 'Wan 2.2 I2V 480p', description: 'Latest Wan image-to-video', category: 'video', fallbackPrice: 0.03 },
-		{ id: 'hunyuan-video/t2v', displayName: 'HunYuan Video', description: 'Tencent HunYuan text-to-video', category: 'video', fallbackPrice: 0.05 },
-		{ id: 'ltx-video/ltx-2-19b-text-to-video', displayName: 'LTX 2 T2V', description: 'Lightricks text-to-video', category: 'video', fallbackPrice: 0.03 },
-		{ id: 'ltx-video/ltx-2-19b-image-to-video', displayName: 'LTX 2 I2V', description: 'Lightricks image-to-video', category: 'video', fallbackPrice: 0.035 },
-		{ id: 'framepack/framepack-f1', displayName: 'FramePack', description: 'Frame-based video generation', category: 'video', fallbackPrice: 0.04 },
-		{ id: 'flux-dev', displayName: 'Flux Dev', description: 'High-quality image generation', category: 'image', fallbackPrice: 0.025 },
-		{ id: 'flux-schnell', displayName: 'Flux Schnell', description: 'Fast image generation', category: 'image', fallbackPrice: 0.015 }
+		{
+			id: 'wan-2.1/t2v',
+			displayName: 'Wan 2.1 T2V',
+			description: 'Text-to-video, 480p–720p quality',
+			category: 'video',
+			fallbackPrice: 0.03
+		},
+		{
+			id: 'wan-2.1/i2v-720p',
+			displayName: 'Wan 2.1 I2V 720p',
+			description: 'Image-to-video, 720p quality',
+			category: 'video',
+			fallbackPrice: 0.04
+		},
+		{
+			id: 'wan-2.2/t2v',
+			displayName: 'Wan 2.2 T2V',
+			description: 'Latest Wan text-to-video',
+			category: 'video',
+			fallbackPrice: 0.04
+		},
+		{
+			id: 'wan-2.2/i2v-480p',
+			displayName: 'Wan 2.2 I2V 480p',
+			description: 'Latest Wan image-to-video',
+			category: 'video',
+			fallbackPrice: 0.03
+		},
+		{
+			id: 'hunyuan-video/t2v',
+			displayName: 'HunYuan Video',
+			description: 'Tencent HunYuan text-to-video',
+			category: 'video',
+			fallbackPrice: 0.05
+		},
+		{
+			id: 'ltx-video/ltx-2-19b-text-to-video',
+			displayName: 'LTX 2 T2V',
+			description: 'Lightricks text-to-video',
+			category: 'video',
+			fallbackPrice: 0.03
+		},
+		{
+			id: 'ltx-video/ltx-2-19b-image-to-video',
+			displayName: 'LTX 2 I2V',
+			description: 'Lightricks image-to-video',
+			category: 'video',
+			fallbackPrice: 0.035
+		},
+		{
+			id: 'framepack/framepack-f1',
+			displayName: 'FramePack',
+			description: 'Frame-based video generation',
+			category: 'video',
+			fallbackPrice: 0.04
+		},
+		{
+			id: 'flux-dev',
+			displayName: 'Flux Dev',
+			description: 'High-quality image generation',
+			category: 'image',
+			fallbackPrice: 0.025
+		},
+		{
+			id: 'flux-schnell',
+			displayName: 'Flux Schnell',
+			description: 'Fast image generation',
+			category: 'image',
+			fallbackPrice: 0.015
+		}
 	];
 
 	// WaveSpeed pricing data
@@ -558,20 +727,23 @@
 		if (wavespeedPricing.length > 0) {
 			// Direct match with wavespeed-ai/ prefix
 			const prefixed = `wavespeed-ai/${localModelId}`;
-			const directMatch = wavespeedPricing.find(m => m.model_id === prefixed);
+			const directMatch = wavespeedPricing.find((m) => m.model_id === prefixed);
 			if (directMatch) return directMatch.base_price;
 
 			// Normalized match: strip prefix and replace / with -
 			const normalizedLocal = localModelId.toLowerCase();
-			const normalizedMatch = wavespeedPricing.find(m => {
-				const stripped = m.model_id.replace(/^wavespeed-ai\//, '').replace(/\//g, '-').toLowerCase();
+			const normalizedMatch = wavespeedPricing.find((m) => {
+				const stripped = m.model_id
+					.replace(/^wavespeed-ai\//, '')
+					.replace(/\//g, '-')
+					.toLowerCase();
 				return stripped === normalizedLocal;
 			});
 			if (normalizedMatch) return normalizedMatch.base_price;
 		}
 
 		// Fall back to local pricing estimate
-		const model = wavespeedModelOptions.find(m => m.id === localModelId);
+		const model = wavespeedModelOptions.find((m) => m.id === localModelId);
 		return model?.fallbackPrice ?? null;
 	}
 
@@ -583,12 +755,15 @@
 		if (wavespeedPricing.length === 0) return null;
 
 		const prefixed = `wavespeed-ai/${localModelId}`;
-		const directMatch = wavespeedPricing.find(m => m.model_id === prefixed);
+		const directMatch = wavespeedPricing.find((m) => m.model_id === prefixed);
 		if (directMatch) return directMatch.base_price;
 
 		const normalizedLocal = localModelId.toLowerCase();
-		const normalizedMatch = wavespeedPricing.find(m => {
-			const stripped = m.model_id.replace(/^wavespeed-ai\//, '').replace(/\//g, '-').toLowerCase();
+		const normalizedMatch = wavespeedPricing.find((m) => {
+			const stripped = m.model_id
+				.replace(/^wavespeed-ai\//, '')
+				.replace(/\//g, '-')
+				.toLowerCase();
 			return stripped === normalizedLocal;
 		});
 		if (normalizedMatch) return normalizedMatch.base_price;
@@ -603,9 +778,13 @@
 		if (wavespeedPricing.length === 0) return null;
 
 		const prefixed = `wavespeed-ai/${localModelId}`;
-		const match = wavespeedPricing.find(m => m.model_id === prefixed) || 
-			wavespeedPricing.find(m => {
-				const stripped = m.model_id.replace(/^wavespeed-ai\//, '').replace(/\//g, '-').toLowerCase();
+		const match =
+			wavespeedPricing.find((m) => m.model_id === prefixed) ||
+			wavespeedPricing.find((m) => {
+				const stripped = m.model_id
+					.replace(/^wavespeed-ai\//, '')
+					.replace(/\//g, '-')
+					.toLowerCase();
 				return stripped === localModelId.toLowerCase();
 			});
 		return match?.type || null;
@@ -854,7 +1033,8 @@
 	<header class="page-header">
 		<h1>AI Provider Keys</h1>
 		<p class="page-description">
-			Manage API keys for AI providers. Drag to reorder — higher priority keys are tried first for AI generation.
+			Manage API keys for AI providers. Drag to reorder — higher priority keys are tried first for
+			AI generation.
 		</p>
 	</header>
 
@@ -891,12 +1071,22 @@
 		</div>
 	{:else}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="keys-list" class:is-dragging={isDragging} bind:this={listEl} on:dragstart={preventNativeDrag}>
+		<div
+			class="keys-list"
+			class:is-dragging={isDragging}
+			bind:this={listEl}
+			on:dragstart={preventNativeDrag}
+		>
 			{#each keys as key, index (key.id)}
 				{@const keyModels = key.models || (key.model ? [key.model] : [])}
 				{@const keyVoiceModels = key.voiceModels || (key.voiceModel ? [key.voiceModel] : [])}
 				<!-- Slot indicator — rendered between items via CSS, no DOM changes during drag -->
-				<div class="drop-slot" class:drop-slot-active={isDragging && dropTargetIndex === index && dragFromIndex !== index}>
+				<div
+					class="drop-slot"
+					class:drop-slot-active={isDragging &&
+						dropTargetIndex === index &&
+						dragFromIndex !== index}
+				>
 					<div class="drop-slot-inner">
 						<span class="drop-slot-dot"></span>
 						<span class="drop-slot-line"></span>
@@ -932,7 +1122,9 @@
 										<circle cx="16" cy="20" r="2" />
 									</svg>
 								</button>
-								<span class="priority-badge" title="Priority order — tried first for AI generation">#{index + 1}</span>
+								<span class="priority-badge" title="Priority order — tried first for AI generation"
+									>#{index + 1}</span
+								>
 								<h3>{key.name}</h3>
 							</div>
 							<div class="key-badges">
@@ -1078,121 +1270,154 @@
 					<!-- Account Info: Balance & Usage -->
 					{#if true}
 						{@const info = accountInfo[key.id]}
-					<div class="account-info-section">
-						<div class="account-info-row">
-							<!-- Balance -->
-							<div class="balance-display">
-								<div class="balance-label">
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-										<line x1="12" y1="1" x2="12" y2="23" />
-										<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-									</svg>
-									{#if info?.balance?.label}
-										{info.balance.label}
-									{:else if key.provider === 'openai'}
-										30-Day Spend
+						<div class="account-info-section">
+							<div class="account-info-row">
+								<!-- Balance -->
+								<div class="balance-display">
+									<div class="balance-label">
+										<svg
+											width="14"
+											height="14"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
+											<line x1="12" y1="1" x2="12" y2="23" />
+											<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+										</svg>
+										{#if info?.balance?.label}
+											{info.balance.label}
+										{:else if key.provider === 'openai'}
+											30-Day Spend
+										{:else}
+											Balance
+										{/if}
+									</div>
+									{#if info?.loading}
+										<div class="balance-value balance-loading">
+											<span class="loading-dot"></span>
+											<span class="loading-dot"></span>
+											<span class="loading-dot"></span>
+										</div>
+									{:else if info?.balance?.available && info.balance.rateLimits}
+										<div class="balance-value rate-limits">
+											{#if info.balance.rateLimits.requestsRemaining != null}
+												<span
+													class="rate-limit-item"
+													title="Requests: {info.balance.rateLimits.requestsRemaining?.toLocaleString()} / {info.balance.rateLimits.requestsLimit?.toLocaleString()}"
+												>
+													{info.balance.rateLimits.requestsRemaining?.toLocaleString()}/{info.balance.rateLimits.requestsLimit?.toLocaleString()}
+													req
+												</span>
+											{/if}
+											{#if info.balance.rateLimits.tokensRemaining != null}
+												<span
+													class="rate-limit-item"
+													title="Tokens: {info.balance.rateLimits.tokensRemaining?.toLocaleString()} / {info.balance.rateLimits.tokensLimit?.toLocaleString()}"
+												>
+													{info.balance.rateLimits.tokensRemaining?.toLocaleString()}/{info.balance.rateLimits.tokensLimit?.toLocaleString()}
+													tok
+												</span>
+											{/if}
+										</div>
+									{:else if info?.balance?.available}
+										<div class="balance-value">
+											{formatCurrency(info.balance.amount ?? 0)}
+										</div>
+									{:else if info?.balance}
+										<div class="balance-value balance-na" title={info.balance.reason || ''}>
+											N/A
+										</div>
 									{:else}
-										Balance
+										<div class="balance-value balance-na">—</div>
 									{/if}
+									<button
+										class="btn-icon-xs"
+										on:click={() => loadAccountInfo(key.id)}
+										aria-label="Refresh account info"
+										disabled={info?.loading}
+									>
+										<svg
+											width="12"
+											height="12"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											class:spinning={info?.loading}
+										>
+											<polyline points="23 4 23 10 17 10" />
+											<polyline points="1 20 1 14 7 14" />
+											<path
+												d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+											/>
+										</svg>
+									</button>
 								</div>
-								{#if info?.loading}
-									<div class="balance-value balance-loading">
-										<span class="loading-dot"></span>
-										<span class="loading-dot"></span>
-										<span class="loading-dot"></span>
-									</div>
-								{:else if info?.balance?.available && info.balance.rateLimits}
-									<div class="balance-value rate-limits">
-										{#if info.balance.rateLimits.requestsRemaining != null}
-											<span class="rate-limit-item" title="Requests: {info.balance.rateLimits.requestsRemaining?.toLocaleString()} / {info.balance.rateLimits.requestsLimit?.toLocaleString()}">
-												{info.balance.rateLimits.requestsRemaining?.toLocaleString()}/{info.balance.rateLimits.requestsLimit?.toLocaleString()} req
+
+								<!-- Usage summary -->
+								{#if info?.usage?.available && info.usage.totalRequests}
+									<div class="usage-summary">
+										<span class="usage-stat">
+											<svg
+												width="12"
+												height="12"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+											>
+												<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+											</svg>
+											{info.usage.totalRequests} requests
+										</span>
+										{#if info.usage.totalCost}
+											<span class="usage-stat">
+												{formatCurrency(info.usage.totalCost)} spent
 											</span>
 										{/if}
-										{#if info.balance.rateLimits.tokensRemaining != null}
-											<span class="rate-limit-item" title="Tokens: {info.balance.rateLimits.tokensRemaining?.toLocaleString()} / {info.balance.rateLimits.tokensLimit?.toLocaleString()}">
-												{info.balance.rateLimits.tokensRemaining?.toLocaleString()}/{info.balance.rateLimits.tokensLimit?.toLocaleString()} tok
-											</span>
-										{/if}
-									</div>
-								{:else if info?.balance?.available}
-									<div class="balance-value">
-										{formatCurrency(info.balance.amount ?? 0)}
-									</div>
-								{:else if info?.balance}
-									<div class="balance-value balance-na" title={info.balance.reason || ''}>
-										N/A
-									</div>
-								{:else}
-									<div class="balance-value balance-na">
-										—
 									</div>
 								{/if}
-								<button
-									class="btn-icon-xs"
-									on:click={() => loadAccountInfo(key.id)}
-									aria-label="Refresh account info"
-									disabled={info?.loading}
-								>
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-										stroke-width="2" class:spinning={info?.loading}>
-										<polyline points="23 4 23 10 17 10" />
-										<polyline points="1 20 1 14 7 14" />
-										<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-									</svg>
-								</button>
 							</div>
 
-							<!-- Usage summary -->
-							{#if info?.usage?.available && info.usage.totalRequests}
-								<div class="usage-summary">
-									<span class="usage-stat">
-										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-											<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+							<!-- Usage Chart -->
+							{#if info?.usage?.available && info.usage.daily.length > 0}
+								{@const daily = info.usage.daily}
+								{@const maxCost = Math.max(...daily.map((d) => d.cost), 0.01)}
+								<div class="usage-chart-container">
+									<div class="usage-chart-header">
+										<span class="usage-chart-title">Daily Usage (30 days)</span>
+										<span class="usage-chart-max">{formatCurrency(maxCost)} peak</span>
+									</div>
+									<div class="usage-chart">
+										<svg
+											viewBox="0 0 {daily.length * 14} 48"
+											preserveAspectRatio="none"
+											class="usage-bars"
+										>
+											{#each daily as day, i}
+												{@const barHeight = Math.max((day.cost / maxCost) * 40, 1)}
+												<rect
+													x={i * 14 + 2}
+													y={48 - barHeight - 4}
+													width="10"
+													height={barHeight}
+													rx="2"
+													class="usage-bar"
+												>
+													<title
+														>{day.date}: {formatCurrency(day.cost)} ({day.requests} requests)</title
+													>
+												</rect>
+											{/each}
 										</svg>
-										{info.usage.totalRequests} requests
-									</span>
-									{#if info.usage.totalCost}
-										<span class="usage-stat">
-											{formatCurrency(info.usage.totalCost)} spent
-										</span>
-									{/if}
+									</div>
 								</div>
+							{:else if info && !info.loading && info.usage?.available}
+								<div class="usage-chart-empty">No usage data in the last 30 days</div>
 							{/if}
 						</div>
-
-						<!-- Usage Chart -->
-						{#if info?.usage?.available && info.usage.daily.length > 0}
-							{@const daily = info.usage.daily}
-							{@const maxCost = Math.max(...daily.map(d => d.cost), 0.01)}
-							<div class="usage-chart-container">
-								<div class="usage-chart-header">
-									<span class="usage-chart-title">Daily Usage (30 days)</span>
-									<span class="usage-chart-max">{formatCurrency(maxCost)} peak</span>
-								</div>
-								<div class="usage-chart">
-									<svg viewBox="0 0 {daily.length * 14} 48" preserveAspectRatio="none" class="usage-bars">
-										{#each daily as day, i}
-											{@const barHeight = Math.max((day.cost / maxCost) * 40, 1)}
-											<rect
-												x={i * 14 + 2}
-												y={48 - barHeight - 4}
-												width="10"
-												height={barHeight}
-												rx="2"
-												class="usage-bar"
-											>
-												<title>{day.date}: {formatCurrency(day.cost)} ({day.requests} requests)</title>
-											</rect>
-										{/each}
-									</svg>
-								</div>
-							</div>
-						{:else if info && !info.loading && info.usage?.available}
-							<div class="usage-chart-empty">
-								No usage data in the last 30 days
-							</div>
-						{/if}
-					</div>
 					{/if}
 
 					<div class="key-meta">
@@ -1201,7 +1426,12 @@
 				</div>
 			{/each}
 			<!-- Final drop slot (after last item) -->
-			<div class="drop-slot" class:drop-slot-active={isDragging && dropTargetIndex === keys.length && dragFromIndex !== keys.length - 1}>
+			<div
+				class="drop-slot"
+				class:drop-slot-active={isDragging &&
+					dropTargetIndex === keys.length &&
+					dragFromIndex !== keys.length - 1}
+			>
 				<div class="drop-slot-inner">
 					<span class="drop-slot-dot"></span>
 					<span class="drop-slot-line"></span>
@@ -1213,7 +1443,15 @@
 		</div>
 		{#if savingOrder}
 			<div class="save-order-indicator">
-				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning">
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					class="spinning"
+				>
 					<polyline points="23 4 23 10 17 10" />
 					<polyline points="1 20 1 14 7 14" />
 					<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
@@ -1282,7 +1520,14 @@
 								rel="noopener noreferrer"
 								class="btn btn-sm btn-outline"
 							>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
 									<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
 									<polyline points="15 3 21 3 21 9" />
 									<line x1="10" y1="14" x2="21" y2="3" />
@@ -1296,7 +1541,11 @@
 						type="password"
 						bind:value={formData.apiKey}
 						class:error={errors.apiKey}
-						placeholder={editingKey ? 'Leave blank to keep existing' : formData.provider === 'wavespeed' ? 'Paste your WaveSpeed API key' : 'Enter API key'}
+						placeholder={editingKey
+							? 'Leave blank to keep existing'
+							: formData.provider === 'wavespeed'
+								? 'Paste your WaveSpeed API key'
+								: 'Enter API key'}
 					/>
 					{#if errors.apiKey}
 						<span class="error-message">{errors.apiKey}</span>
@@ -1318,14 +1567,28 @@
 							{#if wavespeedValidationResult}
 								{#if wavespeedValidationResult.valid}
 									<span class="validation-success">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<svg
+											width="14"
+											height="14"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
 											<polyline points="20 6 9 17 4 12" />
 										</svg>
 										Valid — Balance: ${wavespeedValidationResult.balance?.toFixed(2)}
 									</span>
 								{:else}
 									<span class="validation-error">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<svg
+											width="14"
+											height="14"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
 											<circle cx="12" cy="12" r="10" />
 											<line x1="15" y1="9" x2="9" y2="15" />
 											<line x1="9" y1="9" x2="15" y2="15" />
@@ -1598,13 +1861,15 @@
 											<div class="model-pricing">
 												<div class="price-row">
 													<span class="price-tag">
-														<span class="price-label">{model.resolutions}:</span> ${model.pricing.perSecond.toFixed(2)}/sec
+														<span class="price-label">{model.resolutions}:</span>
+														${model.pricing.perSecond.toFixed(2)}/sec
 													</span>
 												</div>
 												{#if model.pricing.perSecondHighRes}
 													<div class="price-row">
 														<span class="price-tag">
-															<span class="price-label">1080p+:</span> ${model.pricing.perSecondHighRes.toFixed(2)}/sec
+															<span class="price-label">1080p+:</span>
+															${model.pricing.perSecondHighRes.toFixed(2)}/sec
 														</span>
 													</div>
 												{/if}
@@ -1651,20 +1916,25 @@
 								{#if wavespeedPricingLoading}
 									<span class="loading-hint">Loading pricing...</span>
 								{:else if wavespeedPricingCached}
-									<button type="button" class="refresh-pricing-btn" on:click|preventDefault={() => loadWaveSpeedPricing(true)}>
+									<button
+										type="button"
+										class="refresh-pricing-btn"
+										on:click|preventDefault={() => loadWaveSpeedPricing(true)}
+									>
 										↻ Refresh pricing
 									</button>
 								{/if}
 							</p>
-							{@const videoModels = wavespeedModelOptions.filter(m => m.category === 'video')}
-							{@const imageModels = wavespeedModelOptions.filter(m => m.category === 'image')}
+							{@const videoModels = wavespeedModelOptions.filter((m) => m.category === 'video')}
+							{@const imageModels = wavespeedModelOptions.filter((m) => m.category === 'image')}
 							{#if videoModels.length > 0}
 								<div class="model-category-label">Video Models</div>
 								<div class="model-grid">
 									{#each videoModels as model}
 										{@const price = getWaveSpeedPrice(model.id)}
 										{@const modelType = getWaveSpeedModelType(model.id)}
-										{@const isLivePrice = wavespeedPricing.length > 0 && getWaveSpeedLivePrice(model.id) !== null}
+										{@const isLivePrice =
+											wavespeedPricing.length > 0 && getWaveSpeedLivePrice(model.id) !== null}
 										<button
 											type="button"
 											class="model-card video-card"
@@ -1705,7 +1975,8 @@
 								<div class="model-grid">
 									{#each imageModels as model}
 										{@const price = getWaveSpeedPrice(model.id)}
-										{@const isLivePrice = wavespeedPricing.length > 0 && getWaveSpeedLivePrice(model.id) !== null}
+										{@const isLivePrice =
+											wavespeedPricing.length > 0 && getWaveSpeedLivePrice(model.id) !== null}
 										<button
 											type="button"
 											class="model-card video-card"
@@ -2148,8 +2419,14 @@
 	}
 
 	@keyframes dotPulse {
-		0%, 80%, 100% { opacity: 0.3; }
-		40% { opacity: 1; }
+		0%,
+		80%,
+		100% {
+			opacity: 0.3;
+		}
+		40% {
+			opacity: 1;
+		}
 	}
 
 	.balance-na {
@@ -2201,8 +2478,12 @@
 	}
 
 	@keyframes spin {
-		from { transform: rotate(0deg); }
-		to { transform: rotate(360deg); }
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.usage-summary {
@@ -2913,9 +3194,11 @@
 		color: var(--color-text-secondary);
 		cursor: grab;
 		border-radius: var(--radius-sm);
-		transition: color 0.15s ease, background 0.15s ease;
+		transition:
+			color 0.15s ease,
+			background 0.15s ease;
 		flex-shrink: 0;
-		touch-action: none;   /* critical: prevents browser scroll/pan on touch */
+		touch-action: none; /* critical: prevents browser scroll/pan on touch */
 		-webkit-user-select: none;
 		user-select: none;
 		padding: 0;
@@ -2949,7 +3232,10 @@
 
 	/* Card drag states */
 	.key-card {
-		transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease, box-shadow 0.2s ease;
+		transition:
+			transform 0.25s cubic-bezier(0.2, 0, 0, 1),
+			opacity 0.2s ease,
+			box-shadow 0.2s ease;
 		position: relative;
 	}
 
@@ -2980,7 +3266,9 @@
 		padding: 6px 0;
 		opacity: 0;
 		transform: scaleX(0.7);
-		transition: opacity 0.15s ease 0.05s, transform 0.2s cubic-bezier(0.2, 0, 0, 1) 0.05s;
+		transition:
+			opacity 0.15s ease 0.05s,
+			transform 0.2s cubic-bezier(0.2, 0, 0, 1) 0.05s;
 	}
 
 	.drop-slot-active .drop-slot-inner {
@@ -3002,8 +3290,13 @@
 	}
 
 	@keyframes slotDotPulse {
-		0%, 100% { transform: scale(1); }
-		50% { transform: scale(1.4); }
+		0%,
+		100% {
+			transform: scale(1);
+		}
+		50% {
+			transform: scale(1.4);
+		}
 	}
 
 	.drop-slot-line {
@@ -3027,7 +3320,9 @@
 
 	/* Overlay during drag — subtle darken for non-dragged cards */
 	.keys-list.is-dragging .key-card:not(.is-dragged) {
-		transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
+		transition:
+			transform 0.25s cubic-bezier(0.2, 0, 0, 1),
+			opacity 0.2s ease;
 	}
 
 	/* Save order indicator */
@@ -3044,8 +3339,12 @@
 	}
 
 	@keyframes fadeIn {
-		from { opacity: 0; }
-		to { opacity: 1; }
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 
 	/* Mobile responsive, larger hit targets */

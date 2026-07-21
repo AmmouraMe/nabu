@@ -165,7 +165,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 						'SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?'
 					)
 						.bind('github', githubUser.id.toString())
-						.first<{ user_id: string; }>();
+						.first<{ user_id: string }>();
 
 					if (existingOAuth && existingOAuth.user_id !== existingUser.id) {
 						// GitHub account is linked to a different user - merge the accounts
@@ -213,7 +213,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 					'SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?'
 				)
 					.bind('github', githubUser.id.toString())
-					.first<{ user_id: string; }>();
+					.first<{ user_id: string }>();
 
 				if (linkedAccount) {
 					// Log in as the linked user
@@ -273,7 +273,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 					'SELECT id, is_admin FROM users WHERE id = ?'
 				)
 					.bind(githubUser.id.toString())
-					.first<{ id: string; is_admin: number; }>();
+					.first<{ id: string; is_admin: number }>();
 
 				if (existingUserRecord) {
 					// Update existing user
@@ -297,7 +297,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 						'SELECT id FROM oauth_accounts WHERE user_id = ? AND provider = ?'
 					)
 						.bind(githubUser.id.toString(), 'github')
-						.first<{ id: string; }>();
+						.first<{ id: string }>();
 
 					if (!existingOAuthRecord) {
 						await platform.env.DB.prepare(

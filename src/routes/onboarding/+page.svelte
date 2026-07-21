@@ -11,7 +11,10 @@
 
 <svelte:head>
 	<title>Brand Architect — Build Your Brand | NebulaKit</title>
-	<meta name="description" content="AI-powered brand building wizard using psychology, philosophy, and world-class marketing expertise." />
+	<meta
+		name="description"
+		content="AI-powered brand building wizard using psychology, philosophy, and world-class marketing expertise."
+	/>
 </svelte:head>
 
 <div class="onboarding-page">
@@ -23,8 +26,8 @@
 				<span class="notice-icon">⚙️</span>
 				<h2>AI Provider Required</h2>
 				<p>
-					The Brand Architect needs an AI provider to work.
-					Please configure an OpenAI API key in the admin panel first.
+					The Brand Architect needs an AI provider to work. Please configure an OpenAI API key in
+					the admin panel first.
 				</p>
 				<a href="/admin" class="admin-link">Go to Admin Panel →</a>
 			</div>

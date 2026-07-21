@@ -5,11 +5,11 @@
  */
 
 import type {
-  BrandProfile,
-  OnboardingMessage,
-  OnboardingStep,
-  OnboardingStepConfig,
-  BrandStyleGuide
+	BrandProfile,
+	OnboardingMessage,
+	OnboardingStep,
+	OnboardingStepConfig,
+	BrandStyleGuide
 } from '$lib/types/onboarding';
 import type { ChatMessage, ChatMessageContentPart } from '$lib/services/openai-chat';
 import type { D1Database } from '@cloudflare/workers-types';
@@ -20,10 +20,10 @@ import type { BrandText, BrandAssetSummary } from '$lib/types/brand-assets';
  * Fetched from brand_texts and brand_media tables.
  */
 export interface BrandContentContext {
-  /** Text assets (names, messaging, descriptions, legal, social, voice) */
-  texts: BrandText[];
-  /** Summary counts of media assets */
-  assetSummary: BrandAssetSummary;
+	/** Text assets (names, messaging, descriptions, legal, social, voice) */
+	texts: BrandText[];
+	/** Summary counts of media assets */
+	assetSummary: BrandAssetSummary;
 }
 
 /**
@@ -45,12 +45,12 @@ When you are confident that you have gathered enough information for this step a
 
 Do NOT include the marker on your first message in a step — always have at least one exchange with the user first. If the user seems to want to discuss more, continue the conversation without the marker.`;
 export const ONBOARDING_STEPS: OnboardingStepConfig[] = [
-  {
-    id: 'welcome',
-    title: 'Welcome',
-    description: 'Introduction and brand assessment',
-    extractionFields: [],
-    systemPrompt: `You are NebulaKit's Brand Architect — a world-class brand strategist, marketing expert, and creative director rolled into one. You combine deep knowledge of consumer psychology, Jungian archetypes, behavioral economics, and design thinking to help people build extraordinary brands.
+	{
+		id: 'welcome',
+		title: 'Welcome',
+		description: 'Introduction and brand assessment',
+		extractionFields: [],
+		systemPrompt: `You are NebulaKit's Brand Architect — a world-class brand strategist, marketing expert, and creative director rolled into one. You combine deep knowledge of consumer psychology, Jungian archetypes, behavioral economics, and design thinking to help people build extraordinary brands.
 
 Your personality is warm, encouraging, and insightful. You ask thoughtful questions and make the process feel exciting, not overwhelming.
 
@@ -64,13 +64,13 @@ Based on their answer:
 - If they have NOTHING AT ALL yet: That's perfectly fine! Tell them you'll start from their passions, skills, and values to find the perfect market fit. Ask them what they're passionate about, what skills they have, and what problems they notice in the world.
 
 Keep your response concise (3-5 sentences max before the question). Be conversational, not corporate.`
-  },
-  {
-    id: 'brand_assessment',
-    title: 'Brand Assessment',
-    description: 'Understanding what exists and what needs to be built',
-    extractionFields: ['brandName', 'industry', 'elevatorPitch'],
-    systemPrompt: `You are NebulaKit's Brand Architect continuing the brand assessment phase.
+	},
+	{
+		id: 'brand_assessment',
+		title: 'Brand Assessment',
+		description: 'Understanding what exists and what needs to be built',
+		extractionFields: ['brandName', 'industry', 'elevatorPitch'],
+		systemPrompt: `You are NebulaKit's Brand Architect continuing the brand assessment phase.
 
 Your goal: Deeply understand what this person has (or doesn't have) and help them articulate their core business concept.
 
@@ -88,19 +88,19 @@ If they mention a brand name, acknowledge it. If they don't have one, reassure t
 When you feel you have enough to work with (usually after 2-4 exchanges), summarize what you've understood and confirm before moving on. End with: "Ready to dive into building your brand identity?"
 
 IMPORTANT: ALWAYS acknowledge what the user shared before asking the next question. Make them feel heard.`
-  },
-  {
-    id: 'brand_identity',
-    title: 'Brand Identity',
-    description: 'Defining name, mission, vision, and core positioning',
-    extractionFields: [
-      'brandName',
-      'tagline',
-      'missionStatement',
-      'visionStatement',
-      'elevatorPitch'
-    ],
-    systemPrompt: `You are NebulaKit's Brand Architect working on brand identity.
+	},
+	{
+		id: 'brand_identity',
+		title: 'Brand Identity',
+		description: 'Defining name, mission, vision, and core positioning',
+		extractionFields: [
+			'brandName',
+			'tagline',
+			'missionStatement',
+			'visionStatement',
+			'elevatorPitch'
+		],
+		systemPrompt: `You are NebulaKit's Brand Architect working on brand identity.
 
 {BRAND_CONTEXT}
 
@@ -124,13 +124,13 @@ When discussing names, consider:
 - Cultural/linguistic implications
 - Domain/trademark availability awareness
 - How it looks written and sounds spoken`
-  },
-  {
-    id: 'target_audience',
-    title: 'Target Audience',
-    description: 'Identifying ideal customers using psychology and demographics',
-    extractionFields: ['targetAudience', 'customerPainPoints', 'valueProposition'],
-    systemPrompt: `You are NebulaKit's Brand Architect working on target audience definition.
+	},
+	{
+		id: 'target_audience',
+		title: 'Target Audience',
+		description: 'Identifying ideal customers using psychology and demographics',
+		extractionFields: ['targetAudience', 'customerPainPoints', 'valueProposition'],
+		systemPrompt: `You are NebulaKit's Brand Architect working on target audience definition.
 
 {BRAND_CONTEXT}
 
@@ -156,18 +156,18 @@ Help them build a detailed customer avatar using psychological and demographic f
 Guide them through this conversationally. Use examples from successful brands to illustrate points. Make it tangible, not theoretical.
 
 IMPORTANT: If they struggle, draw from the brand info we already have to suggest audience profiles they can react to. It's easier to refine than to create from nothing.`
-  },
-  {
-    id: 'brand_personality',
-    title: 'Brand Personality',
-    description: 'Defining brand archetype and psychological profile',
-    extractionFields: [
-      'brandArchetype',
-      'brandPersonalityTraits',
-      'toneOfVoice',
-      'communicationStyle'
-    ],
-    systemPrompt: `You are NebulaKit's Brand Architect working on brand personality and psychology.
+	},
+	{
+		id: 'brand_personality',
+		title: 'Brand Personality',
+		description: 'Defining brand archetype and psychological profile',
+		extractionFields: [
+			'brandArchetype',
+			'brandPersonalityTraits',
+			'toneOfVoice',
+			'communicationStyle'
+		],
+		systemPrompt: `You are NebulaKit's Brand Architect working on brand personality and psychology.
 
 {BRAND_CONTEXT}
 
@@ -199,30 +199,30 @@ Use the Big Five personality model (OCEAN) as a reference for traits:
 - Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism
 
 Make this FUN. Ask: "If your brand walked into a party, how would people describe them?"`
-  },
-  {
-    id: 'visual_identity',
-    title: 'Visual Identity',
-    description: 'Colors, typography, and visual direction',
-    extractionFields: [
-      'primaryColor',
-      'secondaryColor',
-      'accentColor',
-      'backgroundColor',
-      'surfaceColor',
-      'textColor',
-      'textSecondaryColor',
-      'borderColor',
-      'successColor',
-      'warningColor',
-      'errorColor',
-      'colorPalette',
-      'typographyLogo',
-      'typographyHeading',
-      'typographyBody',
-      'logoConcept'
-    ],
-    systemPrompt: `You are NebulaKit's Brand Architect working on visual identity.
+	},
+	{
+		id: 'visual_identity',
+		title: 'Visual Identity',
+		description: 'Colors, typography, and visual direction',
+		extractionFields: [
+			'primaryColor',
+			'secondaryColor',
+			'accentColor',
+			'backgroundColor',
+			'surfaceColor',
+			'textColor',
+			'textSecondaryColor',
+			'borderColor',
+			'successColor',
+			'warningColor',
+			'errorColor',
+			'colorPalette',
+			'typographyLogo',
+			'typographyHeading',
+			'typographyBody',
+			'logoConcept'
+		],
+		systemPrompt: `You are NebulaKit's Brand Architect working on visual identity.
 
 {BRAND_CONTEXT}
 
@@ -254,13 +254,13 @@ Now translate the brand personality into visual language using **Color Psycholog
 Present color suggestions as specific hex codes. For the palette, suggest 5-7 colors (primary, secondary, accent, plus neutrals/tints).
 
 Make this visual and exciting. Help them SEE the brand coming to life.`
-  },
-  {
-    id: 'market_positioning',
-    title: 'Market Position',
-    description: 'Competitive analysis and market positioning',
-    extractionFields: ['competitors', 'uniqueSellingPoints', 'marketPosition', 'industry'],
-    systemPrompt: `You are NebulaKit's Brand Architect working on market positioning strategy.
+	},
+	{
+		id: 'market_positioning',
+		title: 'Market Position',
+		description: 'Competitive analysis and market positioning',
+		extractionFields: ['competitors', 'uniqueSellingPoints', 'marketPosition', 'industry'],
+		systemPrompt: `You are NebulaKit's Brand Architect working on market positioning strategy.
 
 {BRAND_CONTEXT}
 
@@ -290,13 +290,13 @@ Help them carve out their unique market position using proven strategic framewor
 6. **Unique Selling Points (USPs)**: 3-5 things that make them genuinely different.
 
 Be strategic and realistic. Don't just validate — challenge their assumptions when needed. A good strategist pushes for clarity.`
-  },
-  {
-    id: 'brand_story',
-    title: 'Brand Story',
-    description: 'Crafting the narrative, values, and brand promise',
-    extractionFields: ['originStory', 'brandValues', 'brandPromise'],
-    systemPrompt: `You are NebulaKit's Brand Architect working on brand story and narrative.
+	},
+	{
+		id: 'brand_story',
+		title: 'Brand Story',
+		description: 'Crafting the narrative, values, and brand promise',
+		extractionFields: ['originStory', 'brandValues', 'brandPromise'],
+		systemPrompt: `You are NebulaKit's Brand Architect working on brand story and narrative.
 
 {BRAND_CONTEXT}
 
@@ -327,13 +327,13 @@ Every great brand has a compelling story. Help them craft theirs using narrative
    - This becomes the template for all brand communications
 
 Help them see that brand story isn't fiction — it's the authentic WHY woven into a compelling narrative.`
-  },
-  {
-    id: 'style_guide',
-    title: 'Style Guide',
-    description: 'Generating the complete brand style guide',
-    extractionFields: ['styleGuide'],
-    systemPrompt: `You are NebulaKit's Brand Architect compiling the complete brand style guide.
+	},
+	{
+		id: 'style_guide',
+		title: 'Style Guide',
+		description: 'Generating the complete brand style guide',
+		extractionFields: ['styleGuide'],
+		systemPrompt: `You are NebulaKit's Brand Architect compiling the complete brand style guide.
 
 {BRAND_CONTEXT}
 
@@ -385,13 +385,13 @@ Now compile everything into a comprehensive, actionable Brand Style Guide. Prese
 - **Sample Messages**: [3-5 examples]
 
 After presenting the guide, ask if they'd like to adjust anything. Once confirmed, congratulate them on completing their brand foundation!`
-  },
-  {
-    id: 'complete',
-    title: 'Complete',
-    description: 'Onboarding complete — brand is ready',
-    extractionFields: [],
-    systemPrompt: `You are NebulaKit's Brand Architect. The brand building process is complete!
+	},
+	{
+		id: 'complete',
+		title: 'Complete',
+		description: 'Onboarding complete — brand is ready',
+		extractionFields: [],
+		systemPrompt: `You are NebulaKit's Brand Architect. The brand building process is complete!
 
 {BRAND_CONTEXT}
 
@@ -410,14 +410,14 @@ Then explain what they can do next:
 End with an inspiring message about the journey from idea to brand. Make them feel proud and excited.
 
 Keep it concise and celebratory.`
-  }
+	}
 ];
 
 /**
  * Get step configuration by step ID
  */
 export function getStepConfig(stepId: OnboardingStep): OnboardingStepConfig | undefined {
-  return ONBOARDING_STEPS.find((s) => s.id === stepId);
+	return ONBOARDING_STEPS.find((s) => s.id === stepId);
 }
 
 /**
@@ -425,73 +425,54 @@ export function getStepConfig(stepId: OnboardingStep): OnboardingStepConfig | un
  * Used to give the AI full awareness of what's already filled in.
  */
 export function buildBrandContextString(brandData: Partial<BrandProfile>): string {
-  const contextParts: string[] = [];
+	const contextParts: string[] = [];
 
-  // Identity
-  if (brandData.brandName) contextParts.push(`Brand Name: ${brandData.brandName}`);
-  if (brandData.industry) contextParts.push(`Industry: ${brandData.industry}`);
-  if (brandData.tagline) contextParts.push(`Tagline: ${brandData.tagline}`);
-  if (brandData.missionStatement)
-    contextParts.push(`Mission: ${brandData.missionStatement}`);
-  if (brandData.visionStatement)
-    contextParts.push(`Vision: ${brandData.visionStatement}`);
-  if (brandData.elevatorPitch)
-    contextParts.push(`Elevator Pitch: ${brandData.elevatorPitch}`);
+	// Identity
+	if (brandData.brandName) contextParts.push(`Brand Name: ${brandData.brandName}`);
+	if (brandData.industry) contextParts.push(`Industry: ${brandData.industry}`);
+	if (brandData.tagline) contextParts.push(`Tagline: ${brandData.tagline}`);
+	if (brandData.missionStatement) contextParts.push(`Mission: ${brandData.missionStatement}`);
+	if (brandData.visionStatement) contextParts.push(`Vision: ${brandData.visionStatement}`);
+	if (brandData.elevatorPitch) contextParts.push(`Elevator Pitch: ${brandData.elevatorPitch}`);
 
-  // Personality
-  if (brandData.brandArchetype)
-    contextParts.push(`Brand Archetype: ${brandData.brandArchetype}`);
-  if (brandData.toneOfVoice) contextParts.push(`Tone of Voice: ${brandData.toneOfVoice}`);
-  if (brandData.communicationStyle)
-    contextParts.push(`Communication Style: ${brandData.communicationStyle}`);
-  if (brandData.brandPersonalityTraits)
-    contextParts.push(
-      `Personality Traits: ${brandData.brandPersonalityTraits}`
-    );
+	// Personality
+	if (brandData.brandArchetype) contextParts.push(`Brand Archetype: ${brandData.brandArchetype}`);
+	if (brandData.toneOfVoice) contextParts.push(`Tone of Voice: ${brandData.toneOfVoice}`);
+	if (brandData.communicationStyle)
+		contextParts.push(`Communication Style: ${brandData.communicationStyle}`);
+	if (brandData.brandPersonalityTraits)
+		contextParts.push(`Personality Traits: ${brandData.brandPersonalityTraits}`);
 
-  // Audience
-  if (brandData.targetAudience)
-    contextParts.push(`Target Audience: ${brandData.targetAudience}`);
-  if (brandData.customerPainPoints)
-    contextParts.push(`Customer Pain Points: ${brandData.customerPainPoints}`);
-  if (brandData.valueProposition)
-    contextParts.push(`Value Proposition: ${brandData.valueProposition}`);
+	// Audience
+	if (brandData.targetAudience) contextParts.push(`Target Audience: ${brandData.targetAudience}`);
+	if (brandData.customerPainPoints)
+		contextParts.push(`Customer Pain Points: ${brandData.customerPainPoints}`);
+	if (brandData.valueProposition)
+		contextParts.push(`Value Proposition: ${brandData.valueProposition}`);
 
-  // Visual
-  if (brandData.primaryColor) contextParts.push(`Primary Color: ${brandData.primaryColor}`);
-  if (brandData.secondaryColor)
-    contextParts.push(`Secondary Color: ${brandData.secondaryColor}`);
-  if (brandData.accentColor) contextParts.push(`Accent Color: ${brandData.accentColor}`);
-  if (brandData.colorPalette?.length)
-    contextParts.push(`Color Palette: ${brandData.colorPalette.join(', ')}`);
-  if (brandData.typographyLogo)
-    contextParts.push(`Logo Font: ${brandData.typographyLogo}`);
-  if (brandData.typographyHeading)
-    contextParts.push(`Heading Font: ${brandData.typographyHeading}`);
-  if (brandData.typographyBody)
-    contextParts.push(`Body Font: ${brandData.typographyBody}`);
-  if (brandData.logoConcept)
-    contextParts.push(`Logo Concept: ${brandData.logoConcept}`);
+	// Visual
+	if (brandData.primaryColor) contextParts.push(`Primary Color: ${brandData.primaryColor}`);
+	if (brandData.secondaryColor) contextParts.push(`Secondary Color: ${brandData.secondaryColor}`);
+	if (brandData.accentColor) contextParts.push(`Accent Color: ${brandData.accentColor}`);
+	if (brandData.colorPalette?.length)
+		contextParts.push(`Color Palette: ${brandData.colorPalette.join(', ')}`);
+	if (brandData.typographyLogo) contextParts.push(`Logo Font: ${brandData.typographyLogo}`);
+	if (brandData.typographyHeading)
+		contextParts.push(`Heading Font: ${brandData.typographyHeading}`);
+	if (brandData.typographyBody) contextParts.push(`Body Font: ${brandData.typographyBody}`);
+	if (brandData.logoConcept) contextParts.push(`Logo Concept: ${brandData.logoConcept}`);
 
-  // Market
-  if (brandData.marketPosition)
-    contextParts.push(`Market Position: ${brandData.marketPosition}`);
-  if (brandData.competitors)
-    contextParts.push(`Competitors: ${brandData.competitors}`);
-  if (brandData.uniqueSellingPoints)
-    contextParts.push(`USPs: ${brandData.uniqueSellingPoints}`);
+	// Market
+	if (brandData.marketPosition) contextParts.push(`Market Position: ${brandData.marketPosition}`);
+	if (brandData.competitors) contextParts.push(`Competitors: ${brandData.competitors}`);
+	if (brandData.uniqueSellingPoints) contextParts.push(`USPs: ${brandData.uniqueSellingPoints}`);
 
-  // Story
-  if (brandData.brandValues)
-    contextParts.push(`Brand Values: ${brandData.brandValues}`);
-  if (brandData.brandPromise)
-    contextParts.push(`Brand Promise: ${brandData.brandPromise}`);
-  if (brandData.originStory)
-    contextParts.push(`Origin Story: ${brandData.originStory}`);
+	// Story
+	if (brandData.brandValues) contextParts.push(`Brand Values: ${brandData.brandValues}`);
+	if (brandData.brandPromise) contextParts.push(`Brand Promise: ${brandData.brandPromise}`);
+	if (brandData.originStory) contextParts.push(`Origin Story: ${brandData.originStory}`);
 
-  return contextParts.length > 0
-    ? contextParts.join('\n')
-    : '';
+	return contextParts.length > 0 ? contextParts.join('\n') : '';
 }
 
 /**
@@ -499,101 +480,103 @@ export function buildBrandContextString(brandData: Partial<BrandProfile>): strin
  * Gives the AI awareness of what copy/content has been created.
  */
 export function buildBrandContentContextString(content: BrandContentContext): string {
-  const parts: string[] = [];
+	const parts: string[] = [];
 
-  // Group texts by category
-  if (content.texts.length > 0) {
-    const byCategory = new Map<string, BrandText[]>();
-    for (const text of content.texts) {
-      const existing = byCategory.get(text.category) || [];
-      existing.push(text);
-      byCategory.set(text.category, existing);
-    }
+	// Group texts by category
+	if (content.texts.length > 0) {
+		const byCategory = new Map<string, BrandText[]>();
+		for (const text of content.texts) {
+			const existing = byCategory.get(text.category) || [];
+			existing.push(text);
+			byCategory.set(text.category, existing);
+		}
 
-    parts.push('EXISTING BRAND COPY & TEXT ASSETS:');
-    for (const [category, texts] of byCategory) {
-      const label = category.charAt(0).toUpperCase() + category.slice(1);
-      parts.push(`  ${label}:`);
-      for (const t of texts) {
-        // Truncate very long values to keep context manageable
-        const value = t.value.length > 300 ? t.value.slice(0, 300) + '…' : t.value;
-        parts.push(`    - ${t.label}: ${value}`);
-      }
-    }
-  }
+		parts.push('EXISTING BRAND COPY & TEXT ASSETS:');
+		for (const [category, texts] of byCategory) {
+			const label = category.charAt(0).toUpperCase() + category.slice(1);
+			parts.push(`  ${label}:`);
+			for (const t of texts) {
+				// Truncate very long values to keep context manageable
+				const value = t.value.length > 300 ? t.value.slice(0, 300) + '…' : t.value;
+				parts.push(`    - ${t.label}: ${value}`);
+			}
+		}
+	}
 
-  // Asset summary
-  const s = content.assetSummary;
-  if (s.totalCount > 0 || s.videoGenerationsCount > 0) {
-    parts.push('BRAND ASSET INVENTORY:');
-    if (s.imageCount > 0) parts.push(`  - ${s.imageCount} image(s) (logos, social, marketing, etc.)`);
-    if (s.audioCount > 0) parts.push(`  - ${s.audioCount} audio asset(s) (sonic identity, music, voiceover)`);
-    if (s.videoCount > 0) parts.push(`  - ${s.videoCount} video asset(s)`);
-    if (s.videoGenerationsCount > 0) parts.push(`  - ${s.videoGenerationsCount} AI-generated video(s)`);
-  }
+	// Asset summary
+	const s = content.assetSummary;
+	if (s.totalCount > 0 || s.videoGenerationsCount > 0) {
+		parts.push('BRAND ASSET INVENTORY:');
+		if (s.imageCount > 0)
+			parts.push(`  - ${s.imageCount} image(s) (logos, social, marketing, etc.)`);
+		if (s.audioCount > 0)
+			parts.push(`  - ${s.audioCount} audio asset(s) (sonic identity, music, voiceover)`);
+		if (s.videoCount > 0) parts.push(`  - ${s.videoCount} video asset(s)`);
+		if (s.videoGenerationsCount > 0)
+			parts.push(`  - ${s.videoGenerationsCount} AI-generated video(s)`);
+	}
 
-  return parts.join('\n');
+	return parts.join('\n');
 }
 
 /**
  * Get the system prompt for a specific step, optionally incorporating brand data
  */
 export function getSystemPromptForStep(
-  stepId: OnboardingStep,
-  brandData?: Partial<BrandProfile>,
-  contentContext?: BrandContentContext
+	stepId: OnboardingStep,
+	brandData?: Partial<BrandProfile>,
+	contentContext?: BrandContentContext
 ): string {
-  const step = getStepConfig(stepId);
-  if (!step) return '';
+	const step = getStepConfig(stepId);
+	if (!step) return '';
 
-  let prompt = step.systemPrompt;
+	let prompt = step.systemPrompt;
 
-  // Replace brand context placeholder
-  if (brandData && prompt.includes('{BRAND_CONTEXT}')) {
-    const contextStr = buildBrandContextString(brandData);
+	// Replace brand context placeholder
+	if (brandData && prompt.includes('{BRAND_CONTEXT}')) {
+		const contextStr = buildBrandContextString(brandData);
 
-    const contextBlock =
-      contextStr
-        ? `Here's what we know about the brand so far:\n${contextStr}\n\nBuild on this foundation. The user may have already set some of these fields on their Brand page — acknowledge what's filled in and offer to refine or improve any existing values.`
-        : 'We are starting fresh — no brand details have been defined yet.';
+		const contextBlock = contextStr
+			? `Here's what we know about the brand so far:\n${contextStr}\n\nBuild on this foundation. The user may have already set some of these fields on their Brand page — acknowledge what's filled in and offer to refine or improve any existing values.`
+			: 'We are starting fresh — no brand details have been defined yet.';
 
-    prompt = prompt.replace('{BRAND_CONTEXT}', contextBlock);
-  }
+		prompt = prompt.replace('{BRAND_CONTEXT}', contextBlock);
+	}
 
-  // Add brand awareness instruction to all prompts when we have data
-  if (brandData) {
-    const contextStr = buildBrandContextString(brandData);
-    if (contextStr) {
-      prompt += `
+	// Add brand awareness instruction to all prompts when we have data
+	if (brandData) {
+		const contextStr = buildBrandContextString(brandData);
+		if (contextStr) {
+			prompt += `
 
 BRAND FIELD AWARENESS:
 The user's brand profile currently has these fields filled in:
 ${contextStr}
 
 You can reference, build upon, or suggest improvements to any of these existing values. If the user asks you to change or refine any field, do so and explicitly mention what you're updating. The system will track all changes with version history, so the user can always revert.`;
-    }
-  }
+		}
+	}
 
-  // Add generated content awareness when we have content context
-  if (contentContext) {
-    const contentStr = buildBrandContentContextString(contentContext);
-    if (contentStr) {
-      prompt += `
+	// Add generated content awareness when we have content context
+	if (contentContext) {
+		const contentStr = buildBrandContentContextString(contentContext);
+		if (contentStr) {
+			prompt += `
 
 GENERATED CONTENT AWARENESS:
 The following content and assets have already been created for this brand:
 ${contentStr}
 
 Use this knowledge to maintain consistency across all brand touchpoints. Reference existing copy, acknowledge created assets, and ensure any new suggestions align with what's already established.`;
-    }
-  }
+		}
+	}
 
-  // Append auto-progression instruction for all steps except 'complete'
-  if (stepId !== 'complete') {
-    prompt += STEP_PROGRESSION_INSTRUCTION;
-  }
+	// Append auto-progression instruction for all steps except 'complete'
+	if (stepId !== 'complete') {
+		prompt += STEP_PROGRESSION_INSTRUCTION;
+	}
 
-  return prompt;
+	return prompt;
 }
 
 /**
@@ -602,132 +585,212 @@ Use this knowledge to maintain consistency across all brand touchpoints. Referen
  * but are now treated as plain text.
  */
 function jsonToReadableString(raw: string): string {
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed.map(item => typeof item === 'string' ? item : JSON.stringify(item)).join(', ');
-    }
-    if (typeof parsed === 'string') return parsed;
-    // Object — return raw JSON for user to re-edit in text system
-    return raw;
-  } catch {
-    return raw;
-  }
+	try {
+		const parsed = JSON.parse(raw);
+		if (Array.isArray(parsed)) {
+			return parsed
+				.map((item) => (typeof item === 'string' ? item : JSON.stringify(item)))
+				.join(', ');
+		}
+		if (typeof parsed === 'string') return parsed;
+		// Object — return raw JSON for user to re-edit in text system
+		return raw;
+	} catch {
+		return raw;
+	}
 }
 
 /**
  * Map a database row to a BrandProfile object
  */
 export function mapRowToProfile(row: Record<string, unknown>): BrandProfile {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    status: row.status as BrandProfile['status'],
-    brandName: (row.brand_name as string) || undefined,
-    brandNameConfirmed: !!(row.brand_name_confirmed),
-    tagline: (row.tagline as string) || undefined,
-    missionStatement: (row.mission_statement as string) || undefined,
-    visionStatement: (row.vision_statement as string) || undefined,
-    elevatorPitch: (row.elevator_pitch as string) || undefined,
-    brandArchetype: (row.brand_archetype as BrandProfile['brandArchetype']) || undefined,
-    brandPersonalityTraits: row.brand_personality_traits
-      ? jsonToReadableString(row.brand_personality_traits as string)
-      : undefined,
-    toneOfVoice: (row.tone_of_voice as string) || undefined,
-    communicationStyle: (row.communication_style as string) || undefined,
-    targetAudience: row.target_audience
-      ? jsonToReadableString(row.target_audience as string)
-      : undefined,
-    customerPainPoints: row.customer_pain_points
-      ? jsonToReadableString(row.customer_pain_points as string)
-      : undefined,
-    valueProposition: (row.value_proposition as string) || undefined,
-    primaryColor: (row.primary_color as string) || undefined,
-    secondaryColor: (row.secondary_color as string) || undefined,
-    accentColor: (row.accent_color as string) || undefined,
-    brandColor4: (row.brand_color_4 as string) || undefined,
-    brandColor5: (row.brand_color_5 as string) || undefined,
-    backgroundColor: (row.background_color as string) || undefined,
-    surfaceColor: (row.surface_color as string) || undefined,
-    textColor: (row.text_color as string) || undefined,
-    textSecondaryColor: (row.text_secondary_color as string) || undefined,
-    borderColor: (row.border_color as string) || undefined,
-    successColor: (row.success_color as string) || undefined,
-    warningColor: (row.warning_color as string) || undefined,
-    errorColor: (row.error_color as string) || undefined,
-    colorPalette: row.color_palette ? JSON.parse(row.color_palette as string) : undefined,
-    typographyLogo: (row.typography_logo as string) || undefined,
-    typographyHeading: (row.typography_heading as string) || undefined,
-    typographyBody: (row.typography_body as string) || undefined,
-    logoConcept: (row.logo_concept as string) || undefined,
-    logoUrl: (row.logo_url as string) || undefined,
-    logoHorizontalUrl: (row.logo_horizontal_url as string) || undefined,
-    logoVerticalUrl: (row.logo_vertical_url as string) || undefined,
-    industry: (row.industry as string) || undefined,
-    competitors: row.competitors
-      ? jsonToReadableString(row.competitors as string)
-      : undefined,
-    uniqueSellingPoints: row.unique_selling_points
-      ? jsonToReadableString(row.unique_selling_points as string)
-      : undefined,
-    marketPosition: (row.market_position as BrandProfile['marketPosition']) || undefined,
-    originStory: (row.origin_story as string) || undefined,
-    brandValues: row.brand_values
-      ? jsonToReadableString(row.brand_values as string)
-      : undefined,
-    brandPromise: (row.brand_promise as string) || undefined,
-    styleGuide: row.style_guide ? JSON.parse(row.style_guide as string) : undefined,
-    sortOrder: (row.sort_order as number) ?? 0,
-    onboardingStep: row.onboarding_step as OnboardingStep,
-    conversationId: (row.conversation_id as string) || undefined,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string
-  };
+	return {
+		id: row.id as string,
+		userId: row.user_id as string,
+		status: row.status as BrandProfile['status'],
+		brandName: (row.brand_name as string) || undefined,
+		brandNameConfirmed: !!row.brand_name_confirmed,
+		tagline: (row.tagline as string) || undefined,
+		missionStatement: (row.mission_statement as string) || undefined,
+		visionStatement: (row.vision_statement as string) || undefined,
+		elevatorPitch: (row.elevator_pitch as string) || undefined,
+		brandArchetype: (row.brand_archetype as BrandProfile['brandArchetype']) || undefined,
+		brandPersonalityTraits: row.brand_personality_traits
+			? jsonToReadableString(row.brand_personality_traits as string)
+			: undefined,
+		toneOfVoice: (row.tone_of_voice as string) || undefined,
+		communicationStyle: (row.communication_style as string) || undefined,
+		targetAudience: row.target_audience
+			? jsonToReadableString(row.target_audience as string)
+			: undefined,
+		customerPainPoints: row.customer_pain_points
+			? jsonToReadableString(row.customer_pain_points as string)
+			: undefined,
+		valueProposition: (row.value_proposition as string) || undefined,
+		primaryColor: (row.primary_color as string) || undefined,
+		secondaryColor: (row.secondary_color as string) || undefined,
+		accentColor: (row.accent_color as string) || undefined,
+		brandColor4: (row.brand_color_4 as string) || undefined,
+		brandColor5: (row.brand_color_5 as string) || undefined,
+		backgroundColor: (row.background_color as string) || undefined,
+		surfaceColor: (row.surface_color as string) || undefined,
+		textColor: (row.text_color as string) || undefined,
+		textSecondaryColor: (row.text_secondary_color as string) || undefined,
+		borderColor: (row.border_color as string) || undefined,
+		successColor: (row.success_color as string) || undefined,
+		warningColor: (row.warning_color as string) || undefined,
+		errorColor: (row.error_color as string) || undefined,
+		colorPalette: row.color_palette ? JSON.parse(row.color_palette as string) : undefined,
+		typographyLogo: (row.typography_logo as string) || undefined,
+		typographyHeading: (row.typography_heading as string) || undefined,
+		typographyBody: (row.typography_body as string) || undefined,
+		logoConcept: (row.logo_concept as string) || undefined,
+		logoUrl: (row.logo_url as string) || undefined,
+		logoHorizontalUrl: (row.logo_horizontal_url as string) || undefined,
+		logoVerticalUrl: (row.logo_vertical_url as string) || undefined,
+		industry: (row.industry as string) || undefined,
+		competitors: row.competitors ? jsonToReadableString(row.competitors as string) : undefined,
+		uniqueSellingPoints: row.unique_selling_points
+			? jsonToReadableString(row.unique_selling_points as string)
+			: undefined,
+		marketPosition: (row.market_position as BrandProfile['marketPosition']) || undefined,
+		originStory: (row.origin_story as string) || undefined,
+		brandValues: row.brand_values ? jsonToReadableString(row.brand_values as string) : undefined,
+		brandPromise: (row.brand_promise as string) || undefined,
+		styleGuide: row.style_guide ? JSON.parse(row.style_guide as string) : undefined,
+		sortOrder: (row.sort_order as number) ?? 0,
+		onboardingStep: row.onboarding_step as OnboardingStep,
+		conversationId: (row.conversation_id as string) || undefined,
+		createdAt: row.created_at as string,
+		updatedAt: row.updated_at as string
+	};
 }
 
 /**
  * Map a database row to an OnboardingMessage
  */
 function mapRowToMessage(row: Record<string, unknown>): OnboardingMessage {
-  let attachments;
-  if (row.attachments) {
-    try {
-      attachments = JSON.parse(row.attachments as string);
-    } catch {
-      attachments = undefined;
-    }
-  }
-  return {
-    id: row.id as string,
-    brandProfileId: row.brand_profile_id as string,
-    userId: row.user_id as string,
-    role: row.role as OnboardingMessage['role'],
-    content: row.content as string,
-    step: (row.step as OnboardingStep) || undefined,
-    metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
-    attachments,
-    createdAt: row.created_at as string
-  };
+	let attachments;
+	if (row.attachments) {
+		try {
+			attachments = JSON.parse(row.attachments as string);
+		} catch {
+			attachments = undefined;
+		}
+	}
+	return {
+		id: row.id as string,
+		brandProfileId: row.brand_profile_id as string,
+		userId: row.user_id as string,
+		role: row.role as OnboardingMessage['role'],
+		content: row.content as string,
+		step: (row.step as OnboardingStep) || undefined,
+		metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
+		attachments,
+		createdAt: row.created_at as string
+	};
 }
 
 /** Adjectives for placeholder brand names */
 const PLACEHOLDER_ADJECTIVES = [
-  'Amber', 'Azure', 'Bold', 'Bright', 'Cedar', 'Cobalt', 'Coral', 'Crimson',
-  'Crystal', 'Dusk', 'Ember', 'Fern', 'Frost', 'Golden', 'Harbor', 'Indigo',
-  'Iron', 'Ivory', 'Jade', 'Lunar', 'Maple', 'Midnight', 'Noble', 'Opal',
-  'Pearl', 'Pine', 'Prism', 'Quartz', 'Radiant', 'Raven', 'Rustic', 'Sable',
-  'Sage', 'Scarlet', 'Shadow', 'Silver', 'Solar', 'Sterling', 'Stone', 'Summit',
-  'Swift', 'Velvet', 'Verdant', 'Vivid', 'Wild', 'Zenith'
+	'Amber',
+	'Azure',
+	'Bold',
+	'Bright',
+	'Cedar',
+	'Cobalt',
+	'Coral',
+	'Crimson',
+	'Crystal',
+	'Dusk',
+	'Ember',
+	'Fern',
+	'Frost',
+	'Golden',
+	'Harbor',
+	'Indigo',
+	'Iron',
+	'Ivory',
+	'Jade',
+	'Lunar',
+	'Maple',
+	'Midnight',
+	'Noble',
+	'Opal',
+	'Pearl',
+	'Pine',
+	'Prism',
+	'Quartz',
+	'Radiant',
+	'Raven',
+	'Rustic',
+	'Sable',
+	'Sage',
+	'Scarlet',
+	'Shadow',
+	'Silver',
+	'Solar',
+	'Sterling',
+	'Stone',
+	'Summit',
+	'Swift',
+	'Velvet',
+	'Verdant',
+	'Vivid',
+	'Wild',
+	'Zenith'
 ];
 
 /** Nouns for placeholder brand names */
 const PLACEHOLDER_NOUNS = [
-  'Anchor', 'Arrow', 'Atlas', 'Aurora', 'Beacon', 'Bloom', 'Bridge', 'Canyon',
-  'Crest', 'Crown', 'Dawn', 'Echo', 'Edge', 'Ember', 'Falcon', 'Fable',
-  'Forge', 'Fox', 'Grove', 'Harbor', 'Haven', 'Horizon', 'Iris', 'Lark',
-  'Lotus', 'Lynx', 'Mesa', 'Moss', 'Nexus', 'Nova', 'Orbit', 'Osprey',
-  'Peak', 'Phoenix', 'Plume', 'Pulse', 'Reef', 'Ridge', 'River', 'Root',
-  'Sequoia', 'Spark', 'Spire', 'Tide', 'Vale', 'Vortex', 'Wave', 'Wren'
+	'Anchor',
+	'Arrow',
+	'Atlas',
+	'Aurora',
+	'Beacon',
+	'Bloom',
+	'Bridge',
+	'Canyon',
+	'Crest',
+	'Crown',
+	'Dawn',
+	'Echo',
+	'Edge',
+	'Ember',
+	'Falcon',
+	'Fable',
+	'Forge',
+	'Fox',
+	'Grove',
+	'Harbor',
+	'Haven',
+	'Horizon',
+	'Iris',
+	'Lark',
+	'Lotus',
+	'Lynx',
+	'Mesa',
+	'Moss',
+	'Nexus',
+	'Nova',
+	'Orbit',
+	'Osprey',
+	'Peak',
+	'Phoenix',
+	'Plume',
+	'Pulse',
+	'Reef',
+	'Ridge',
+	'River',
+	'Root',
+	'Sequoia',
+	'Spark',
+	'Spire',
+	'Tide',
+	'Vale',
+	'Vortex',
+	'Wave',
+	'Wren'
 ];
 
 /**
@@ -735,245 +798,239 @@ const PLACEHOLDER_NOUNS = [
  * Used to identify new brand profiles until the user chooses a real name.
  */
 export function generatePlaceholderBrandName(): string {
-  const adjIdx = Math.floor(Math.random() * PLACEHOLDER_ADJECTIVES.length);
-  const nounIdx = Math.floor(Math.random() * PLACEHOLDER_NOUNS.length);
-  return `${PLACEHOLDER_ADJECTIVES[adjIdx]} ${PLACEHOLDER_NOUNS[nounIdx]}`;
+	const adjIdx = Math.floor(Math.random() * PLACEHOLDER_ADJECTIVES.length);
+	const nounIdx = Math.floor(Math.random() * PLACEHOLDER_NOUNS.length);
+	return `${PLACEHOLDER_ADJECTIVES[adjIdx]} ${PLACEHOLDER_NOUNS[nounIdx]}`;
 }
 
 /**
  * Create a new brand profile for a user
  */
-export async function createBrandProfile(
-  db: D1Database,
-  userId: string
-): Promise<BrandProfile> {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-  const placeholderName = generatePlaceholderBrandName();
+export async function createBrandProfile(db: D1Database, userId: string): Promise<BrandProfile> {
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
+	const placeholderName = generatePlaceholderBrandName();
 
-  await db
-    .prepare(
-      `INSERT INTO brand_profiles (id, user_id, brand_name, brand_name_confirmed, status, onboarding_step, created_at, updated_at)
+	await db
+		.prepare(
+			`INSERT INTO brand_profiles (id, user_id, brand_name, brand_name_confirmed, status, onboarding_step, created_at, updated_at)
 			 VALUES (?, ?, ?, 0, 'in_progress', 'welcome', ?, ?)`
-    )
-    .bind(id, userId, placeholderName, now, now)
-    .run();
+		)
+		.bind(id, userId, placeholderName, now, now)
+		.run();
 
-  return {
-    id,
-    userId,
-    brandName: placeholderName,
-    brandNameConfirmed: false,
-    status: 'in_progress',
-    onboardingStep: 'welcome',
-    createdAt: now,
-    updatedAt: now
-  };
+	return {
+		id,
+		userId,
+		brandName: placeholderName,
+		brandNameConfirmed: false,
+		status: 'in_progress',
+		onboardingStep: 'welcome',
+		createdAt: now,
+		updatedAt: now
+	};
 }
 
 /**
  * Get a brand profile by ID
  */
 export async function getBrandProfile(
-  db: D1Database,
-  profileId: string
+	db: D1Database,
+	profileId: string
 ): Promise<BrandProfile | null> {
-  const row = await db
-    .prepare('SELECT * FROM brand_profiles WHERE id = ?')
-    .bind(profileId)
-    .first();
+	const row = await db.prepare('SELECT * FROM brand_profiles WHERE id = ?').bind(profileId).first();
 
-  if (!row) return null;
-  return mapRowToProfile(row as Record<string, unknown>);
+	if (!row) return null;
+	return mapRowToProfile(row as Record<string, unknown>);
 }
 
 /**
  * Get the active (in_progress or completed) brand profile for a user
  */
 export async function getBrandProfileByUser(
-  db: D1Database,
-  userId: string
+	db: D1Database,
+	userId: string
 ): Promise<BrandProfile | null> {
-  const row = await db
-    .prepare(
-      `SELECT * FROM brand_profiles 
+	const row = await db
+		.prepare(
+			`SELECT * FROM brand_profiles 
 			 WHERE user_id = ? AND status IN ('in_progress', 'completed')
 			 ORDER BY updated_at DESC LIMIT 1`
-    )
-    .bind(userId)
-    .first();
+		)
+		.bind(userId)
+		.first();
 
-  if (!row) return null;
-  return mapRowToProfile(row as Record<string, unknown>);
+	if (!row) return null;
+	return mapRowToProfile(row as Record<string, unknown>);
 }
 
 /**
  * Update a brand profile with new data
  */
 export async function updateBrandProfile(
-  db: D1Database,
-  profileId: string,
-  updates: Partial<BrandProfile>
+	db: D1Database,
+	profileId: string,
+	updates: Partial<BrandProfile>
 ): Promise<void> {
-  const setClauses: string[] = [];
-  const values: unknown[] = [];
+	const setClauses: string[] = [];
+	const values: unknown[] = [];
 
-  const fieldMap: Record<string, string> = {
-    brandName: 'brand_name',
-    brandNameConfirmed: 'brand_name_confirmed',
-    tagline: 'tagline',
-    missionStatement: 'mission_statement',
-    visionStatement: 'vision_statement',
-    elevatorPitch: 'elevator_pitch',
-    brandArchetype: 'brand_archetype',
-    toneOfVoice: 'tone_of_voice',
-    communicationStyle: 'communication_style',
-    valueProposition: 'value_proposition',
-    primaryColor: 'primary_color',
-    secondaryColor: 'secondary_color',
-    accentColor: 'accent_color',
-    typographyLogo: 'typography_logo',
-    typographyHeading: 'typography_heading',
-    typographyBody: 'typography_body',
-    logoConcept: 'logo_concept',
-    logoUrl: 'logo_url',
-    logoHorizontalUrl: 'logo_horizontal_url',
-    logoVerticalUrl: 'logo_vertical_url',
-    industry: 'industry',
-    marketPosition: 'market_position',
-    originStory: 'origin_story',
-    brandPromise: 'brand_promise',
-    brandPersonalityTraits: 'brand_personality_traits',
-    brandValues: 'brand_values',
-    competitors: 'competitors',
-    uniqueSellingPoints: 'unique_selling_points',
-    customerPainPoints: 'customer_pain_points',
-    targetAudience: 'target_audience',
-    onboardingStep: 'onboarding_step',
-    conversationId: 'conversation_id',
-    status: 'status'
-  };
+	const fieldMap: Record<string, string> = {
+		brandName: 'brand_name',
+		brandNameConfirmed: 'brand_name_confirmed',
+		tagline: 'tagline',
+		missionStatement: 'mission_statement',
+		visionStatement: 'vision_statement',
+		elevatorPitch: 'elevator_pitch',
+		brandArchetype: 'brand_archetype',
+		toneOfVoice: 'tone_of_voice',
+		communicationStyle: 'communication_style',
+		valueProposition: 'value_proposition',
+		primaryColor: 'primary_color',
+		secondaryColor: 'secondary_color',
+		accentColor: 'accent_color',
+		typographyLogo: 'typography_logo',
+		typographyHeading: 'typography_heading',
+		typographyBody: 'typography_body',
+		logoConcept: 'logo_concept',
+		logoUrl: 'logo_url',
+		logoHorizontalUrl: 'logo_horizontal_url',
+		logoVerticalUrl: 'logo_vertical_url',
+		industry: 'industry',
+		marketPosition: 'market_position',
+		originStory: 'origin_story',
+		brandPromise: 'brand_promise',
+		brandPersonalityTraits: 'brand_personality_traits',
+		brandValues: 'brand_values',
+		competitors: 'competitors',
+		uniqueSellingPoints: 'unique_selling_points',
+		customerPainPoints: 'customer_pain_points',
+		targetAudience: 'target_audience',
+		onboardingStep: 'onboarding_step',
+		conversationId: 'conversation_id',
+		status: 'status'
+	};
 
-  const jsonFields: Record<string, string> = {
-    colorPalette: 'color_palette'
-  };
+	const jsonFields: Record<string, string> = {
+		colorPalette: 'color_palette'
+	};
 
-  const objectFields: Record<string, string> = {
-    styleGuide: 'style_guide'
-  };
+	const objectFields: Record<string, string> = {
+		styleGuide: 'style_guide'
+	};
 
-  // Simple string fields
-  for (const [key, column] of Object.entries(fieldMap)) {
-    if (key in updates) {
-      setClauses.push(`${column} = ?`);
-      const val = (updates as Record<string, unknown>)[key];
-      // Convert booleans to integers for SQLite
-      values.push(typeof val === 'boolean' ? (val ? 1 : 0) : (val ?? null));
-    }
-  }
+	// Simple string fields
+	for (const [key, column] of Object.entries(fieldMap)) {
+		if (key in updates) {
+			setClauses.push(`${column} = ?`);
+			const val = (updates as Record<string, unknown>)[key];
+			// Convert booleans to integers for SQLite
+			values.push(typeof val === 'boolean' ? (val ? 1 : 0) : (val ?? null));
+		}
+	}
 
-  // JSON array fields
-  for (const [key, column] of Object.entries(jsonFields)) {
-    if (key in updates) {
-      setClauses.push(`${column} = ?`);
-      const val = (updates as Record<string, unknown>)[key];
-      values.push(val ? JSON.stringify(val) : null);
-    }
-  }
+	// JSON array fields
+	for (const [key, column] of Object.entries(jsonFields)) {
+		if (key in updates) {
+			setClauses.push(`${column} = ?`);
+			const val = (updates as Record<string, unknown>)[key];
+			values.push(val ? JSON.stringify(val) : null);
+		}
+	}
 
-  // JSON object fields
-  for (const [key, column] of Object.entries(objectFields)) {
-    if (key in updates) {
-      setClauses.push(`${column} = ?`);
-      const val = (updates as Record<string, unknown>)[key];
-      values.push(val ? JSON.stringify(val) : null);
-    }
-  }
+	// JSON object fields
+	for (const [key, column] of Object.entries(objectFields)) {
+		if (key in updates) {
+			setClauses.push(`${column} = ?`);
+			const val = (updates as Record<string, unknown>)[key];
+			values.push(val ? JSON.stringify(val) : null);
+		}
+	}
 
-  if (setClauses.length === 0) return;
+	if (setClauses.length === 0) return;
 
-  // Always update the timestamp
-  setClauses.push("updated_at = datetime('now')");
-  values.push(profileId);
+	// Always update the timestamp
+	setClauses.push("updated_at = datetime('now')");
+	values.push(profileId);
 
-  await db
-    .prepare(`UPDATE brand_profiles SET ${setClauses.join(', ')} WHERE id = ?`)
-    .bind(...values)
-    .run();
+	await db
+		.prepare(`UPDATE brand_profiles SET ${setClauses.join(', ')} WHERE id = ?`)
+		.bind(...values)
+		.run();
 }
 
 /**
  * Add a message to the onboarding conversation
  */
 export async function addOnboardingMessage(
-  db: D1Database,
-  message: {
-    brandProfileId: string;
-    userId: string;
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    step?: OnboardingStep;
-    metadata?: Record<string, unknown>;
-    attachments?: string | null;
-  }
+	db: D1Database,
+	message: {
+		brandProfileId: string;
+		userId: string;
+		role: 'user' | 'assistant' | 'system';
+		content: string;
+		step?: OnboardingStep;
+		metadata?: Record<string, unknown>;
+		attachments?: string | null;
+	}
 ): Promise<OnboardingMessage> {
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
 
-  await db
-    .prepare(
-      `INSERT INTO onboarding_messages (id, brand_profile_id, user_id, role, content, step, metadata, attachments, created_at)
+	await db
+		.prepare(
+			`INSERT INTO onboarding_messages (id, brand_profile_id, user_id, role, content, step, metadata, attachments, created_at)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .bind(
-      id,
-      message.brandProfileId,
-      message.userId,
-      message.role,
-      message.content,
-      message.step || null,
-      message.metadata ? JSON.stringify(message.metadata) : null,
-      message.attachments || null,
-      now
-    )
-    .run();
+		)
+		.bind(
+			id,
+			message.brandProfileId,
+			message.userId,
+			message.role,
+			message.content,
+			message.step || null,
+			message.metadata ? JSON.stringify(message.metadata) : null,
+			message.attachments || null,
+			now
+		)
+		.run();
 
-  return {
-    id,
-    brandProfileId: message.brandProfileId,
-    userId: message.userId,
-    role: message.role,
-    content: message.content,
-    step: message.step,
-    metadata: message.metadata,
-    createdAt: now
-  };
+	return {
+		id,
+		brandProfileId: message.brandProfileId,
+		userId: message.userId,
+		role: message.role,
+		content: message.content,
+		step: message.step,
+		metadata: message.metadata,
+		createdAt: now
+	};
 }
 
 /**
  * Get onboarding messages for a brand profile, optionally filtered by step
  */
 export async function getOnboardingMessages(
-  db: D1Database,
-  brandProfileId: string,
-  step?: OnboardingStep
+	db: D1Database,
+	brandProfileId: string,
+	step?: OnboardingStep
 ): Promise<OnboardingMessage[]> {
-  let query = 'SELECT * FROM onboarding_messages WHERE brand_profile_id = ?';
-  const params: unknown[] = [brandProfileId];
+	let query = 'SELECT * FROM onboarding_messages WHERE brand_profile_id = ?';
+	const params: unknown[] = [brandProfileId];
 
-  if (step) {
-    query += ' AND step = ?';
-    params.push(step);
-  }
+	if (step) {
+		query += ' AND step = ?';
+		params.push(step);
+	}
 
-  query += ' ORDER BY created_at ASC';
+	query += ' ORDER BY created_at ASC';
 
-  const result = await db
-    .prepare(query)
-    .bind(...params)
-    .all();
+	const result = await db
+		.prepare(query)
+		.bind(...params)
+		.all();
 
-  return (result.results || []).map((row) => mapRowToMessage(row as Record<string, unknown>));
+	return (result.results || []).map((row) => mapRowToMessage(row as Record<string, unknown>));
 }
 
 /**
@@ -982,110 +1039,110 @@ export async function getOnboardingMessages(
  * Includes image attachments as multi-modal content for vision
  */
 export function buildConversationContext(
-  step: OnboardingStep,
-  messages: OnboardingMessage[],
-  brandData?: Partial<BrandProfile>,
-  contentContext?: BrandContentContext
+	step: OnboardingStep,
+	messages: OnboardingMessage[],
+	brandData?: Partial<BrandProfile>,
+	contentContext?: BrandContentContext
 ): ChatMessage[] {
-  const systemPrompt = getSystemPromptForStep(step, brandData, contentContext);
-  const result: ChatMessage[] = [{ role: 'system', content: systemPrompt }];
+	const systemPrompt = getSystemPromptForStep(step, brandData, contentContext);
+	const result: ChatMessage[] = [{ role: 'system', content: systemPrompt }];
 
-  for (const msg of messages) {
-    if (msg.role === 'user' || msg.role === 'assistant') {
-      // Check for image attachments to send as multi-modal content
-      const imageAttachments = msg.attachments?.filter(a => a.type === 'image') || [];
-      const otherAttachments = msg.attachments?.filter(a => a.type !== 'image') || [];
+	for (const msg of messages) {
+		if (msg.role === 'user' || msg.role === 'assistant') {
+			// Check for image attachments to send as multi-modal content
+			const imageAttachments = msg.attachments?.filter((a) => a.type === 'image') || [];
+			const otherAttachments = msg.attachments?.filter((a) => a.type !== 'image') || [];
 
-      if (imageAttachments.length > 0 && msg.role === 'user') {
-        // Build multi-modal content with text + images
-        const contentParts: ChatMessageContentPart[] = [];
+			if (imageAttachments.length > 0 && msg.role === 'user') {
+				// Build multi-modal content with text + images
+				const contentParts: ChatMessageContentPart[] = [];
 
-        // Add text content
-        let textContent = msg.content;
-        if (otherAttachments.length > 0) {
-          const attachmentList = otherAttachments
-            .map(a => `[Attached ${a.type}: ${a.name}]`)
-            .join('\n');
-          textContent += '\n\n' + attachmentList;
-        }
-        contentParts.push({ type: 'text', text: textContent });
+				// Add text content
+				let textContent = msg.content;
+				if (otherAttachments.length > 0) {
+					const attachmentList = otherAttachments
+						.map((a) => `[Attached ${a.type}: ${a.name}]`)
+						.join('\n');
+					textContent += '\n\n' + attachmentList;
+				}
+				contentParts.push({ type: 'text', text: textContent });
 
-        // Add image URLs for vision
-        for (const img of imageAttachments) {
-          contentParts.push({
-            type: 'image_url',
-            image_url: { url: img.url, detail: 'auto' }
-          });
-        }
+				// Add image URLs for vision
+				for (const img of imageAttachments) {
+					contentParts.push({
+						type: 'image_url',
+						image_url: { url: img.url, detail: 'auto' }
+					});
+				}
 
-        result.push({ role: 'user', content: contentParts });
-      } else if (otherAttachments.length > 0 || imageAttachments.length > 0) {
-        // Non-image attachments — mention them as text footnotes
-        const attachmentList = [...imageAttachments, ...otherAttachments]
-          .map(a => `[Attached ${a.type}: ${a.name}]`)
-          .join('\n');
-        result.push({ role: msg.role, content: msg.content + '\n\n' + attachmentList });
-      } else {
-        result.push({ role: msg.role, content: msg.content });
-      }
-    }
-  }
+				result.push({ role: 'user', content: contentParts });
+			} else if (otherAttachments.length > 0 || imageAttachments.length > 0) {
+				// Non-image attachments — mention them as text footnotes
+				const attachmentList = [...imageAttachments, ...otherAttachments]
+					.map((a) => `[Attached ${a.type}: ${a.name}]`)
+					.join('\n');
+				result.push({ role: msg.role, content: msg.content + '\n\n' + attachmentList });
+			} else {
+				result.push({ role: msg.role, content: msg.content });
+			}
+		}
+	}
 
-  return result;
+	return result;
 }
 
 /**
  * Archive a brand profile (soft delete)
  */
 export async function archiveBrandProfile(db: D1Database, profileId: string): Promise<void> {
-  await db
-    .prepare(
-      "UPDATE brand_profiles SET status = 'archived', updated_at = datetime('now') WHERE id = ?"
-    )
-    .bind(profileId)
-    .run();
+	await db
+		.prepare(
+			"UPDATE brand_profiles SET status = 'archived', updated_at = datetime('now') WHERE id = ?"
+		)
+		.bind(profileId)
+		.run();
 }
 
 /**
  * Unarchive a brand profile (restore from archive)
  */
 export async function unarchiveBrandProfile(db: D1Database, profileId: string): Promise<void> {
-  await db
-    .prepare(
-      "UPDATE brand_profiles SET status = 'in_progress', updated_at = datetime('now') WHERE id = ?"
-    )
-    .bind(profileId)
-    .run();
+	await db
+		.prepare(
+			"UPDATE brand_profiles SET status = 'in_progress', updated_at = datetime('now') WHERE id = ?"
+		)
+		.bind(profileId)
+		.run();
 }
 
 /**
  * Get the next step in the onboarding flow
  */
 export function getNextStep(currentStep: OnboardingStep): OnboardingStep | null {
-  const stepIds = ONBOARDING_STEPS.map((s) => s.id);
-  const currentIndex = stepIds.indexOf(currentStep);
-  if (currentIndex === -1 || currentIndex >= stepIds.length - 1) return null;
-  return stepIds[currentIndex + 1];
+	const stepIds = ONBOARDING_STEPS.map((s) => s.id);
+	const currentIndex = stepIds.indexOf(currentStep);
+	if (currentIndex === -1 || currentIndex >= stepIds.length - 1) return null;
+	return stepIds[currentIndex + 1];
 }
 
 /**
  * Get the previous step in the onboarding flow
  */
 export function getPreviousStep(currentStep: OnboardingStep): OnboardingStep | null {
-  const stepIds = ONBOARDING_STEPS.map((s) => s.id);
-  const currentIndex = stepIds.indexOf(currentStep);
-  if (currentIndex <= 0) return null;
-  return stepIds[currentIndex - 1];
+	const stepIds = ONBOARDING_STEPS.map((s) => s.id);
+	const currentIndex = stepIds.indexOf(currentStep);
+	if (currentIndex <= 0) return null;
+	return stepIds[currentIndex - 1];
 }
 
 /**
  * Get step progress as a percentage
  */
 export function getStepProgress(currentStep: OnboardingStep): number {
-  const stepIds = ONBOARDING_STEPS.map((s) => s.id);
-  const currentIndex = stepIds.indexOf(currentStep);
-  if (currentIndex === -1) return 0;
-  return Math.round((currentIndex / (stepIds.length - 1)) * 100);
+	const stepIds = ONBOARDING_STEPS.map((s) => s.id);
+	const currentIndex = stepIds.indexOf(currentStep);
+	if (currentIndex === -1) return 0;
+	return Math.round((currentIndex / (stepIds.length - 1)) * 100);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -1094,17 +1151,41 @@ export function getStepProgress(currentStep: OnboardingStep): number {
 
 /** All brand profile fields that can be extracted from conversations */
 const KNOWN_EXTRACTION_FIELDS = new Set([
-  'brandName', 'industry', 'elevatorPitch', 'tagline',
-  'missionStatement', 'visionStatement', 'brandArchetype',
-  'brandPersonalityTraits', 'toneOfVoice', 'communicationStyle',
-  'targetAudience', 'customerPainPoints', 'valueProposition',
-  'primaryColor', 'secondaryColor', 'accentColor',
-  'backgroundColor', 'surfaceColor', 'textColor', 'textSecondaryColor',
-  'borderColor', 'successColor', 'warningColor', 'errorColor',
-  'colorPalette',
-  'typographyLogo', 'typographyHeading', 'typographyBody', 'logoConcept',
-  'competitors', 'uniqueSellingPoints', 'marketPosition',
-  'originStory', 'brandValues', 'brandPromise'
+	'brandName',
+	'industry',
+	'elevatorPitch',
+	'tagline',
+	'missionStatement',
+	'visionStatement',
+	'brandArchetype',
+	'brandPersonalityTraits',
+	'toneOfVoice',
+	'communicationStyle',
+	'targetAudience',
+	'customerPainPoints',
+	'valueProposition',
+	'primaryColor',
+	'secondaryColor',
+	'accentColor',
+	'backgroundColor',
+	'surfaceColor',
+	'textColor',
+	'textSecondaryColor',
+	'borderColor',
+	'successColor',
+	'warningColor',
+	'errorColor',
+	'colorPalette',
+	'typographyLogo',
+	'typographyHeading',
+	'typographyBody',
+	'logoConcept',
+	'competitors',
+	'uniqueSellingPoints',
+	'marketPosition',
+	'originStory',
+	'brandValues',
+	'brandPromise'
 ]);
 
 /** Type for extracted brand fields */
@@ -1117,27 +1198,30 @@ export type ExtractedFields = Partial<Record<string, string | string[] | Record<
  * Returns an empty string for the 'complete' step (nothing to extract).
  */
 export function buildExtractionPrompt(
-  step: OnboardingStep,
-  conversationMessages: Array<{ role: string; content: string; }>
+	step: OnboardingStep,
+	conversationMessages: Array<{ role: string; content: string }>
 ): string {
-  if (step === 'complete') return '';
+	if (step === 'complete') return '';
 
-  const stepConfig = getStepConfig(step);
-  // Always include brandName; merge with the step's declared fields
-  const fieldsSet = new Set<string>(['brandName']);
-  if (stepConfig?.extractionFields) {
-    for (const f of stepConfig.extractionFields) {
-      fieldsSet.add(f);
-    }
-  }
-  const fields = Array.from(fieldsSet);
+	const stepConfig = getStepConfig(step);
+	// Always include brandName; merge with the step's declared fields
+	const fieldsSet = new Set<string>(['brandName']);
+	if (stepConfig?.extractionFields) {
+		for (const f of stepConfig.extractionFields) {
+			fieldsSet.add(f);
+		}
+	}
+	const fields = Array.from(fieldsSet);
 
-  // Build a condensed conversation transcript
-  const transcript = conversationMessages
-    .map((m) => `${m.role.toUpperCase()}: ${typeof m.content === 'string' ? m.content : JSON.stringify(m.content)}`)
-    .join('\n');
+	// Build a condensed conversation transcript
+	const transcript = conversationMessages
+		.map(
+			(m) =>
+				`${m.role.toUpperCase()}: ${typeof m.content === 'string' ? m.content : JSON.stringify(m.content)}`
+		)
+		.join('\n');
 
-  return `You are a data extraction assistant. Analyze the following brand onboarding conversation and extract any brand information that has been explicitly stated or clearly agreed upon by the user.
+	return `You are a data extraction assistant. Analyze the following brand onboarding conversation and extract any brand information that has been explicitly stated or clearly agreed upon by the user.
 
 CONVERSATION:
 ${transcript}
@@ -1162,39 +1246,39 @@ RULES:
  * Returns null if the response is invalid, empty, or contains no known fields.
  */
 export function parseExtractionResponse(response: string): ExtractedFields | null {
-  if (!response || response.trim().length === 0) return null;
+	if (!response || response.trim().length === 0) return null;
 
-  let text = response.trim();
+	let text = response.trim();
 
-  // Strip markdown code block wrappers if present
-  const codeBlockMatch = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
-  if (codeBlockMatch) {
-    text = codeBlockMatch[1].trim();
-  }
+	// Strip markdown code block wrappers if present
+	const codeBlockMatch = text.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+	if (codeBlockMatch) {
+		text = codeBlockMatch[1].trim();
+	}
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return null;
-  }
+	let parsed: Record<string, unknown>;
+	try {
+		parsed = JSON.parse(text);
+	} catch {
+		return null;
+	}
 
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    return null;
-  }
+	if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+		return null;
+	}
 
-  // Filter to only known fields with non-empty values
-  const result: ExtractedFields = {};
-  let hasValue = false;
+	// Filter to only known fields with non-empty values
+	const result: ExtractedFields = {};
+	let hasValue = false;
 
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!KNOWN_EXTRACTION_FIELDS.has(key)) continue;
-    if (value === null || value === undefined) continue;
-    if (typeof value === 'string' && value.trim() === '') continue;
+	for (const [key, value] of Object.entries(parsed)) {
+		if (!KNOWN_EXTRACTION_FIELDS.has(key)) continue;
+		if (value === null || value === undefined) continue;
+		if (typeof value === 'string' && value.trim() === '') continue;
 
-    result[key] = value as string | string[] | Record<string, unknown>;
-    hasValue = true;
-  }
+		result[key] = value as string | string[] | Record<string, unknown>;
+		hasValue = true;
+	}
 
-  return hasValue ? result : null;
+	return hasValue ? result : null;
 }

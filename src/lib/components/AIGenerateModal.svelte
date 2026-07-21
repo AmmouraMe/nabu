@@ -13,7 +13,10 @@
 		pricing?: {
 			estimatedCostPerSecond?: number;
 			estimatedCostPerGeneration?: number;
-			pricingByResolution?: Record<string, { estimatedCostPerSecond?: number; estimatedCostPerGeneration?: number }>;
+			pricingByResolution?: Record<
+				string,
+				{ estimatedCostPerSecond?: number; estimatedCostPerGeneration?: number }
+			>;
 			currency: string;
 		};
 	}
@@ -73,7 +76,10 @@
 	$: hasMultipleVideoProviders = videoProviders.length > 1;
 
 	// Auto-select first provider when models load
-	$: if (videoProviders.length > 0 && (!selectedVideoProvider || !videoProviders.includes(selectedVideoProvider))) {
+	$: if (
+		videoProviders.length > 0 &&
+		(!selectedVideoProvider || !videoProviders.includes(selectedVideoProvider))
+	) {
 		selectedVideoProvider = videoProviders[0];
 	}
 
@@ -83,7 +89,10 @@
 		: videoModels;
 
 	// Auto-select first model when provider changes
-	$: if (filteredVideoModels.length > 0 && (!videoModel || !filteredVideoModels.some((m) => m.id === videoModel))) {
+	$: if (
+		filteredVideoModels.length > 0 &&
+		(!videoModel || !filteredVideoModels.some((m) => m.id === videoModel))
+	) {
 		videoModel = filteredVideoModels[0].id;
 	}
 
@@ -133,13 +142,15 @@
 		loadVideoModels();
 	}
 
-	$: typeLabel = generationType === 'image' ? 'Image' : generationType === 'audio' ? 'Audio' : 'Video';
+	$: typeLabel =
+		generationType === 'image' ? 'Image' : generationType === 'audio' ? 'Audio' : 'Video';
 
-	$: defaultCategories = generationType === 'image'
-		? ['logo', 'social', 'marketing', 'product', 'brand_elements', 'team']
-		: generationType === 'audio'
-			? ['sonic_identity', 'music', 'voiceover']
-			: ['brand', 'social', 'marketing', 'content', 'internal'];
+	$: defaultCategories =
+		generationType === 'image'
+			? ['logo', 'social', 'marketing', 'product', 'brand_elements', 'team']
+			: generationType === 'audio'
+				? ['sonic_identity', 'music', 'voiceover']
+				: ['brand', 'social', 'marketing', 'content', 'internal'];
 
 	$: if (defaultCategories.length > 0 && !selectedCategory) {
 		selectedCategory = defaultCategories[0];
@@ -170,11 +181,18 @@
 		return '~$0.04-0.50/sec';
 	})();
 
-	$: estimatedCost = generationType === 'image'
-		? (imageModel === 'dall-e-3' ? (imageQuality === 'hd' ? '$0.08' : '$0.04') : '$0.02')
-		: generationType === 'audio'
-			? (audioModel === 'tts-1-hd' ? '~$0.03/1K chars' : '~$0.015/1K chars')
-			: videoEstimatedCost;
+	$: estimatedCost =
+		generationType === 'image'
+			? imageModel === 'dall-e-3'
+				? imageQuality === 'hd'
+					? '$0.08'
+					: '$0.04'
+				: '$0.02'
+			: generationType === 'audio'
+				? audioModel === 'tts-1-hd'
+					? '~$0.03/1K chars'
+					: '~$0.015/1K chars'
+				: videoEstimatedCost;
 
 	function handleClose() {
 		if (!generating) {
@@ -250,13 +268,33 @@
 
 {#if open}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-	<div class="modal-backdrop" on:click={handleBackdropClick} role="dialog" aria-modal="true" aria-label="AI {typeLabel} Generation">
+	<div
+		class="modal-backdrop"
+		on:click={handleBackdropClick}
+		role="dialog"
+		aria-modal="true"
+		aria-label="AI {typeLabel} Generation"
+	>
 		<div class="modal">
 			<header class="modal-header">
 				<div class="header-content">
-					<svg class="ai-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-						<path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" stroke-linecap="round" stroke-linejoin="round" />
-						<path d="M18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" stroke-linecap="round" stroke-linejoin="round" />
+					<svg
+						class="ai-icon"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+					>
+						<path
+							d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+						<path
+							d="M18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
 					</svg>
 					<h2>Generate {typeLabel} with AI</h2>
 				</div>
@@ -271,8 +309,16 @@
 				{#if error}
 					<div class="error-banner" role="alert">
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" stroke-linecap="round" stroke-linejoin="round" />
-							<path d="M12 15.75h.007v.008H12v-.008z" stroke-linecap="round" stroke-linejoin="round" />
+							<path
+								d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+							<path
+								d="M12 15.75h.007v.008H12v-.008z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
 						</svg>
 						<span>{error}</span>
 					</div>
@@ -281,7 +327,9 @@
 				<!-- Prompt -->
 				<div class="field">
 					<label for="ai-prompt">
-						{#if generationType === 'audio'}Text to speak{:else}Describe what you want <span class="optional-hint">(optional — brand context will be used)</span>{/if}
+						{#if generationType === 'audio'}Text to speak{:else}Describe what you want <span
+								class="optional-hint">(optional — brand context will be used)</span
+							>{/if}
 					</label>
 					<textarea
 						id="ai-prompt"
@@ -382,81 +430,98 @@
 							<span class="range-value">{audioSpeed}x</span>
 						</div>
 					</div>
+				{:else if videoModels.length === 0 && videoModelsLoaded}
+					<div class="no-video-models">
+						<p>
+							No video models available. Go to <a href="/admin/ai-keys">Admin &rarr; AI Keys</a> and
+							enable Video Generation on an API key.
+						</p>
+					</div>
 				{:else}
-					{#if videoModels.length === 0 && videoModelsLoaded}
-						<div class="no-video-models">
-							<p>No video models available. Go to <a href="/admin/ai-keys">Admin &rarr; AI Keys</a> and enable Video Generation on an API key.</p>
+					{#if hasMultipleVideoProviders}
+						<div class="field">
+							<label for="ai-vid-provider">Provider</label>
+							<select id="ai-vid-provider" bind:value={selectedVideoProvider}>
+								{#each videoProviders as prov}
+									<option value={prov}>{providerDisplayNames[prov] || prov}</option>
+								{/each}
+							</select>
 						</div>
-					{:else}
-						{#if hasMultipleVideoProviders}
+					{/if}
+					<div class="field">
+						<label for="ai-vid-model">Model</label>
+						<select id="ai-vid-model" bind:value={videoModel}>
+							{#each filteredVideoModels as m}
+								<option value={m.id}>{m.displayName}</option>
+							{/each}
+						</select>
+					</div>
+					<div class="options-grid">
+						<div class="field">
+							<label for="ai-vid-aspect">Aspect Ratio</label>
+							<select id="ai-vid-aspect" bind:value={videoAspectRatio}>
+								{#each videoAspectRatios as ratio}
+									<option value={ratio}
+										>{ratio === '16:9'
+											? '16:9 Landscape'
+											: ratio === '9:16'
+												? '9:16 Portrait'
+												: '1:1 Square'}</option
+									>
+								{/each}
+							</select>
+						</div>
+						<div class="field">
+							<label for="ai-vid-duration">Duration</label>
+							<select id="ai-vid-duration" bind:value={videoDuration}>
+								{#each videoDurations as d}
+									<option value={d}>{d} seconds</option>
+								{/each}
+							</select>
+						</div>
+						{#if hasQualitySelector}
 							<div class="field">
-								<label for="ai-vid-provider">Provider</label>
-								<select id="ai-vid-provider" bind:value={selectedVideoProvider}>
-									{#each videoProviders as prov}
-										<option value={prov}>{providerDisplayNames[prov] || prov}</option>
+								<label for="ai-vid-quality">Quality</label>
+								<select id="ai-vid-quality" bind:value={videoResolution}>
+									{#each videoResolutions as res}
+										<option value={res}>{res}</option>
 									{/each}
 								</select>
 							</div>
 						{/if}
-						<div class="field">
-							<label for="ai-vid-model">Model</label>
-							<select id="ai-vid-model" bind:value={videoModel}>
-								{#each filteredVideoModels as m}
-									<option value={m.id}>{m.displayName}</option>
-								{/each}
-							</select>
-						</div>
-						<div class="options-grid">
-							<div class="field">
-								<label for="ai-vid-aspect">Aspect Ratio</label>
-								<select id="ai-vid-aspect" bind:value={videoAspectRatio}>
-									{#each videoAspectRatios as ratio}
-										<option value={ratio}>{ratio === '16:9' ? '16:9 Landscape' : ratio === '9:16' ? '9:16 Portrait' : '1:1 Square'}</option>
-									{/each}
-								</select>
-							</div>
-							<div class="field">
-								<label for="ai-vid-duration">Duration</label>
-								<select id="ai-vid-duration" bind:value={videoDuration}>
-									{#each videoDurations as d}
-										<option value={d}>{d} seconds</option>
-									{/each}
-								</select>
-							</div>
-							{#if hasQualitySelector}
-								<div class="field">
-									<label for="ai-vid-quality">Quality</label>
-									<select id="ai-vid-quality" bind:value={videoResolution}>
-										{#each videoResolutions as res}
-											<option value={res}>{res}</option>
-										{/each}
-									</select>
-								</div>
-							{/if}
-						</div>
-					{/if}
+					</div>
 				{/if}
 
 				<!-- Cost estimate -->
 				<div class="cost-estimate">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-						<path d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33" stroke-linecap="round" stroke-linejoin="round" />
+						<path
+							d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
 					</svg>
 					<span>Estimated cost: <strong>{estimatedCost}</strong></span>
 				</div>
 			</div>
 
 			<footer class="modal-footer">
-				<button class="btn-secondary" on:click={handleClose} disabled={generating}>
-					Cancel
-				</button>
-				<button class="btn-primary" on:click={handleGenerate} disabled={generating || (generationType === 'audio' && !prompt.trim())}>
+				<button class="btn-secondary" on:click={handleClose} disabled={generating}> Cancel </button>
+				<button
+					class="btn-primary"
+					on:click={handleGenerate}
+					disabled={generating || (generationType === 'audio' && !prompt.trim())}
+				>
 					{#if generating}
 						<span class="spinner"></span>
 						Generating...
 					{:else}
 						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" stroke-linecap="round" stroke-linejoin="round" />
+							<path
+								d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
 						</svg>
 						Generate {typeLabel}
 					{/if}
@@ -525,7 +590,9 @@
 		padding: var(--spacing-xs);
 		border-radius: var(--radius-md);
 		color: var(--color-text-secondary);
-		transition: color var(--transition-fast), background-color var(--transition-fast);
+		transition:
+			color var(--transition-fast),
+			background-color var(--transition-fast);
 	}
 
 	.close-btn:hover {
@@ -583,7 +650,7 @@
 	}
 
 	.field textarea,
-	.field input[type="text"],
+	.field input[type='text'],
 	.field select {
 		background-color: var(--color-surface);
 		color: var(--color-text);
@@ -608,7 +675,7 @@
 		color: var(--color-text-secondary);
 	}
 
-	.field input[type="range"] {
+	.field input[type='range'] {
 		accent-color: var(--color-primary);
 	}
 
@@ -719,7 +786,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	/* Mobile responsive */

@@ -453,8 +453,15 @@ export function buildBrandContextString(brandData: Partial<BrandProfile>): strin
 	if (brandData.primaryColor) contextParts.push(`Primary Color: ${brandData.primaryColor}`);
 	if (brandData.secondaryColor) contextParts.push(`Secondary Color: ${brandData.secondaryColor}`);
 	if (brandData.accentColor) contextParts.push(`Accent Color: ${brandData.accentColor}`);
-	if (brandData.colorPalette?.length)
-		contextParts.push(`Color Palette: ${brandData.colorPalette.join(', ')}`);
+	// colorPalette is the one array-valued field here. It arrives parsed from the
+	// DB row mapper, but extraction results merge in the model's raw JSON string —
+	// so accept both rather than throwing on `.join`.
+	if (brandData.colorPalette?.length) {
+		const palette = Array.isArray(brandData.colorPalette)
+			? brandData.colorPalette.join(', ')
+			: jsonToReadableString(brandData.colorPalette as string);
+		if (palette) contextParts.push(`Color Palette: ${palette}`);
+	}
 	if (brandData.typographyLogo) contextParts.push(`Logo Font: ${brandData.typographyLogo}`);
 	if (brandData.typographyHeading)
 		contextParts.push(`Heading Font: ${brandData.typographyHeading}`);
@@ -502,9 +509,10 @@ export function buildBrandContentContextString(content: BrandContentContext): st
 		}
 	}
 
-	// Asset summary
+	// Asset summary. Optional in practice: a caller that only has text assets can
+	// omit it, and a missing summary must not take down prompt building.
 	const s = content.assetSummary;
-	if (s.totalCount > 0 || s.videoGenerationsCount > 0) {
+	if (s && (s.totalCount > 0 || s.videoGenerationsCount > 0)) {
 		parts.push('BRAND ASSET INVENTORY:');
 		if (s.imageCount > 0)
 			parts.push(`  - ${s.imageCount} image(s) (logos, social, marketing, etc.)`);

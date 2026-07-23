@@ -1,37 +1,29 @@
 import type { ServerLoad } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
+import { getAllEnabledAIKeys } from '$lib/services/openai-chat';
 
 export const load: ServerLoad = async ({ platform, locals }) => {
-  // Require authentication
-  if (!locals.user) {
-    throw redirect(302, '/auth/login?redirect=/brand');
-  }
+	// Require authentication
+	if (!locals.user) {
+		throw redirect(302, '/auth/login?redirect=/brand');
+	}
 
-  // Check if AI providers are available (for the onboarding link)
-  let hasAIProviders = false;
-  try {
-    if (platform?.env?.KV) {
-      const keysList = await platform.env.KV.get('ai_keys_list');
-      if (keysList) {
-        const keyIds = JSON.parse(keysList);
-        for (const keyId of keyIds) {
-          const keyData = await platform.env.KV.get(`ai_key:${keyId}`);
-          if (keyData) {
-            const key = JSON.parse(keyData);
-            if (key.enabled !== false && (key.provider === 'openai' || key.provider === 'anthropic')) {
-              hasAIProviders = true;
-              break;
-            }
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error('Failed to check AI providers:', err);
-  }
+	// Check if any text-chat-capable AI provider is available (for the onboarding
+	// link). Reuse the same helper the chat path uses so this gate stays in sync
+	// with what the Brand Architect can actually call — including keyless Workers
+	// AI (which only counts when its binding is present).
+	let hasAIProviders = false;
+	try {
+		if (platform?.env?.KV) {
+			const keys = await getAllEnabledAIKeys(platform);
+			hasAIProviders = keys.length > 0;
+		}
+	} catch (err) {
+		console.error('Failed to check AI providers:', err);
+	}
 
-  return {
-    userId: locals.user.id,
-    hasAIProviders
-  };
+	return {
+		userId: locals.user.id,
+		hasAIProviders
+	};
 };

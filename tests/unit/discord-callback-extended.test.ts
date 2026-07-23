@@ -439,7 +439,9 @@ describe('Discord Callback Server - Extended Coverage', () => {
 			};
 
 			const mockEvent = {
-				url: new URL('http://localhost/api/auth/discord/callback?code=test-code'),
+				url: new URL(
+					'http://localhost/api/auth/discord/callback?code=test-code&state=link:csrf-token'
+				),
 				cookies: { get: vi.fn().mockReturnValue(existingSession), set: vi.fn() },
 				platform: {
 					env: {

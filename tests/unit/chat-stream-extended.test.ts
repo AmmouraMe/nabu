@@ -8,7 +8,7 @@ vi.mock('$lib/services/openai-chat', () => ({
 	formatMessagesForOpenAI: vi.fn((messages) => messages),
 	getEnabledOpenAIKey: vi.fn(),
 	streamChatCompletion: vi.fn(),
-	getAllEnabledOpenAIKeys: vi.fn(),
+	getAllEnabledAIKeys: vi.fn(),
 	streamChatCompletionWithFallback: vi.fn()
 }));
 
@@ -16,7 +16,7 @@ import {
 	formatMessagesForOpenAI,
 	getEnabledOpenAIKey,
 	streamChatCompletion,
-	getAllEnabledOpenAIKeys,
+	getAllEnabledAIKeys,
 	streamChatCompletionWithFallback,
 	type AIKey
 } from '$lib/services/openai-chat';
@@ -74,7 +74,7 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should return 503 when no OpenAI key is configured', async () => {
-		vi.mocked(getAllEnabledOpenAIKeys).mockResolvedValue([]);
+		vi.mocked(getAllEnabledAIKeys).mockResolvedValue([]);
 
 		await expect(
 			POST(createMockEvent() as unknown as Parameters<typeof POST>[0])
@@ -82,7 +82,9 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should return streaming response when key is available', async () => {
-		vi.mocked(getAllEnabledOpenAIKeys).mockResolvedValue([{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey]);
+		vi.mocked(getAllEnabledAIKeys).mockResolvedValue([
+			{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey
+		]);
 		vi.mocked(streamChatCompletionWithFallback).mockImplementation(async function* () {
 			yield { type: 'content' as const, content: 'Hello' };
 			yield { type: 'content' as const, content: ' world' };
@@ -100,8 +102,10 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should handle streaming errors gracefully', async () => {
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
-		vi.mocked(getAllEnabledOpenAIKeys).mockResolvedValue([{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey]);
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(getAllEnabledAIKeys).mockResolvedValue([
+			{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey
+		]);
 		vi.mocked(streamChatCompletionWithFallback).mockImplementation(async function* () {
 			throw new Error('Stream failed');
 		});
@@ -116,7 +120,9 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should format messages before streaming', async () => {
-		vi.mocked(getAllEnabledOpenAIKeys).mockResolvedValue([{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey]);
+		vi.mocked(getAllEnabledAIKeys).mockResolvedValue([
+			{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey
+		]);
 		vi.mocked(formatMessagesForOpenAI).mockReturnValue([{ role: 'user', content: 'formatted' }]);
 		vi.mocked(streamChatCompletionWithFallback).mockImplementation(async function* () {
 			yield { type: 'content', content: 'response' };
@@ -128,7 +134,7 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should re-throw errors with status property', async () => {
-		vi.mocked(getAllEnabledOpenAIKeys).mockRejectedValue({ status: 404, message: 'Not found' });
+		vi.mocked(getAllEnabledAIKeys).mockRejectedValue({ status: 404, message: 'Not found' });
 
 		await expect(
 			POST(createMockEvent() as unknown as Parameters<typeof POST>[0])
@@ -136,8 +142,8 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should throw 500 for unknown errors', async () => {
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
-		vi.mocked(getAllEnabledOpenAIKeys).mockRejectedValue(new Error('Unknown error'));
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(getAllEnabledAIKeys).mockRejectedValue(new Error('Unknown error'));
 
 		await expect(
 			POST(createMockEvent() as unknown as Parameters<typeof POST>[0])
@@ -147,7 +153,9 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should pass model parameter to streamChatCompletionWithFallback', async () => {
-		vi.mocked(getAllEnabledOpenAIKeys).mockResolvedValue([{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey]);
+		vi.mocked(getAllEnabledAIKeys).mockResolvedValue([
+			{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey
+		]);
 		vi.mocked(streamChatCompletionWithFallback).mockImplementation(async function* () {
 			yield { type: 'content', content: 'response' };
 		});
@@ -171,7 +179,9 @@ describe('Chat Stream API - Extended Coverage', () => {
 	});
 
 	it('should use default model when not specified', async () => {
-		vi.mocked(getAllEnabledOpenAIKeys).mockResolvedValue([{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey]);
+		vi.mocked(getAllEnabledAIKeys).mockResolvedValue([
+			{ apiKey: 'test-key', id: 'k1', name: 'Test', provider: 'openai', enabled: true } as AIKey
+		]);
 		vi.mocked(streamChatCompletionWithFallback).mockImplementation(async function* () {
 			yield { type: 'content', content: 'response' };
 		});

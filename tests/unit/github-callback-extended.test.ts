@@ -27,7 +27,7 @@ import { GET } from '../../src/routes/api/auth/github/callback/+server';
 
 // NOTE: These tests are skipped due to complex mock interaction issues with the OAuth flow.
 // The existing github-oauth-flow.test.ts provides coverage for the callback endpoint.
-describe.skip('GitHub OAuth Callback - Extended Coverage', () => {
+describe('GitHub OAuth Callback - Extended Coverage', () => {
 	let mockFetch: ReturnType<typeof vi.fn>;
 	let mockKVGet: ReturnType<typeof vi.fn>;
 	let mockKVPut: ReturnType<typeof vi.fn>;

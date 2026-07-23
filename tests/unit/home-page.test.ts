@@ -8,10 +8,28 @@ vi.mock('$app/navigation', () => ({
 	goto: vi.fn()
 }));
 
-// NOTE: These tests are skipped due to SvelteKit's page store issue in vitest.
-// The page store cannot be subscribed to outside a Svelte component context.
+// SvelteKit's real `page` store refuses to be subscribed to outside a component
+// context during SSR — which is exactly what @testing-library/svelte does here.
+// A plain readable store with the shape the page reads is enough.
 // See: https://svelte.dev/docs/kit/state-management#avoid-shared-state-on-the-server
-describe.skip('Home Page – Marketing Landing', () => {
+vi.mock('$app/stores', async () => {
+	const { readable } = await import('svelte/store');
+	return {
+		page: readable({
+			url: new URL('http://localhost/'),
+			params: {},
+			route: { id: '/' },
+			status: 200,
+			error: null,
+			data: {},
+			form: null
+		}),
+		navigating: readable(null),
+		updated: { ...readable(false), check: async () => false }
+	};
+});
+
+describe('Home Page – Marketing Landing', () => {
 	beforeEach(() => {
 		showCommandPalette.set(false);
 	});
@@ -41,13 +59,15 @@ describe.skip('Home Page – Marketing Landing', () => {
 	it('should render CTA buttons for unauthenticated users', () => {
 		render(Page, { props: { data: { user: undefined, hasAIProviders: false } } });
 		expect(screen.getByText('Start Building Your Brand')).toBeTruthy();
-		expect(screen.getByText('Sign In')).toBeTruthy();
+		// "Sign In" appears in both the hero and the closing CTA section.
+		expect(screen.getAllByText('Sign In')).toHaveLength(2);
 	});
 
 	it('should render app buttons for authenticated users', () => {
 		const user = { id: '1', login: 'testuser', email: 'test@test.com', isOwner: false };
 		render(Page, { props: { data: { user, hasAIProviders: false } } });
-		expect(screen.getByText('Build Your Brand')).toBeTruthy();
+		// "Build Your Brand" likewise appears in the hero and the closing CTA.
+		expect(screen.getAllByText('Build Your Brand')).toHaveLength(2);
 		expect(screen.getByText('Go to Dashboard')).toBeTruthy();
 	});
 

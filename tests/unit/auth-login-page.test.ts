@@ -67,7 +67,9 @@ describe('Auth Login Page Server', () => {
 				configuredProviders: {
 					github: false,
 					discord: false
-				}
+				},
+				// Dev virtual login is on under `vite dev` / vitest (import.meta.env.DEV).
+				devLoginEnabled: true
 			});
 		});
 
@@ -85,7 +87,9 @@ describe('Auth Login Page Server', () => {
 				configuredProviders: {
 					github: false,
 					discord: false
-				}
+				},
+				// Dev virtual login is on under `vite dev` / vitest (import.meta.env.DEV).
+				devLoginEnabled: true
 			});
 		});
 

@@ -221,3 +221,61 @@ describe('provisionApiKey', () => {
 		expect(r.reused).toBe(true);
 	});
 });
+
+describe('error-detail and empty-collection fallbacks', () => {
+	it('exchangeCode prefers error_description, then error, then the status code', async () => {
+		globalThis.fetch = vi
+			.fn()
+			.mockResolvedValue(resp(400, { error_description: 'described' })) as any;
+		await expect(exchangeCode(config, 'c', 'u')).rejects.toThrow('described');
+
+		globalThis.fetch = vi.fn().mockResolvedValue(resp(400, {})) as any;
+		await expect(exchangeCode(config, 'c', 'u')).rejects.toThrow('400');
+	});
+
+	it('getAccessToken falls back to the status code without a description', async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue(resp(500, {})) as any;
+		await expect(getAccessToken(config, 'r')).rejects.toThrow('500');
+	});
+
+	it('gapi tolerates an empty body and an error without a message', async () => {
+		// Empty body on the projects list → treated as {} → no projects
+		globalThis.fetch = vi.fn().mockResolvedValue(resp(200, '')) as any;
+		expect(await listProjects('at')).toEqual([]);
+
+		// Error payload with no error.message → falls back to "HTTP <status>"
+		globalThis.fetch = vi.fn().mockResolvedValue(resp(500, {})) as any;
+		await expect(listProjects('at')).rejects.toThrow('HTTP 500');
+	});
+
+	it('listProjects returns an empty list when the response omits projects', async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue(resp(200, {})) as any;
+		expect(await listProjects('at')).toEqual([]);
+	});
+
+	it('provisionApiKey rethrows a non-404 service-account lookup failure', async () => {
+		globalThis.fetch = vi.fn((url: string) => {
+			if (url.includes(':enable')) return Promise.resolve(resp(200, {}));
+			if (url.includes('/serviceAccounts/'))
+				return Promise.resolve(resp(500, { error: { message: 'iam down' } }));
+			return Promise.resolve(resp(200, {}));
+		}) as any;
+		await expect(provisionApiKey('p', 'at')).rejects.toThrow('iam down');
+	});
+
+	it('provisionApiKey handles a keys list with no keys field', async () => {
+		globalThis.fetch = vi.fn((url: string, init: any = {}) => {
+			const method = init.method || 'GET';
+			if (url.includes(':enable')) return Promise.resolve(resp(200, {}));
+			if (url.includes('/serviceAccounts/')) return Promise.resolve(resp(200, {}));
+			if (url.endsWith('/keys') && method === 'GET') return Promise.resolve(resp(200, {})); // no `keys`
+			if (url.endsWith('/keys') && method === 'POST')
+				return Promise.resolve(resp(200, { name: 'operations/op1' }));
+			if (url.includes('/operations/op1'))
+				return Promise.resolve(resp(200, { done: true, response: { name: 'projects/p/keys/k1' } }));
+			if (url.includes('/keyString')) return Promise.resolve(resp(200, { keyString: 'AIza' }));
+			return Promise.resolve(resp(404, {}));
+		}) as any;
+		expect((await provisionApiKey('p', 'at')).reused).toBe(false);
+	});
+});

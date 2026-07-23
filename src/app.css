@@ -1,8 +1,17 @@
 /* CSS Variables for Theme System */
 :root {
+	/* Brand — the Nabu teal, matching static/logo.svg + favicon.svg. Single
+	   source of truth for the mark's colors; --color-primary is derived from
+	   these per theme (below and in the dark block) so the UI accent and the
+	   logo can't drift apart. The two tones are the logo's two interlocking
+	   shapes. These are constant across themes — only which one primary points
+	   at changes, picked for WCAG-AA contrast on each theme's background. */
+	--color-brand: #3ba99f; /* lighter teal — logo back shape */
+	--color-brand-strong: #1e7d72; /* darker teal — logo front shape */
+
 	/* Light theme colors - WCAG AA compliant */
-	--color-primary: #0066cc;
-	--color-primary-hover: #0052a3;
+	--color-primary: var(--color-brand-strong); /* 4.93:1 on #ffffff */
+	--color-primary-hover: #17635b;
 	--color-secondary: #6366f1;
 	--color-secondary-hover: #4f46e5;
 	--color-background: #ffffff;
@@ -47,8 +56,11 @@
 
 /* Dark theme */
 [data-theme='dark'] {
-	--color-primary: #3b82f6;
-	--color-primary-hover: #2563eb;
+	/* The lighter brand tone; the darker one fails 4.5:1 on #0a0a0a. Primary
+	   buttons set their text to var(--color-background), so on this teal that
+	   is dark text at 7.17:1 — high contrast in both themes. */
+	--color-primary: var(--color-brand); /* 7.17:1 on #0a0a0a */
+	--color-primary-hover: #2f978c;
 	--color-secondary: #8b5cf6;
 	--color-secondary-hover: #7c3aed;
 	--color-background: #0a0a0a;

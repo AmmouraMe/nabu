@@ -40,7 +40,7 @@ export const load: ServerLoad = async ({ platform, locals, params }) => {
     const result = await db
       .prepare(
         `SELECT id, title, body, platform, status, created_at, external_url, error_message
-         FROM content_items
+         FROM brand_content_items
          WHERE brand_id = ? AND type = 'video'
          ORDER BY created_at DESC
          LIMIT 50`

@@ -1,6 +1,6 @@
 /**
  * GET /api/content/items?brandId=<id>
- * Lists content_items for a brand, verified to belong to the authenticated user.
+ * Lists brand_content_items for a brand, verified to belong to the authenticated user.
  */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -22,7 +22,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
 
   const { results: items } = await db
     .prepare(
-      `SELECT * FROM content_items WHERE brand_id = ? ORDER BY created_at DESC LIMIT 100`
+      `SELECT * FROM brand_content_items WHERE brand_id = ? ORDER BY created_at DESC LIMIT 100`
     )
     .bind(brandId)
     .all();

@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 
   // Load item and verify ownership via brand → user chain
   const item = await db
-    .prepare('SELECT * FROM content_items WHERE id = ?')
+    .prepare('SELECT * FROM brand_content_items WHERE id = ?')
     .bind(itemId)
     .first<ContentItem>();
   if (!item) throw error(404, 'Content item not found');
@@ -81,7 +81,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 
     await db
       .prepare(
-        `UPDATE content_items
+        `UPDATE brand_content_items
          SET status = 'published', published_at = datetime('now'), external_url = ?
          WHERE id = ?`
       )
@@ -94,7 +94,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 
     await db
       .prepare(
-        `UPDATE content_items SET status = 'failed', error_message = ? WHERE id = ?`
+        `UPDATE brand_content_items SET status = 'failed', error_message = ? WHERE id = ?`
       )
       .bind(msg, itemId)
       .run();

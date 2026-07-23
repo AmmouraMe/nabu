@@ -106,7 +106,7 @@ describe('brand/[id]/videos/+page.server load', () => {
 		const db = makeDB([
 			{ match: 'FROM brand_profiles', first: { id: 'bp1', brand_name: 'Acme' } },
 			{ match: 'FROM brands', first: { id: 'br1' } },
-			{ match: 'FROM content_items', all: { results: [{ id: 'v1', platform: 'youtube' }] } }
+			{ match: 'FROM brand_content_items', all: { results: [{ id: 'v1', platform: 'youtube' }] } }
 		]);
 		const kv = { get: vi.fn().mockResolvedValue('token') };
 		const res = await load({

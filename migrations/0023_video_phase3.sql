@@ -1,9 +1,9 @@
 -- Migration 0023: Phase 3 Video Generation
--- 1. Extend content_items to support video type and video platforms
+-- 1. Extend brand_content_items to support video type and video platforms
 -- 2. SQLite doesn't allow ALTER TABLE to change CHECK constraints,
 --    so we recreate the table with updated constraints.
 
-CREATE TABLE content_items_new (
+CREATE TABLE brand_content_items_new (
   id TEXT PRIMARY KEY,
   brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK(type IN ('post', 'article', 'update', 'video')),
@@ -18,11 +18,11 @@ CREATE TABLE content_items_new (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-INSERT INTO content_items_new SELECT * FROM content_items;
-DROP TABLE content_items;
-ALTER TABLE content_items_new RENAME TO content_items;
+INSERT INTO brand_content_items_new SELECT * FROM brand_content_items;
+DROP TABLE brand_content_items;
+ALTER TABLE brand_content_items_new RENAME TO brand_content_items;
 
-CREATE INDEX idx_content_items_brand ON content_items(brand_id);
-CREATE INDEX idx_content_items_status ON content_items(status);
-CREATE INDEX idx_content_items_platform ON content_items(platform);
-CREATE INDEX idx_content_items_scheduled ON content_items(scheduled_for) WHERE scheduled_for IS NOT NULL;
+CREATE INDEX idx_brand_content_items_brand ON brand_content_items(brand_id);
+CREATE INDEX idx_brand_content_items_status ON brand_content_items(status);
+CREATE INDEX idx_brand_content_items_platform ON brand_content_items(platform);
+CREATE INDEX idx_brand_content_items_scheduled ON brand_content_items(scheduled_for) WHERE scheduled_for IS NOT NULL;

@@ -23,7 +23,7 @@ CREATE INDEX idx_brands_brand_profile ON brands(brand_profile_id);
 CREATE INDEX idx_brands_auto_schedule ON brands(auto_schedule);
 
 -- Individual pieces of generated or scheduled content
-CREATE TABLE content_items (
+CREATE TABLE brand_content_items (
   id TEXT PRIMARY KEY,
   brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK(type IN ('post', 'article', 'update')),
@@ -38,10 +38,10 @@ CREATE TABLE content_items (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX idx_content_items_brand ON content_items(brand_id);
-CREATE INDEX idx_content_items_status ON content_items(status);
-CREATE INDEX idx_content_items_platform ON content_items(platform);
-CREATE INDEX idx_content_items_scheduled ON content_items(scheduled_for) WHERE scheduled_for IS NOT NULL;
+CREATE INDEX idx_brand_content_items_brand ON brand_content_items(brand_id);
+CREATE INDEX idx_brand_content_items_status ON brand_content_items(status);
+CREATE INDEX idx_brand_content_items_platform ON brand_content_items(platform);
+CREATE INDEX idx_brand_content_items_scheduled ON brand_content_items(scheduled_for) WHERE scheduled_for IS NOT NULL;
 
 -- Connected publishing accounts (actual tokens stored in KV, not here)
 CREATE TABLE publishing_accounts (

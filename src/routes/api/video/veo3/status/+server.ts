@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
   if (result.done && result.videoUrl && itemId) {
     await db
       .prepare(
-        `UPDATE content_items SET body = ?, status = 'published', published_at = datetime('now'), external_url = ?
+        `UPDATE brand_content_items SET body = ?, status = 'published', published_at = datetime('now'), external_url = ?
          WHERE id = ? AND brand_id IN (SELECT id FROM brands WHERE user_id = ?)`
       )
       .bind(result.videoUrl, result.videoUrl, itemId, locals.user.id)
@@ -34,7 +34,7 @@ export const GET: RequestHandler = async ({ locals, platform, url }) => {
   } else if (result.done && result.error && itemId) {
     await db
       .prepare(
-        `UPDATE content_items SET status = 'failed', error_message = ?
+        `UPDATE brand_content_items SET status = 'failed', error_message = ?
          WHERE id = ? AND brand_id IN (SELECT id FROM brands WHERE user_id = ?)`
       )
       .bind(result.error, itemId, locals.user.id)

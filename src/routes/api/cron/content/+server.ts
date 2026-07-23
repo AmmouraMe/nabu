@@ -5,7 +5,7 @@
  *   Authorization: Bearer <CRON_SECRET>
  *
  * Generates a 4-week content calendar for every brand with auto_schedule=1
- * and saves all entries as draft content_items.
+ * and saves all entries as draft brand_content_items.
  */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -74,7 +74,7 @@ export const GET: RequestHandler = async ({ platform, request }) => {
             const id = crypto.randomUUID();
             await db
               .prepare(
-                `INSERT INTO content_items (id, brand_id, type, platform, title, body, status, created_at)
+                `INSERT INTO brand_content_items (id, brand_id, type, platform, title, body, status, created_at)
                  VALUES (?, ?, ?, ?, ?, '', 'draft', datetime('now'))`
               )
               .bind(id, brand.id, type, plt, entry.topic)

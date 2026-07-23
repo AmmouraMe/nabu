@@ -53,7 +53,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
   const itemId = crypto.randomUUID();
   await db
     .prepare(
-      `INSERT INTO content_items (id, brand_id, type, platform, title, body, status, created_at)
+      `INSERT INTO brand_content_items (id, brand_id, type, platform, title, body, status, created_at)
        VALUES (?, ?, 'video', ?, ?, ?, 'draft', datetime('now'))`
     )
     .bind(

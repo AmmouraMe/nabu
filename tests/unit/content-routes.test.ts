@@ -157,7 +157,7 @@ describe('GET /api/content/items', () => {
 	it('returns the content items', async () => {
 		const db = makeDB([
 			{ match: 'FROM brands', first: { id: 'br1' } },
-			{ match: 'FROM content_items', all: { results: [{ id: 'c1' }] } }
+			{ match: 'FROM brand_content_items', all: { results: [{ id: 'c1' }] } }
 		]);
 		const res = await GET({
 			locals: { user },
@@ -181,7 +181,7 @@ describe('POST /api/content/publish', () => {
 		} as any);
 
 	const itemRoute = (over: any = {}) => ({
-		match: 'FROM content_items',
+		match: 'FROM brand_content_items',
 		first: {
 			id: 'c1',
 			brand_id: 'br1',
@@ -203,7 +203,7 @@ describe('POST /api/content/publish', () => {
 		await expect(
 			call({
 				platform: {
-					env: { DB: makeDB([{ match: 'FROM content_items', first: null }]), KV: kv(null) }
+					env: { DB: makeDB([{ match: 'FROM brand_content_items', first: null }]), KV: kv(null) }
 				}
 			})
 		).rejects.toMatchObject({ status: 404 });

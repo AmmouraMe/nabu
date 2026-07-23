@@ -1,4 +1,7 @@
-name = "nebulakit"
+# Pages project name. The D1/R2 resource names below deliberately keep their
+# original nebulakit-* names — they are live resources; renaming them here would
+# break the bindings and `npm run db:migrate`.
+name = "nabu"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = ".svelte-kit/cloudflare"
 

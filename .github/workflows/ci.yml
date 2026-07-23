@@ -7,7 +7,10 @@ on:
     branches: [main, develop]
 
 env:
-  NODE_VERSION: '18'
+  # Keep this on a current LTS and reasonably close to local dev. Node 18 is EOL,
+  # and the skew matters: Node 25 ships its own inert global `localStorage`,
+  # which broke the theme tests until tests/setup.ts started polyfilling it.
+  NODE_VERSION: '24'
 
 jobs:
   test:
@@ -29,20 +32,21 @@ jobs:
       - name: Type check
         run: npm run check
 
+      # Coverage thresholds (95% lines/branches/functions/statements) are
+      # enforced by vitest itself via vite.config.ts, so this step fails the
+      # build on a regression. A previous hand-rolled 90% gate here read
+      # coverage/coverage-summary.json, which is never generated (the reporters
+      # are text/json/html/lcov) — `cat` failed, `jq` returned null, and the
+      # check silently always passed. Removed rather than fixed: one threshold,
+      # one source of truth.
       - name: Run unit tests with coverage
         run: npm run test:coverage
 
-      - name: Check coverage threshold (90%)
-        run: |
-          COVERAGE=$(cat coverage/coverage-summary.json | jq '.total.lines.pct')
-          echo "Coverage: $COVERAGE%"
-          if (( $(echo "$COVERAGE < 90" | bc -l) )); then
-            echo "Coverage is below 90%!"
-            exit 1
-          fi
+      - name: Validate theme contrast (WCAG AA)
+        run: npm run validate:contrast
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           directory: ./coverage
           fail_ci_if_error: false
@@ -77,5 +81,8 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-  # Build & Deploy handled by Cloudflare Pages Git integration
-  # See: https://dash.cloudflare.com → Pages → NebulaKit
+  # Build & Deploy handled by Cloudflare Pages Git integration.
+  # See: https://dash.cloudflare.com → Pages → nabu
+  # NOTE: wrangler.toml's `name` is now "nabu". If the dashboard project is still
+  # named "nebulakit", rename it there (or create "nabu" and re-point the Git
+  # integration) so `wrangler pages deploy` and the dashboard agree.

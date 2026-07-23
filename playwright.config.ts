@@ -14,7 +14,9 @@ const config: PlaywrightTestConfig = {
 		screenshot: 'only-on-failure'
 	},
 	retries: process.env.CI ? 2 : 0,
-	reporter: process.env.CI ? 'github' : 'list'
+	// In CI also emit the HTML report, so the workflow's playwright-report
+	// artifact actually has something to upload when a run fails.
+	reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list'
 };
 
 export default config;

@@ -1,6 +1,5 @@
-# Pages project name. The D1/R2 resource names below deliberately keep their
-# original nebulakit-* names — they are live resources; renaming them here would
-# break the bindings and `npm run db:migrate`.
+# Pages project name. All bound resources below are Nabu's own, on the *Space
+# account — see the D1 block for why that matters.
 name = "nabu"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = ".svelte-kit/cloudflare"
@@ -9,27 +8,36 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 # account non-interactively (the OAuth login exposes multiple accounts).
 account_id = "f6dece8a25710d1e02a529144cfc3344"
 
-# D1 Database
-# Create with: wrangler d1 create nebulakit-db
-# Then replace the database_id below with the actual ID
+# D1 Database — Nabu's own, on the *Space account.
+# Created 2026-07-23 with: wrangler d1 create nabu-db
+#
+# These IDs were previously copied verbatim from the convey.land project
+# (database_id bd776be3-…, KV 12a65763-…). D1 binds by *id*, so that pointed
+# Nabu at another project's database and KV — and the migration filenames
+# diverge from 0004 on, so applying Nabu's migrations there would have
+# interleaved two unrelated schemas in one d1_migrations table. Nothing had
+# been written (no remote resources existed on this account), but do not
+# reintroduce another project's IDs here.
 [[d1_databases]]
 binding = "DB"
-database_name = "nebulakit-db"
-database_id = "bd776be3-9823-4763-abb1-c18b40931456"
+database_name = "nabu-db"
+database_id = "3804142a-d754-4d02-98a7-86113e2b00b5"
 migrations_dir = "./migrations"
 
 # KV Namespace
-# Create with: wrangler kv:namespace create "KV"
-# For local dev preview: wrangler kv:namespace create "KV" --preview
+# Created with: wrangler kv namespace create KV   (and again with --preview)
 [[kv_namespaces]]
 binding = "KV"
-id = "12a6576334dd4e16bf1e08d5cc1fac4a"
-preview_id = "e9b0a93432b1406786dc7b9b334da90d"
+id = "771c669e06344160960e963bbb99b34f"
+preview_id = "da23de6c55b54ca89b93a6023e464ece"
+
 # R2 Bucket
-# Create with: wrangler r2 bucket create nebulakit-files
+# NOT YET CREATED: R2 is not enabled on the *Space account (API returns 10042).
+# Enable R2 in the Cloudflare dashboard, then: wrangler r2 bucket create nabu-files
+# R2 binds by name, so this resolves as soon as the bucket exists.
 [[r2_buckets]]
 binding = "BUCKET"
-bucket_name = "nebulakit-files"
+bucket_name = "nabu-files"
 
 # Queue (disabled - enable Queues at https://dash.cloudflare.com before uncommenting)
 # [[queues.producers]]

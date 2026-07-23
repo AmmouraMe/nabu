@@ -42,9 +42,26 @@ describe('Auth Keys [id] API - Extended Branch Coverage', () => {
 							}
 						}
 					: overrides.platform,
-			locals: {}
+			// These routes gate on isOwner/isAdmin.
+			locals: { user: { id: 'admin-1', isAdmin: true } }
 		};
 	};
+
+	describe('admin gate', () => {
+		it('PUT: throws 403 without an admin user', async () => {
+			const event = { ...createMockEvent(), locals: { user: { id: 'user-1' } } };
+			await expect(PUT(event as unknown as Parameters<typeof PUT>[0])).rejects.toMatchObject({
+				status: 403
+			});
+		});
+
+		it('DELETE: throws 403 without an admin user', async () => {
+			const event = { ...createMockEvent(), locals: { user: null } };
+			await expect(DELETE(event as unknown as Parameters<typeof DELETE>[0])).rejects.toMatchObject({
+				status: 403
+			});
+		});
+	});
 
 	describe('PUT - Update auth key', () => {
 		it('should allow update when no auth config exists in KV', async () => {

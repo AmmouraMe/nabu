@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The admin auth-keys routes gate on isOwner/isAdmin.
+const adminLocals = { user: { id: 'admin-1', isAdmin: true } };
+
 /**
  * Tests for Auth Keys API Endpoints
  * TDD: Tests for auth key management
@@ -23,7 +26,8 @@ describe('Auth Keys API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 			const response = await GET({
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -53,7 +57,8 @@ describe('Auth Keys API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 			const response = await GET({
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -73,7 +78,8 @@ describe('Auth Keys API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 			const response = await GET({
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -83,7 +89,8 @@ describe('Auth Keys API', () => {
 		it('should return empty array when KV is not available', async () => {
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 			const response = await GET({
-				platform: {}
+				platform: {},
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -113,7 +120,8 @@ describe('Auth Keys API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 			const response = await GET({
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -156,7 +164,8 @@ describe('Auth Keys API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 			const response = await GET({
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -183,7 +192,8 @@ describe('Auth Keys API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 			const response = await GET({
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -208,7 +218,8 @@ describe('Auth Keys API', () => {
 
 			// The GET function catches KV errors internally and returns empty keys
 			const response = await GET({
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -234,7 +245,8 @@ describe('Auth Keys API', () => {
 						clientSecret: 'secret-123'
 					})
 				},
-				platform: {}
+				platform: {},
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -254,7 +266,8 @@ describe('Auth Keys API', () => {
 							// Missing clientId and clientSecret
 						})
 					},
-					platform: {}
+					platform: {},
+					locals: adminLocals
 				} as any)
 			).rejects.toThrow();
 		});
@@ -283,7 +296,8 @@ describe('Auth Keys API', () => {
 						clientSecret: 'secret-123'
 					})
 				},
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -303,7 +317,8 @@ describe('Auth Keys API', () => {
 					request: {
 						json: vi.fn().mockRejectedValue(new Error('Request parse failed'))
 					},
-					platform: {}
+					platform: {},
+					locals: adminLocals
 				} as any);
 				expect.fail('Should have thrown');
 			} catch (err: any) {
@@ -335,7 +350,8 @@ describe('Auth Keys API', () => {
 						clientId: 'client-456'
 					})
 				},
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -368,7 +384,8 @@ describe('Auth Keys API', () => {
 							clientId: 'evil-client'
 						})
 					},
-					platform: mockPlatform
+					platform: mockPlatform,
+					locals: adminLocals
 				} as any)
 			).rejects.toThrow();
 		});
@@ -392,7 +409,8 @@ describe('Auth Keys API', () => {
 							// Missing name and clientId
 						})
 					},
-					platform: mockPlatform
+					platform: mockPlatform,
+					locals: adminLocals
 				} as any)
 			).rejects.toThrow();
 		});
@@ -411,7 +429,8 @@ describe('Auth Keys API', () => {
 			const { DELETE } = await import('../../src/routes/api/admin/auth-keys/[id]/+server');
 			const response = await DELETE({
 				params: { id: 'key-123' },
-				platform: mockPlatform
+				platform: mockPlatform,
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();
@@ -437,7 +456,8 @@ describe('Auth Keys API', () => {
 			await expect(
 				DELETE({
 					params: { id: 'setup-key-123' },
-					platform: mockPlatform
+					platform: mockPlatform,
+					locals: adminLocals
 				} as any)
 			).rejects.toThrow();
 		});
@@ -446,7 +466,8 @@ describe('Auth Keys API', () => {
 			const { DELETE } = await import('../../src/routes/api/admin/auth-keys/[id]/+server');
 			const response = await DELETE({
 				params: { id: 'key-123' },
-				platform: {}
+				platform: {},
+				locals: adminLocals
 			} as any);
 
 			const result = await response.json();

@@ -2,7 +2,11 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
 // GET - List all auth keys
-export const GET: RequestHandler = async ({ platform }) => {
+export const GET: RequestHandler = async ({ platform, locals }) => {
+	if (!locals.user?.isOwner && !locals.user?.isAdmin) {
+		throw error(403, 'Admin access required');
+	}
+
 	try {
 		const keys: any[] = [];
 
@@ -55,7 +59,11 @@ export const GET: RequestHandler = async ({ platform }) => {
 };
 
 // POST - Create new auth key
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, platform, locals }) => {
+	if (!locals.user?.isOwner && !locals.user?.isAdmin) {
+		throw error(403, 'Admin access required');
+	}
+
 	try {
 		const data = await request.json();
 

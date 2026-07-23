@@ -22,40 +22,48 @@ Nabu guides users from product conception to automated marketing:
 
 ## 🚀 Features (Roadmap)
 
-### Phase 1: AI Onboarding ✅ (In Progress)
+Boxes are checked where shipped code + migrations back them; they track
+direction, not a claim of end-to-end polish. Two pivots happened as the product
+matured (noted inline).
+
+### Phase 1: AI Onboarding ✅
 
 - [x] Clone NebulaKit base
-- [ ] AI chat interface for brand assessment
-- [ ] Brand profile creation (name, colors, voice)
-- [ ] Style guide generation
-- [ ] Save to database
+- [x] AI chat interface for brand assessment (the "Brand Architect")
+- [x] Brand profile creation (name, colors, voice; versioned fields)
+- [x] Style guide generation (Brand Book generator)
+- [x] Save to database (D1)
 
-### Phase 2: Content Strategy
+### Phase 2: Content Strategy ✅ (largely)
 
-- [ ] AI content calendar generation
-- [ ] Topic/script creation
-- [ ] Voiceover text generation
-- [ ] Visual asset planning
+- [x] AI content calendar generation (weekly, via a cron trigger)
+- [x] Topic/script creation
+- [x] Voiceover text generation
+- [x] Visual asset planning (AI image generation: FLUX on Workers AI, DALL·E)
 
-### Phase 3: Video Generation Pipeline
+### Phase 3: Video Generation Pipeline ✅ (approach pivoted)
 
-- [ ] Text-to-speech integration
-- [ ] Stock footage/AI image sourcing
-- [ ] Video composition (ffmpeg)
+- [x] Text-to-speech integration (OpenAI TTS-1 / TTS-1-HD)
+- [x] Stock footage/AI image sourcing (AI image generation)
+- [x] AI video generation — **Google Veo 3**, which replaced the planned FFmpeg
+      composition step (full-clip generation, no FFmpeg runtime to host)
 - [ ] Brand template system
 
-### Phase 4: Publishing & Scheduling
+### Phase 4: Publishing & Scheduling ◐ (targets pivoted)
 
-- [ ] YouTube API (draft uploads)
-- [ ] TikTok API integration
-- [ ] Background job queue
-- [ ] Cron scheduling
+- [x] Publishing integrations — **Dev.to** and **LinkedIn** (free APIs), chosen
+      over the planned YouTube/TikTok video targets
+- [x] Cron scheduling (Cloudflare cron trigger; video schedules)
+- [ ] Background job queue — not used: Cloudflare Pages can't run queue
+      consumers, so cron + `waitUntil` cover background work instead
+- [ ] Additional platforms (YouTube / TikTok / Instagram)
 
-### Phase 5: Review Dashboard
+### Phase 5: Review Dashboard ◐
 
-- [ ] Video preview UI
-- [ ] Edit/regenerate controls
-- [ ] Publish management
+- [x] Video preview UI (per-brand list + streaming status)
+- [x] Edit/regenerate controls (media revisions + history)
+- [x] Publish management (draft → publish through the publishers above)
+- [ ] Unified review dashboard across all content types
 
 ---
 

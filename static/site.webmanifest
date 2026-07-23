@@ -1,0 +1,13 @@
+{
+	"name": "Nabu",
+	"short_name": "Nabu",
+	"description": "Build your brand. Automate your marketing.",
+	"start_url": "/",
+	"display": "standalone",
+	"theme_color": "#0a0a0a",
+	"background_color": "#0a0a0a",
+	"icons": [
+		{ "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+		{ "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" }
+	]
+}

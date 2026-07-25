@@ -37,10 +37,23 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 #      zone and so could never serve nabu.ammoura.me. That database is empty and
 #      is being deleted.
 # Do not reintroduce another project's or another account's IDs here.
+#
+# `preview_database_id` matters more than it looks. Without it, preview and branch
+# deployments bind this same production database — while KV *does* get a separate
+# preview namespace. That split is what made `/setup` bootstrappable on a public
+# branch URL (empty preview KV, so the lock key was missing) while pointed at live
+# production rows. Preview now gets its own database, so a branch deploy can never
+# read or write production data.
+#
+# Cost of this line: migrations must be applied twice. Production:
+#   wrangler d1 migrations apply nabu-db --remote
+# Preview:
+#   wrangler d1 migrations apply nabu-db --remote --preview
 [[d1_databases]]
 binding = "DB"
 database_name = "nabu-db"
 database_id = "0604dd51-85fe-4c8f-ad56-b71a3eb57156"
+preview_database_id = "2ea88d9f-8b4b-4f61-93ea-86ffa434a7f0"
 migrations_dir = "./migrations"
 
 # KV Namespace — on the Ammoura account.

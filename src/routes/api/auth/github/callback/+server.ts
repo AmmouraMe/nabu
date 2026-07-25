@@ -1,4 +1,5 @@
 import { externalOrigin, isSecureRequest } from '$lib/server/origin';
+import { signSession, verifySession } from '$lib/server/session';
 import { mergeAccounts } from '$lib/services/account-merge';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
@@ -91,18 +92,16 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 		let isLinkingMode = false;
 
 		if (existingSessionCookie) {
-			try {
-				let base64 = existingSessionCookie;
-				if (base64.includes('-') || base64.includes('_')) {
-					base64 = base64.replace(/-/g, '+').replace(/_/g, '/');
-				}
-				while (base64.length % 4) {
-					base64 += '=';
-				}
-				existingUser = JSON.parse(atob(base64));
+			// Must be verified, not just decoded: linking mode grafts this GitHub identity
+			// onto whoever the cookie names, so a forged cookie would let an attacker
+			// attach their own login to another user's account.
+			const verified = await verifySession<Record<string, any>>(
+				existingSessionCookie,
+				platform?.env?.SESSION_SECRET
+			);
+			if (verified) {
+				existingUser = verified;
 				isLinkingMode = true;
-			} catch {
-				// Invalid session, treat as new login
 			}
 		}
 
@@ -240,10 +239,7 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 							isAdmin: linkedUser.is_admin === 1
 						};
 
-						const sessionCookie = btoa(JSON.stringify(sessionData))
-							.replace(/\+/g, '-')
-							.replace(/\//g, '_')
-							.replace(/=+$/, '');
+						const sessionCookie = await signSession(sessionData, platform?.env?.SESSION_SECRET);
 
 						const isSecure = isSecureRequest(url);
 						const cookieParts = [
@@ -366,12 +362,8 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 			isAdmin
 		};
 
-		// Store session in cookie using URL-safe base64 encoding
-		// Replace +, /, = with URL-safe characters to avoid cookie parsing issues
-		const sessionCookie = btoa(JSON.stringify(sessionData))
-			.replace(/\+/g, '-')
-			.replace(/\//g, '_')
-			.replace(/=+$/, '');
+		// Signed so the contents (notably isOwner) can be trusted on the way back in.
+		const sessionCookie = await signSession(sessionData, platform?.env?.SESSION_SECRET);
 
 		// Track first admin login to lock setup page
 		if (isOwner && platform?.env?.KV) {

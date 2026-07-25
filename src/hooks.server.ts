@@ -1,34 +1,30 @@
 import type { Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { ensureSessionUserRecord } from '$lib/utils/db';
+import { verifySession } from '$lib/server/session';
 
 // Auth handling hook
 const authHandler: Handle = async ({ event, resolve }) => {
-	// Get session cookie
-	const sessionId = event.cookies.get('session');
+	const sessionCookie = event.cookies.get('session');
 
-	if (sessionId) {
-		// In production, fetch session from D1 or KV
-		// For now, decode the session from the cookie
-		try {
-			// Handle both standard base64 and URL-safe base64
-			// URL-safe uses - instead of +, _ instead of /, and no padding
-			let base64 = sessionId;
+	if (sessionCookie) {
+		// The cookie carries the session itself, so it must be proven server-issued
+		// before any of it is trusted. This previously base64-decoded the cookie
+		// straight into locals.user, which let anyone self-assign isOwner/isAdmin and
+		// walk through every admin guard. verifySession returns null for a cookie that
+		// is unsigned, tampered with, or signed by another secret.
+		const sessionData = await verifySession<App.Locals['user']>(
+			sessionCookie,
+			event.platform?.env?.SESSION_SECRET
+		);
 
-			// Only apply URL-safe decoding if the string contains URL-safe characters
-			if (base64.includes('-') || base64.includes('_')) {
-				base64 = base64.replace(/-/g, '+').replace(/_/g, '/');
-			}
-
-			// Add padding if needed (for both standard and URL-safe base64)
-			while (base64.length % 4) {
-				base64 += '=';
-			}
-
-			const decoded = atob(base64);
-			const sessionData = JSON.parse(decoded);
-
-			// Check if user is admin from database (optional - don't fail auth if DB unavailable)
+		if (!sessionData) {
+			event.cookies.delete('session', { path: '/' });
+		} else {
+			// Re-derive isAdmin from the database where possible. Note this is a
+			// refresh, not a check: ensureSessionUserRecord seeds a new row from the
+			// session, so it can only narrow rights that were legitimately issued —
+			// the signature above is what makes the claim trustworthy in the first place.
 			if (event.platform?.env?.DB) {
 				try {
 					await ensureSessionUserRecord(event.platform.env.DB, sessionData);
@@ -37,7 +33,7 @@ const authHandler: Handle = async ({ event, resolve }) => {
 						'SELECT is_admin FROM users WHERE id = ?'
 					)
 						.bind(sessionData.id)
-						.first<{ is_admin: number; }>();
+						.first<{ is_admin: number }>();
 
 					if (userRecord) {
 						sessionData.isAdmin = userRecord.is_admin === 1;
@@ -48,9 +44,6 @@ const authHandler: Handle = async ({ event, resolve }) => {
 			}
 
 			event.locals.user = sessionData;
-		} catch {
-			// Invalid session, clear cookie
-			event.cookies.delete('session', { path: '/' });
 		}
 	}
 

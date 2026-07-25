@@ -28,6 +28,11 @@ declare global {
 					): Promise<{ response?: string; [k: string]: unknown }>;
 				};
 				TURNSTILE_SECRET_KEY: string;
+				// HMAC key for signing the session cookie (see src/lib/server/session.ts).
+				// REQUIRED in production: without it the app refuses to issue sessions and
+				// verifies none, so nobody can log in. Set with:
+				//   wrangler pages secret put SESSION_SECRET
+				SESSION_SECRET?: string;
 				GITHUB_CLIENT_ID?: string;
 				GITHUB_CLIENT_SECRET?: string;
 				GITHUB_OWNER_ID?: string;

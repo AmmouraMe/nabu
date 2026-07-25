@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { signSession } from '../../src/lib/server/session';
 
 // Mock console to avoid noise
 vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -11,7 +12,10 @@ describe('GitHub Callback Server - Extended Coverage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.resetModules();
-		vi.stubGlobal('crypto', { randomUUID: () => 'test-uuid-123' });
+		vi.stubGlobal('crypto', {
+			randomUUID: () => 'test-uuid-123',
+			subtle: globalThis.__REAL_SUBTLE__
+		});
 
 		mockFetch = vi.fn();
 		vi.stubGlobal('fetch', mockFetch);
@@ -444,12 +448,11 @@ describe('GitHub Callback Server - Extended Coverage', () => {
 		});
 
 		it('should link GitHub account to existing user', async () => {
-			const existingSession = btoa(
-				JSON.stringify({ id: 'existing-user-123', login: 'existinguser' })
-			)
-				.replace(/\+/g, '-')
-				.replace(/\//g, '_')
-				.replace(/=+$/, '');
+			// Signed: linking mode only trusts a verified session cookie.
+			const existingSession = await signSession(
+				{ id: 'existing-user-123', login: 'existinguser' },
+				undefined
+			);
 
 			mockFetch.mockResolvedValueOnce({
 				ok: true,

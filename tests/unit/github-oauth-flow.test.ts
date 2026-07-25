@@ -36,7 +36,7 @@ describe('GitHub Auth API', () => {
 		});
 
 		it('should redirect to GitHub OAuth when configured via env', async () => {
-			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid' });
+			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid', subtle: globalThis.__REAL_SUBTLE__ });
 
 			const mockPlatform = {
 				env: {
@@ -61,7 +61,7 @@ describe('GitHub Auth API', () => {
 		});
 
 		it('should mark profile-initiated GitHub OAuth as link mode', async () => {
-			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid' });
+			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid', subtle: globalThis.__REAL_SUBTLE__ });
 
 			const mockPlatform = {
 				env: {
@@ -84,7 +84,7 @@ describe('GitHub Auth API', () => {
 		});
 
 		it('should redirect to GitHub OAuth when configured via KV', async () => {
-			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid' });
+			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid', subtle: globalThis.__REAL_SUBTLE__ });
 
 			const mockPlatform = {
 				env: {

@@ -24,7 +24,7 @@ describe('Discord OAuth - Initial Redirect', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.resetModules();
-		vi.stubGlobal('crypto', { randomUUID: () => 'test-uuid-123' });
+		vi.stubGlobal('crypto', { randomUUID: () => 'test-uuid-123', subtle: globalThis.__REAL_SUBTLE__ });
 	});
 
 	it('should redirect to setup if Discord OAuth is not configured', async () => {

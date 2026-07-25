@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { signSession } from '$lib/server/session';
 import type { RequestHandler } from './$types';
 
 /**
@@ -64,11 +65,8 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		}
 	}
 
-	// URL-safe base64, matching the real OAuth callbacks' cookie format.
-	const sessionCookie = btoa(JSON.stringify(sessionData))
-		.replace(/\+/g, '-')
-		.replace(/\//g, '_')
-		.replace(/=+$/, '');
+	// Signed, matching the real OAuth callbacks' cookie format.
+	const sessionCookie = await signSession(sessionData, platform?.env?.SESSION_SECRET);
 
 	const isSecure = url.protocol === 'https:';
 	const cookieParts = [

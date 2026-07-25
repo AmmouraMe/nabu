@@ -6,6 +6,7 @@
  *   - /routes/brand/[id]/+page.server.ts (85.71%)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { signSession } from '../../src/lib/server/session';
 
 // ═══════════════════════════════════════════════════════════════
 // Video Stream Endpoint
@@ -615,12 +616,10 @@ describe('Auth GitHub Callback (/api/auth/github/callback)', () => {
 	});
 
 	it('should handle URL-safe base64 session cookie with - and _', async () => {
-		// Create a session cookie that includes URL-safe base64 chars
+		// Signed cookies are URL-safe base64 by construction, so this still exercises
+		// the - / _ decode path — and must be signed to reach linking mode at all.
 		const sessionData = { id: 'existing-user-1', login: 'existing' };
-		const sessionCookie = btoa(JSON.stringify(sessionData))
-			.replace(/\+/g, '-')
-			.replace(/\//g, '_')
-			.replace(/=+$/, '');
+		const sessionCookie = await signSession(sessionData, undefined);
 
 		// When existingOAuth is already linked to another user, it should merge
 		mockDB._mockFirst.mockResolvedValueOnce({ user_id: 'other-user-id' }); // existing OAuth linked to another user
@@ -648,7 +647,8 @@ describe('Auth GitHub Callback (/api/auth/github/callback)', () => {
 
 	it('should handle linking mode when existingOAuth is null (create new oauth record)', async () => {
 		const sessionData = { id: 'existing-user', login: 'testuser' };
-		const sessionCookie = btoa(JSON.stringify(sessionData));
+		// Signed: linking mode only trusts a verified session cookie.
+		const sessionCookie = await signSession(sessionData, undefined);
 
 		mockDB._mockFirst.mockResolvedValueOnce(null); // No existing OAuth → will INSERT
 

@@ -2,6 +2,11 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/svelte';
 import { afterEach } from 'vitest';
 
+declare global {
+	// eslint-disable-next-line no-var
+	var __REAL_SUBTLE__: SubtleCrypto | undefined;
+}
+
 // Cleanup after each test
 afterEach(() => {
 	cleanup();
@@ -69,6 +74,19 @@ Object.defineProperty(globalThis, 'localStorage', {
 	writable: true,
 	configurable: true
 });
+
+// Pristine WebCrypto SubtleCrypto, captured before any test can stub it out.
+//
+// Many suites do `vi.stubGlobal('crypto', { randomUUID: () => '…' })` to make UUIDs
+// deterministic, which replaces the *whole* crypto global and takes `crypto.subtle`
+// with it. That was harmless until session cookies started being HMAC-signed
+// (src/lib/server/session.ts), which needs `crypto.subtle.importKey` — every auth
+// callback test then failed with "Cannot read properties of undefined". Real Workers
+// always have subtle, so this is a harness artifact, not a production concern.
+//
+// Stubs that need deterministic UUIDs should preserve subtle by spreading this:
+//   vi.stubGlobal('crypto', { ...realCrypto, randomUUID: () => 'fixed' })
+globalThis.__REAL_SUBTLE__ = globalThis.crypto?.subtle;
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {

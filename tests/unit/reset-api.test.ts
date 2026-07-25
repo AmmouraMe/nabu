@@ -58,6 +58,99 @@ describe('Reset API', () => {
 			expect(mockGet).toHaveBeenCalledWith('reset_route_disabled');
 		});
 
+		// Regression guard: this endpoint deletes admin_first_login_completed, the only
+		// lock on /setup. Unauthenticated it was a full takeover — reset, then claim
+		// admin through setup. Once an owner exists, only that owner may reset.
+		describe('owner gate', () => {
+			const ownerEstablishedKV = (extra: Record<string, string | null> = {}) => ({
+				get: vi.fn().mockImplementation((key: string) => {
+					if (key === 'github_owner_id') return Promise.resolve('12345');
+					return Promise.resolve(extra[key] ?? null);
+				}),
+				delete: vi.fn().mockResolvedValue(undefined)
+			});
+
+			it('should reject an anonymous reset once an owner exists', async () => {
+				const { POST } = await import('../../src/routes/api/reset/+server');
+				const kv = ownerEstablishedKV();
+
+				await expect(
+					POST({
+						platform: { env: { KV: kv } },
+						cookies: { delete: vi.fn() },
+						locals: {}
+					} as any)
+				).rejects.toMatchObject({ status: 403 });
+
+				expect(kv.delete).not.toHaveBeenCalled();
+			});
+
+			it('should reject a signed-in non-owner', async () => {
+				const { POST } = await import('../../src/routes/api/reset/+server');
+				const kv = ownerEstablishedKV();
+
+				await expect(
+					POST({
+						platform: { env: { KV: kv } },
+						cookies: { delete: vi.fn() },
+						locals: { user: { id: 'someone-else', isOwner: false, isAdmin: true } }
+					} as any)
+				).rejects.toMatchObject({ status: 403 });
+
+				expect(kv.delete).not.toHaveBeenCalled();
+			});
+
+			it('should reject when only admin_first_login_completed marks the owner', async () => {
+				const { POST } = await import('../../src/routes/api/reset/+server');
+				const kv = {
+					get: vi.fn().mockImplementation((key: string) => {
+						if (key === 'admin_first_login_completed') return Promise.resolve('true');
+						return Promise.resolve(null);
+					}),
+					delete: vi.fn().mockResolvedValue(undefined)
+				};
+
+				await expect(
+					POST({
+						platform: { env: { KV: kv } },
+						cookies: { delete: vi.fn() },
+						locals: {}
+					} as any)
+				).rejects.toMatchObject({ status: 403 });
+			});
+
+			it('should allow the owner to reset', async () => {
+				const { POST } = await import('../../src/routes/api/reset/+server');
+				const kv = ownerEstablishedKV();
+
+				const response = await POST({
+					platform: { env: { KV: kv } },
+					cookies: { delete: vi.fn() },
+					locals: { user: { id: '12345', isOwner: true } }
+				} as any);
+
+				expect((await response.json()).success).toBe(true);
+				expect(kv.delete).toHaveBeenCalledWith('admin_first_login_completed');
+			});
+
+			it('should allow an anonymous reset before any owner exists', async () => {
+				// Bootstrap state: nothing to protect, and /setup is openly claimable anyway.
+				const { POST } = await import('../../src/routes/api/reset/+server');
+				const kv = {
+					get: vi.fn().mockResolvedValue(null),
+					delete: vi.fn().mockResolvedValue(undefined)
+				};
+
+				const response = await POST({
+					platform: { env: { KV: kv } },
+					cookies: { delete: vi.fn() },
+					locals: {}
+				} as any);
+
+				expect((await response.json()).success).toBe(true);
+			});
+		});
+
 		it('should reset configuration successfully', async () => {
 			const { POST } = await import('../../src/routes/api/reset/+server');
 

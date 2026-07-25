@@ -82,9 +82,15 @@ binding = "AI"
 # here (crons = ["0 9 * * 1"], Monday 9am UTC for the weekly content calendar) had
 # therefore never taken effect — it only ever blocked deploys.
 #
-# The weekly calendar still needs a scheduler: deploy a standalone Worker with its
-# own cron trigger that calls POST /api/cron/content with
-# `Authorization: Bearer <CRON_SECRET>`. Not yet set up.
+# That scheduler now exists as a separate Worker: `workers/content-cron/`, which
+# calls `GET /api/cron/content` with `Authorization: Bearer <CRON_SECRET>` every
+# Monday at 09:00 UTC. Note GET, not POST — the route exports `GET`; earlier notes
+# here and in planning/decisions.md said POST and were wrong.
+#
+# Its CRON_SECRET is set and matches this project's. Its cron trigger is NOT yet
+# registered: attaching a schedule needs the account's workers.dev subdomain to
+# exist (API code 10063), which is created by opening the Workers page in the
+# dashboard once. After that, re-run `wrangler deploy` in workers/content-cron.
 
 # Environment Variables
 # For production, set these in Cloudflare Pages settings

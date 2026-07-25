@@ -1,0 +1,32 @@
+# Standalone scheduler for Nabu's weekly content calendar.
+#
+# This exists because Pages rejects `[triggers]`; see src/index.ts for the full
+# story. A plain Worker config, unlike a Pages one, accepts both `[triggers]` and
+# `account_id` — so both live here rather than being passed in the environment.
+name = "nabu-content-cron"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# The dedicated Ammoura account, same as the Nabu Pages project.
+account_id = "756e4c695a0301d24f0440b9dd3741f7"
+
+# No public URL: this is a cron-only Worker, so it needs no route and no
+# workers.dev subdomain (the Ammoura account has never registered one, and the
+# deploy fails asking for one unless this is explicit). Leaving it false also
+# means the `fetch` handler in src/index.ts is unreachable from the internet —
+# it stays available under `wrangler dev` for a manual run, which is its point.
+workers_dev = false
+
+# Monday 09:00 UTC — the cadence the dead Pages block was aiming for.
+[triggers]
+crons = ["0 9 * * 1"]
+
+[vars]
+# Nabu's cron endpoint. Points at the custom domain rather than nabu-a7i.pages.dev
+# so the scheduler keeps working across redeploys and project renames. It only
+# resolves once the nabu.ammoura.me CNAME exists on the personal account's zone.
+NABU_CRON_URL = "https://nabu.ammoura.me/api/cron/content"
+
+# CRON_SECRET is a secret, not a var — set with:
+#   wrangler secret put CRON_SECRET
+# It must match the value set on the Nabu Pages project, or the endpoint 401s.

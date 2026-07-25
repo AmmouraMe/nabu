@@ -19,6 +19,12 @@ GITHUB_OWNER_ID=your_github_user_id_here
 # Get these from https://discord.com/developers/applications
 DISCORD_CLIENT_ID=your_discord_client_id_here
 DISCORD_CLIENT_SECRET=your_discord_client_secret_here
+# Discord account id granted owner/admin rights (Discord → Settings → Advanced →
+# Developer Mode, then right-click your name → Copy User ID). This is separate from
+# GITHUB_OWNER_ID on purpose: owner used to be derived only from a GitHub account id,
+# so a Discord snowflake could never match and Discord-only logins had no route to
+# /admin. Leave unset and no Discord account is owner.
+DISCORD_OWNER_ID=your_discord_user_id_here
 
 # Note: .dev.vars is gitignored and should never be committed
 # These values are used by `wrangler dev` for local development

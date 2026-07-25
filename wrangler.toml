@@ -115,4 +115,10 @@ binding = "AI"
 # and fall back to KV `github_owner_id`. Leaving it unset makes isOwner false for
 # everyone, which locks the admin panel to nobody.
 GITHUB_OWNER_ID = "72961"
+# Discord account id that gets owner/admin rights — davis9001. Public data, and the
+# Discord-side counterpart to GITHUB_OWNER_ID above: owner used to be derived only
+# from a GitHub id, which no Discord snowflake can ever match, so Discord logins were
+# permanently locked out of /admin. The callbacks check this env var first and fall
+# back to KV `discord_owner_id`.
+DISCORD_OWNER_ID = "293484886726279168"
 # CRON_SECRET - Random secret for authorizing the /api/cron/content endpoint

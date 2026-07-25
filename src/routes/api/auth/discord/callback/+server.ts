@@ -108,6 +108,28 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 			}
 		}
 
+		// Discord's own owner id. `appOwnerId` above is a *GitHub* account id, which a
+		// Discord snowflake can never equal — that is precisely why a Discord-only
+		// session used to be hardcoded to `isOwner: false` and could not reach /admin.
+		// This is the Discord-side counterpart, resolved the same way (env, then KV).
+		let discordOwnerId = platform?.env?.DISCORD_OWNER_ID;
+
+		if (!discordOwnerId && platform?.env?.KV) {
+			try {
+				const storedDiscordOwnerId = await platform.env.KV.get('discord_owner_id');
+				if (storedDiscordOwnerId) {
+					discordOwnerId = storedDiscordOwnerId;
+				}
+			} catch (err) {
+				console.error('Failed to fetch Discord owner ID from KV:', err);
+			}
+		}
+
+		// Compared as strings: Discord ids are 64-bit snowflakes and lose precision as
+		// JS numbers, so they must never be coerced. Unset owner id means nobody is
+		// owner — the same fail-closed default the GitHub side uses.
+		const isDiscordOwner = discordOwnerId ? discordUser.id === discordOwnerId : false;
+
 		// Only explicit profile-driven OAuth flows should be treated as account linking.
 		const existingSessionCookie = authMode === 'link' ? cookies.get('session') : undefined;
 		let existingUser = null;
@@ -190,7 +212,8 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 					if (linkedUser) {
 						// Check if the linked user is the owner
 						// First check if user ID directly matches (for users who signed up with GitHub)
-						let isOwner = appOwnerId ? linkedUser.id === appOwnerId : false;
+						// or if this Discord account is itself the configured owner.
+						let isOwner = isDiscordOwner || (appOwnerId ? linkedUser.id === appOwnerId : false);
 
 						// If not, check if user has a linked GitHub account that matches the owner ID
 						if (!isOwner && appOwnerId) {
@@ -310,8 +333,10 @@ export const GET: RequestHandler = async ({ url, cookies, platform }) => {
 			name: discordUser.global_name || discordUser.username,
 			email: discordUser.email,
 			avatarUrl,
-			isOwner: false, // Discord-only users can't be owner (owner is GitHub ID based)
-			isAdmin
+			// Owner when this Discord account matches DISCORD_OWNER_ID. Still false for
+			// everyone else, so the default stays closed.
+			isOwner: isDiscordOwner,
+			isAdmin: isAdmin || isDiscordOwner
 		};
 
 		// Signed so the contents can be trusted on the way back in.

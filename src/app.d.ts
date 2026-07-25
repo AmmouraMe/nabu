@@ -38,6 +38,12 @@ declare global {
 				GITHUB_OWNER_ID?: string;
 				DISCORD_CLIENT_ID?: string;
 				DISCORD_CLIENT_SECRET?: string;
+				// Discord account id that gets owner/admin rights, the Discord-side
+				// counterpart to GITHUB_OWNER_ID. It has to be its own variable: owner
+				// used to be derived solely from a GitHub account id, so a Discord
+				// snowflake could never match it and Discord-only logins were locked out
+				// of admin no matter what. Falls back to KV `discord_owner_id`.
+				DISCORD_OWNER_ID?: string;
 				// Google Cloud OAuth client used by admin-side API-key provisioning
 				// (see src/lib/server/gcp-provision.ts). Falls back to KV
 				// `auth_config:gcp` when unset, like the GitHub/Discord routes.

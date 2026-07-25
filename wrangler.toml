@@ -1,12 +1,24 @@
 # Pages project name. All bound resources below are Nabu's own, on the *Space
 # account — see the D1 block for why that matters.
 name = "nabu"
-compatibility_date = "2024-01-01"
+# Bumped from 2024-01-01 together with the nodejs_compat flag below. The built
+# _worker.js imports `node:async_hooks` (SvelteKit's adapter-cloudflare needs it),
+# and without the flag wrangler warns the Worker "may throw errors at runtime".
+# 2024-09-23 is the date at which nodejs_compat switches to its v2 behaviour, which
+# is the combination adapter-cloudflare expects. Safe to move here because nothing
+# had ever been deployed against the old date.
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".svelte-kit/cloudflare"
 
-# StarSpace account — required so the local Workers AI binding can pick an
-# account non-interactively (the OAuth login exposes multiple accounts).
-account_id = "f6dece8a25710d1e02a529144cfc3344"
+# NOTE: `account_id` cannot live here. Pages configs reject it ("Configuration file
+# for Pages projects does not support 'account_id'"), which fails every
+# `wrangler pages …` command before it runs.
+#
+# It was here to let the local Workers AI binding pick an account non-interactively,
+# since the wrangler OAuth login can see more than one. That job belongs to
+# CLOUDFLARE_ACCOUNT_ID in .dev.vars (already set, and documented in
+# .dev.vars.example) — the *Space account is f6dece8a25710d1e02a529144cfc3344.
 
 # D1 Database — Nabu's own, on the *Space account.
 # Created 2026-07-23 with: wrangler d1 create nabu-db
@@ -52,18 +64,26 @@ bucket_name = "nabu-files"
 [ai]
 binding = "AI"
 
-# Cron Triggers (Monday 9am UTC — generates weekly content calendar)
-# Note: For Cloudflare Pages, deploy a standalone Worker that calls /api/cron/content
-# with Authorization: Bearer <CRON_SECRET>
-[triggers]
-crons = ["0 9 * * 1"]
+# Cron Triggers — NOT configurable here.
+#
+# Pages projects reject a [triggers] block outright ("Configuration file for Pages
+# projects does not support 'triggers'"), which fails `wrangler pages secret put`
+# and `wrangler pages deploy` before they do anything. The block that used to sit
+# here (crons = ["0 9 * * 1"], Monday 9am UTC for the weekly content calendar) had
+# therefore never taken effect — it only ever blocked deploys.
+#
+# The weekly calendar still needs a scheduler: deploy a standalone Worker with its
+# own cron trigger that calls POST /api/cron/content with
+# `Authorization: Bearer <CRON_SECRET>`. Not yet set up.
 
 # Environment Variables
 # For production, set these in Cloudflare Pages settings
 # For local dev, use .env file (see .env.example)
 [vars]
 # TURNSTILE_SECRET_KEY will be set via environment
-# GITHUB_OWNER_ID - Set this to your GitHub user ID to enable admin access
-# To find your GitHub ID: visit https://api.github.com/users/YOUR_USERNAME
-# GITHUB_OWNER_ID = "YOUR_GITHUB_USER_ID_HERE"
+# GitHub user ID that gets owner/admin rights. davis9001; public data, from
+# https://api.github.com/users/davis9001. The callbacks check this env var first
+# and fall back to KV `github_owner_id`. Leaving it unset makes isOwner false for
+# everyone, which locks the admin panel to nobody.
+GITHUB_OWNER_ID = "72961"
 # CRON_SECRET - Random secret for authorizing the /api/cron/content endpoint

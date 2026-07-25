@@ -1,5 +1,7 @@
-# Pages project name. All bound resources below are Nabu's own, on the *Space
-# account — see the D1 block for why that matters.
+# Pages project name. All bound resources below are Nabu's own, on the dedicated
+# Ammoura account (756e4c695a0301d24f0440b9dd3741f7) — see the D1 block for why
+# that matters. Serves nabu.ammoura.me; the ammoura.me zone deliberately stays on
+# the personal David Monaghan account, so the custom domain is cross-account.
 name = "nabu"
 # Bumped from 2024-01-01 together with the nodejs_compat flag below. The built
 # _worker.js imports `node:async_hooks` (SvelteKit's adapter-cloudflare needs it),
@@ -18,35 +20,43 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 # It was here to let the local Workers AI binding pick an account non-interactively,
 # since the wrangler OAuth login can see more than one. That job belongs to
 # CLOUDFLARE_ACCOUNT_ID in .dev.vars (already set, and documented in
-# .dev.vars.example) — the *Space account is f6dece8a25710d1e02a529144cfc3344.
+# .dev.vars.example) — the Ammoura account is 756e4c695a0301d24f0440b9dd3741f7.
+# Every `wrangler …` command against this project needs that in the environment,
+# since the login can see four accounts and this file cannot pin one.
 
-# D1 Database — Nabu's own, on the *Space account.
-# Created 2026-07-23 with: wrangler d1 create nabu-db
+# D1 Database — Nabu's own, on the Ammoura account.
+# Created 2026-07-25 with: wrangler d1 create nabu-db
 #
-# These IDs were previously copied verbatim from the convey.land project
-# (database_id bd776be3-…, KV 12a65763-…). D1 binds by *id*, so that pointed
-# Nabu at another project's database and KV — and the migration filenames
-# diverge from 0004 on, so applying Nabu's migrations there would have
-# interleaved two unrelated schemas in one d1_migrations table. Nothing had
-# been written (no remote resources existed on this account), but do not
-# reintroduce another project's IDs here.
+# History of this line, because it has been wrong twice:
+#   1. It was copied verbatim from the convey.land project (database_id
+#      bd776be3-…, KV 12a65763-…). D1 binds by *id*, so that pointed Nabu at
+#      another project's database — and the migration filenames diverge from
+#      0004 on, so applying Nabu's migrations there would have interleaved two
+#      unrelated schemas in one d1_migrations table.
+#   2. It then pointed at 3804142a-… on the *Space account, which owns no DNS
+#      zone and so could never serve nabu.ammoura.me. That database is empty and
+#      is being deleted.
+# Do not reintroduce another project's or another account's IDs here.
 [[d1_databases]]
 binding = "DB"
 database_name = "nabu-db"
-database_id = "3804142a-d754-4d02-98a7-86113e2b00b5"
+database_id = "0604dd51-85fe-4c8f-ad56-b71a3eb57156"
 migrations_dir = "./migrations"
 
-# KV Namespace
-# Created with: wrangler kv namespace create KV   (and again with --preview)
+# KV Namespace — on the Ammoura account.
+# Created 2026-07-25 with: wrangler kv namespace create KV   (and again with --preview)
 [[kv_namespaces]]
 binding = "KV"
-id = "771c669e06344160960e963bbb99b34f"
-preview_id = "da23de6c55b54ca89b93a6023e464ece"
+id = "17817a9350af492aa3c889c704392f4f"
+preview_id = "69e17c99477148da87a783fc62ee3ac0"
 
 # R2 Bucket
-# NOT YET CREATED: R2 is not enabled on the *Space account (API returns 10042).
-# Enable R2 in the Cloudflare dashboard, then: wrangler r2 bucket create nabu-files
-# R2 binds by name, so this resolves as soon as the bucket exists.
+# NOT YET CREATED: R2 is not enabled on the Ammoura account either (the API still
+# returns 10042 — it is a per-account opt-in, not something the CLI can turn on;
+# the wrangler OAuth token has no r2 scope at all). Enable R2 in the dashboard for
+# account 756e4c69…, then: wrangler r2 bucket create nabu-files
+# R2 binds by name, so this resolves as soon as the bucket exists. `BUCKET` has 17
+# call sites (brand assets, generated media, video), so those paths fail until then.
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "nabu-files"

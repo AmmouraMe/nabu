@@ -34,6 +34,8 @@
 	import { renderMessageHtml } from '$lib/utils/message-format';
 	import BrandCompletionMeter from './BrandCompletionMeter.svelte';
 	import BrandColorCard from './BrandColorCard.svelte';
+	import GoogleFontPicker from './GoogleFontPicker.svelte';
+	import BrandLogoCard from './BrandLogoCard.svelte';
 	import type { CompletionItem } from '$lib/services/brand-completion';
 
 	/** Optional brand profile ID to load a specific brand for continued onboarding */
@@ -331,7 +333,16 @@
 	let cardSaving = false;
 
 	/** Card kinds with a real inline editor. Everything else stays conversational. */
-	const DIRECT_EDIT_CARDS = new Set(['color']);
+	const DIRECT_EDIT_CARDS = new Set(['color', 'typography', 'logo']);
+
+	// Narrowed here rather than in the markup: Svelte's template parser cannot read a
+	// TS `as` cast to a union type inside an expression.
+	$: typographyField = (
+		activeCard?.key === 'typographyBody' ? 'typographyBody' : 'typographyHeading'
+	) as 'typographyHeading' | 'typographyBody';
+	$: typographyCurrentFont = activeCard
+		? ($onboardingStore.profile?.[activeCard.key as keyof BrandProfile] as string | undefined)
+		: undefined;
 
 	/**
 	 * Act on the meter's "next best thing" suggestion.
@@ -361,6 +372,19 @@
 	 * Persist a card edit. `updateBrandData` PATCHes and refreshes the store, so the
 	 * meter recomputes on its own — there is no separate progress state to keep in sync.
 	 */
+	/**
+	 * GoogleFontPicker reports `{ field, font }`; the card host speaks
+	 * `{ field, value }`. Adapt rather than change the picker, which is also used by
+	 * the brand page.
+	 */
+	async function handleFontSelect(event: CustomEvent<{ field: string; font: string }>) {
+		await handleCardSave(
+			new CustomEvent('save', {
+				detail: { field: event.detail.field, value: event.detail.font }
+			})
+		);
+	}
+
 	async function handleCardSave(event: CustomEvent<{ field: string; value: string }>) {
 		const { field, value } = event.detail;
 		cardSaving = true;
@@ -548,6 +572,26 @@
 									field={activeCard.key}
 									label={activeCard.label}
 									profile={$onboardingStore.profile}
+									saving={cardSaving}
+									on:save={handleCardSave}
+									on:dismiss={() => (activeCard = null)}
+								/>
+							{:else if activeCard.card === 'typography'}
+								<!-- GoogleFontPicker is already a self-contained inline panel and its
+								     `field` union is exactly these keys, so it needs no wrapper. The
+								     casts live in the script: Svelte's template parser cannot read a
+								     TS union type inside an expression. -->
+								<GoogleFontPicker
+									field={typographyField}
+									currentFont={typographyCurrentFont}
+									on:select={handleFontSelect}
+									on:close={() => (activeCard = null)}
+								/>
+							{:else if activeCard.card === 'logo' && $onboardingStore.profile}
+								<BrandLogoCard
+									brandProfileId={$onboardingStore.profile.id}
+									onboardingStep={$onboardingStore.currentStep}
+									currentLogoUrl={$onboardingStore.profile.logoUrl}
 									saving={cardSaving}
 									on:save={handleCardSave}
 									on:dismiss={() => (activeCard = null)}

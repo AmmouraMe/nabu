@@ -18,7 +18,12 @@
 		resetOnboarding
 	} from '$lib/stores/onboarding';
 	import type { OnboardingStep, OnboardingAttachment } from '$lib/types/onboarding';
-	import { ONBOARDING_STEPS, getNextStep, getPreviousStep, STEP_COMPLETE_MARKER } from '$lib/services/onboarding';
+	import {
+		ONBOARDING_STEPS,
+		getNextStep,
+		getPreviousStep,
+		STEP_COMPLETE_MARKER
+	} from '$lib/services/onboarding';
 	import {
 		validateAttachmentFile,
 		getAttachmentType,
@@ -26,6 +31,7 @@
 		getAcceptString,
 		MAX_ATTACHMENTS
 	} from '$lib/utils/attachments';
+	import { renderMessageHtml } from '$lib/utils/message-format';
 
 	/** Optional brand profile ID to load a specific brand for continued onboarding */
 	export let brandId: string | undefined = undefined;
@@ -61,13 +67,15 @@
 	$: {
 		const current = $onboardingStore.currentStep;
 		if (previousStep && previousStep !== current && initialized) {
-			const fromConfig = ONBOARDING_STEPS.find(s => s.id === previousStep);
-			const toConfig = ONBOARDING_STEPS.find(s => s.id === current);
+			const fromConfig = ONBOARDING_STEPS.find((s) => s.id === previousStep);
+			const toConfig = ONBOARDING_STEPS.find((s) => s.id === current);
 			stepTransition = {
 				from: fromConfig?.title || '',
 				to: toConfig?.title || ''
 			};
-			setTimeout(() => { stepTransition = null; }, 4000);
+			setTimeout(() => {
+				stepTransition = null;
+			}, 4000);
 		}
 		previousStep = current;
 	}
@@ -75,8 +83,11 @@
 	const MAX_INPUT_LENGTH = 4000;
 	$: inputLength = input.length;
 	$: hasAttachments = pendingAttachments.length > 0;
-	$: allUploaded = pendingAttachments.every(a => a.uploaded && !a.uploading);
-	$: canSend = (input.trim().length > 0 || (hasAttachments && allUploaded)) && !$onboardingStore.isStreaming && !$onboardingStore.isLoading;
+	$: allUploaded = pendingAttachments.every((a) => a.uploaded && !a.uploading);
+	$: canSend =
+		(input.trim().length > 0 || (hasAttachments && allUploaded)) &&
+		!$onboardingStore.isStreaming &&
+		!$onboardingStore.isLoading;
 	$: showCharCount = inputLength > MAX_INPUT_LENGTH * 0.8;
 
 	onMount(async () => {
@@ -118,8 +129,8 @@
 
 		// Collect uploaded attachment metadata to send with message
 		const attachmentsForMessage: OnboardingAttachment[] = pendingAttachments
-			.filter(a => a.uploaded)
-			.map(a => ({
+			.filter((a) => a.uploaded)
+			.map((a) => ({
 				id: a.id,
 				type: a.type,
 				name: a.name,
@@ -133,7 +144,10 @@
 		input = '';
 		pendingAttachments = [];
 		autoResizeTextarea();
-		await sendMessage(message, attachmentsForMessage.length > 0 ? attachmentsForMessage : undefined);
+		await sendMessage(
+			message,
+			attachmentsForMessage.length > 0 ? attachmentsForMessage : undefined
+		);
 		await tick();
 		scrollToBottom();
 		textareaElement?.focus();
@@ -244,7 +258,7 @@
 		}
 	}
 
-	async function uploadAttachment(attachment: typeof pendingAttachments[0]) {
+	async function uploadAttachment(attachment: (typeof pendingAttachments)[0]) {
 		const state = $onboardingStore;
 		if (!state.profile) return;
 
@@ -266,13 +280,17 @@
 
 			const data = await response.json();
 
-			pendingAttachments = pendingAttachments.map(a =>
+			pendingAttachments = pendingAttachments.map((a) =>
 				a.id === attachment.id
-					? { ...a, uploading: false, uploaded: { r2Key: data.r2Key, url: data.url, archiveId: data.id } }
+					? {
+							...a,
+							uploading: false,
+							uploaded: { r2Key: data.r2Key, url: data.url, archiveId: data.id }
+						}
 					: a
 			);
 		} catch (err) {
-			pendingAttachments = pendingAttachments.map(a =>
+			pendingAttachments = pendingAttachments.map((a) =>
 				a.id === attachment.id
 					? { ...a, uploading: false, error: err instanceof Error ? err.message : 'Upload failed' }
 					: a
@@ -281,11 +299,11 @@
 	}
 
 	function removeAttachment(id: string) {
-		const att = pendingAttachments.find(a => a.id === id);
+		const att = pendingAttachments.find((a) => a.id === id);
 		if (att?.previewUrl) {
 			URL.revokeObjectURL(att.previewUrl);
 		}
-		pendingAttachments = pendingAttachments.filter(a => a.id !== id);
+		pendingAttachments = pendingAttachments.filter((a) => a.id !== id);
 	}
 
 	async function handleNextStep() {
@@ -303,30 +321,20 @@
 	}
 
 	/**
-	 * Render markdown-like formatting in messages
+	 * Render markdown-like formatting in messages.
+	 *
+	 * The marker is stripped here, before rendering: it is angle-bracketed
+	 * (`<<STEP_COMPLETE>>`), so removing it afterwards would mean matching its
+	 * escaped form instead.
 	 */
 	function formatMessage(content: string): string {
-		return content
-			// Strip step completion marker if it leaked into display
-			.replace(STEP_COMPLETE_MARKER, '')
-			// Bold
-			.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-			// Italic
-			.replace(/\*(.*?)\*/g, '<em>$1</em>')
-			// Headers
-			.replace(/^### (.*$)/gm, '<h4>$1</h4>')
-			.replace(/^## (.*$)/gm, '<h3>$1</h3>')
-			// Lists
-			.replace(/^- (.*$)/gm, '<li>$1</li>')
-			.replace(/^(\d+)\. (.*$)/gm, '<li>$2</li>')
-			// Line breaks
-			.replace(/\n\n/g, '</p><p>')
-			.replace(/\n/g, '<br>');
+		return renderMessageHtml(content.replace(STEP_COMPLETE_MARKER, ''));
 	}
 
-	$: currentStepConfig = ONBOARDING_STEPS.find(s => s.id === $onboardingStore.currentStep);
+	$: currentStepConfig = ONBOARDING_STEPS.find((s) => s.id === $onboardingStore.currentStep);
 	$: canGoBack = getPreviousStep($onboardingStore.currentStep) !== null;
-	$: brandName = $onboardingStore.profile?.brandName || ($onboardingStore.profile ? 'New Brand' : '');
+	$: brandName =
+		$onboardingStore.profile?.brandName || ($onboardingStore.profile ? 'New Brand' : '');
 	$: brandNameConfirmed = $onboardingStore.profile?.brandNameConfirmed ?? false;
 
 	async function handlePreviousStep() {
@@ -338,7 +346,9 @@
 		}
 	}
 
-	async function handleStepNavigate(event: CustomEvent<import('$lib/types/onboarding').OnboardingStep>) {
+	async function handleStepNavigate(
+		event: CustomEvent<import('$lib/types/onboarding').OnboardingStep>
+	) {
 		const targetStep = event.detail;
 		await updateStep(targetStep);
 		await tick();
@@ -354,8 +364,8 @@
 				<div class="welcome-icon">✨</div>
 				<h1>Brand Architect</h1>
 				<p class="welcome-subtitle">
-					Your AI-powered brand strategist, combining psychology, philosophy,
-					and world-class marketing expertise to build your perfect brand.
+					Your AI-powered brand strategist, combining psychology, philosophy, and world-class
+					marketing expertise to build your perfect brand.
 				</p>
 
 				<div class="welcome-features">
@@ -391,8 +401,8 @@
 
 				<div class="welcome-cta">
 					<p class="cta-note">
-						Whether you have an existing brand to refine or are starting from scratch —
-						even if you have no idea yet — we'll build something extraordinary together.
+						Whether you have an existing brand to refine or are starting from scratch — even if you
+						have no idea yet — we'll build something extraordinary together.
 					</p>
 					<button class="start-button" on:click={handleStartOnboarding}>
 						Begin Your Brand Journey
@@ -401,11 +411,13 @@
 				</div>
 			</div>
 		</div>
-
 	{:else}
 		<!-- Onboarding Chat Interface -->
 		<div class="chat-layout" in:fade={{ duration: 200 }}>
-			<OnboardingProgress currentStep={$onboardingStore.currentStep} on:stepClick={handleStepNavigate} />
+			<OnboardingProgress
+				currentStep={$onboardingStore.currentStep}
+				on:stepClick={handleStepNavigate}
+			/>
 
 			<div class="chat-area" bind:this={chatContainer}>
 				{#if $onboardingStore.isLoading && $onboardingStore.messages.length === 0}
@@ -416,10 +428,7 @@
 				{/if}
 
 				{#each $onboardingStore.messages as message, i (message.id)}
-					<div
-						class="message {message.role}"
-						in:fly={{ y: 20, duration: 300, easing: quintOut }}
-					>
+					<div class="message {message.role}" in:fly={{ y: 20, duration: 300, easing: quintOut }}>
 						<div class="message-avatar">
 							{#if message.role === 'assistant'}
 								<span class="avatar-icon">✨</span>
@@ -450,10 +459,12 @@
 												<img src={att.url} alt={att.name} class="attachment-image" loading="lazy" />
 											{:else if att.type === 'video'}
 												<!-- svelte-ignore a11y-media-has-caption -->
-												<video src={att.url} class="attachment-video" controls preload="metadata"></video>
+												<video src={att.url} class="attachment-video" controls preload="metadata"
+												></video>
 											{:else if att.type === 'audio'}
 												<!-- svelte-ignore a11y-media-has-caption -->
-												<audio src={att.url} class="attachment-audio" controls preload="metadata"></audio>
+												<audio src={att.url} class="attachment-audio" controls preload="metadata"
+												></audio>
 											{/if}
 											<span class="attachment-name">{att.name}</span>
 										</div>
@@ -472,10 +483,15 @@
 				{/if}
 
 				{#if stepTransition}
-					<div class="step-transition" in:fly={{ y: 20, duration: 400 }} out:fade={{ duration: 300 }}>
+					<div
+						class="step-transition"
+						in:fly={{ y: 20, duration: 400 }}
+						out:fade={{ duration: 300 }}
+					>
 						<span class="transition-icon">✅</span>
 						<span class="transition-text">
-							<strong>{stepTransition.from}</strong> complete — moving to <strong>{stepTransition.to}</strong>
+							<strong>{stepTransition.from}</strong> complete — moving to
+							<strong>{stepTransition.to}</strong>
 						</span>
 					</div>
 				{/if}
@@ -484,7 +500,7 @@
 					<div class="error-message" in:fade>
 						<span>⚠️</span>
 						<p>{$onboardingStore.error}</p>
-						<button on:click={() => onboardingStore.update(s => ({ ...s, error: null }))}>
+						<button on:click={() => onboardingStore.update((s) => ({ ...s, error: null }))}>
 							Dismiss
 						</button>
 					</div>
@@ -497,31 +513,29 @@
 				{#if $onboardingStore.profile}
 					<div class="brand-indicator">
 						<span class="brand-indicator-label">{brandNameConfirmed ? 'Brand' : 'Codename'}</span>
-						<span class="brand-indicator-name" class:untitled={!brandNameConfirmed}>{brandName}</span>
+						<span class="brand-indicator-name" class:untitled={!brandNameConfirmed}
+							>{brandName}</span
+						>
 					</div>
 				{/if}
 				<!-- Step info + manual skip -->
 				{#if !$onboardingStore.isStreaming && $onboardingStore.messages.length > 0 && $onboardingStore.currentStep !== 'complete'}
 					<div class="step-navigation">
-					{#if canGoBack}
-						<button
-							class="back-step-btn"
-							on:click={handlePreviousStep}
-							title="Go to previous step"
-						>
-							← Back
-						</button>
-					{/if}
-					{#if currentStepConfig}
-						<span class="step-hint">
-							{currentStepConfig.title} — {currentStepConfig.description}
-						</span>
-					{/if}
-					<button
-							class="skip-step-btn"
-							on:click={handleNextStep}
-							title="Skip to next step"
-						>
+						{#if canGoBack}
+							<button
+								class="back-step-btn"
+								on:click={handlePreviousStep}
+								title="Go to previous step"
+							>
+								← Back
+							</button>
+						{/if}
+						{#if currentStepConfig}
+							<span class="step-hint">
+								{currentStepConfig.title} — {currentStepConfig.description}
+							</span>
+						{/if}
+						<button class="skip-step-btn" on:click={handleNextStep} title="Skip to next step">
 							Skip →
 						</button>
 					</div>
@@ -532,6 +546,14 @@
 						<h3>🎉 Brand Foundation Complete!</h3>
 						<p>Your brand style guide is ready. You can continue chatting to refine any details.</p>
 						<div class="completion-actions">
+							<!-- An anchor, not a button: this is navigation, so middle-click and
+							     open-in-new-tab should work. Guarded on the id because the banner can
+							     render from a restored session before the profile has loaded. -->
+							{#if $onboardingStore.profile?.id}
+								<a class="primary-btn" href="/brand/{$onboardingStore.profile.id}">
+									View {brandName || 'Brand'} →
+								</a>
+							{/if}
 							<button class="secondary-btn" on:click={handleRestartOnboarding}>
 								Start New Brand
 							</button>
@@ -558,14 +580,18 @@
 					{#if attachmentError}
 						<div class="attachment-error" transition:fade={{ duration: 200 }}>
 							<span>⚠️ {attachmentError}</span>
-							<button class="dismiss-btn" on:click={() => attachmentError = null}>✕</button>
+							<button class="dismiss-btn" on:click={() => (attachmentError = null)}>✕</button>
 						</div>
 					{/if}
 
 					{#if pendingAttachments.length > 0}
 						<div class="pending-attachments" transition:fly={{ y: 10, duration: 200 }}>
 							{#each pendingAttachments as att (att.id)}
-								<div class="pending-attachment" class:error={!!att.error} transition:fade={{ duration: 150 }}>
+								<div
+									class="pending-attachment"
+									class:error={!!att.error}
+									transition:fade={{ duration: 150 }}
+								>
 									{#if att.type === 'image' && att.previewUrl}
 										<img src={att.previewUrl} alt={att.name} class="pending-thumb" />
 									{:else if att.type === 'video'}
@@ -588,60 +614,78 @@
 										class="remove-attachment"
 										on:click={() => removeAttachment(att.id)}
 										title="Remove attachment"
-										aria-label="Remove {att.name}"
-									>✕</button>
+										aria-label="Remove {att.name}">✕</button
+									>
 								</div>
 							{/each}
 						</div>
 					{/if}
 
-				<div class="input-wrapper" class:focused={true}>
-					<button
-						class="attach-button"
-						on:click={handleAttachButtonClick}
-						title="Attach image, video, or audio"
-						aria-label="Attach file"
-						disabled={$onboardingStore.isStreaming || $onboardingStore.isLoading}
-					>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"></path>
-						</svg>
-					</button>
-					<input
-						bind:this={fileInputElement}
-						type="file"
-						accept={getAcceptString()}
-						multiple
-						class="file-input-hidden"
-						on:change={handleFileSelect}
-						aria-hidden="true"
-						tabindex="-1"
-					/>
-					<textarea
-						bind:this={textareaElement}
-						bind:value={input}
-						on:keydown={handleKeydown}
-						on:input={autoResizeTextarea}
-						on:paste={handlePaste}
-						placeholder={$onboardingStore.isStreaming ? 'AI is responding...' : 'Type your message or attach files...'}
-						disabled={$onboardingStore.isStreaming || $onboardingStore.isLoading}
-						maxlength={MAX_INPUT_LENGTH}
-						rows="1"
-						aria-label="Chat message input"
-					></textarea>
-					<button
-						class="send-button"
-						on:click={handleSend}
-						disabled={!canSend}
-						aria-label="Send message"
-						title="Send message"
-					>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<line x1="22" y1="2" x2="11" y2="13"></line>
-							<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-						</svg>
-					</button>
-				</div>
+					<div class="input-wrapper" class:focused={true}>
+						<button
+							class="attach-button"
+							on:click={handleAttachButtonClick}
+							title="Attach image, video, or audio"
+							aria-label="Attach file"
+							disabled={$onboardingStore.isStreaming || $onboardingStore.isLoading}
+						>
+							<svg
+								width="20"
+								height="20"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<path
+									d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+								></path>
+							</svg>
+						</button>
+						<input
+							bind:this={fileInputElement}
+							type="file"
+							accept={getAcceptString()}
+							multiple
+							class="file-input-hidden"
+							on:change={handleFileSelect}
+							aria-hidden="true"
+							tabindex="-1"
+						/>
+						<textarea
+							bind:this={textareaElement}
+							bind:value={input}
+							on:keydown={handleKeydown}
+							on:input={autoResizeTextarea}
+							on:paste={handlePaste}
+							placeholder={$onboardingStore.isStreaming
+								? 'AI is responding...'
+								: 'Type your message or attach files...'}
+							disabled={$onboardingStore.isStreaming || $onboardingStore.isLoading}
+							maxlength={MAX_INPUT_LENGTH}
+							rows="1"
+							aria-label="Chat message input"
+						></textarea>
+						<button
+							class="send-button"
+							on:click={handleSend}
+							disabled={!canSend}
+							aria-label="Send message"
+							title="Send message"
+						>
+							<svg
+								width="20"
+								height="20"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+							>
+								<line x1="22" y1="2" x2="11" y2="13"></line>
+								<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+							</svg>
+						</button>
+					</div>
 					{#if showCharCount}
 						<div class="char-count" class:warning={inputLength > MAX_INPUT_LENGTH * 0.95}>
 							{inputLength}/{MAX_INPUT_LENGTH}
@@ -813,7 +857,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	/* Messages */
@@ -935,6 +981,25 @@
 	.message-text :global(p) {
 		margin-bottom: var(--spacing-sm);
 	}
+	/* Hex colours in a message render as a swatch followed by the code itself —
+	   the code stays selectable and copyable, which is the point of quoting it. */
+	.message-text :global(.color-chip) {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35em;
+		/* Keep the swatch welded to its hex code across a line wrap. */
+		white-space: nowrap;
+	}
+	.message-text :global(.color-swatch) {
+		width: 0.85em;
+		height: 0.85em;
+		border-radius: 3px;
+		flex-shrink: 0;
+		/* Palettes routinely include near-black and near-white, which would dissolve
+		   into the bubble. An inset ring in mid-grey stays visible against both, so
+		   it needs no light/dark variant. */
+		box-shadow: inset 0 0 0 1px rgb(127 127 127 / 0.6);
+	}
 
 	.cursor-blink {
 		animation: blink 0.8s infinite;
@@ -942,8 +1007,13 @@
 	}
 
 	@keyframes blink {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0;
+		}
 	}
 
 	.streaming-status-bar {
@@ -962,8 +1032,12 @@
 	}
 
 	@keyframes spin {
-		from { transform: rotate(0deg); }
-		to { transform: rotate(360deg); }
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	/* Error message */
@@ -1116,6 +1190,31 @@
 		display: flex;
 		gap: var(--spacing-sm);
 		justify-content: center;
+		/* The two actions sit side by side, but wrap rather than squeeze on narrow
+		   screens — the brand name makes the primary label variable-width. */
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	/* Primary action: go to the brand just built. --color-primary already carries
+	   the brand teal and has separate light/dark values, so this needs no theme
+	   handling of its own. */
+	.primary-btn {
+		padding: var(--spacing-xs) var(--spacing-md);
+		background: var(--color-primary);
+		color: var(--color-background);
+		border: 1px solid var(--color-primary);
+		border-radius: var(--radius-md);
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+
+	.primary-btn:hover {
+		background: var(--color-primary-hover);
+		border-color: var(--color-primary-hover);
 	}
 
 	.secondary-btn {

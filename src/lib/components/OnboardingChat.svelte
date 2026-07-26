@@ -32,6 +32,8 @@
 		MAX_ATTACHMENTS
 	} from '$lib/utils/attachments';
 	import { renderMessageHtml } from '$lib/utils/message-format';
+	import BrandCompletionMeter from './BrandCompletionMeter.svelte';
+	import type { CompletionItem } from '$lib/services/brand-completion';
 
 	/** Optional brand profile ID to load a specific brand for continued onboarding */
 	export let brandId: string | undefined = undefined;
@@ -321,6 +323,20 @@
 	}
 
 	/**
+	 * Act on the meter's "next best thing" suggestion by steering the conversation to
+	 * it, rather than opening a separate editor. Keeping it in the chat is the point:
+	 * the Brand Architect asks about the field, and the existing per-step extraction
+	 * captures the answer, so the meter moves without any new save path.
+	 */
+	async function handleResolveItem(event: CustomEvent<CompletionItem>) {
+		const item = event.detail;
+		if (!item || $onboardingStore.isStreaming) return;
+		await sendMessage(`Let's work on my ${item.label.toLowerCase()}.`);
+		await tick();
+		scrollToBottom();
+	}
+
+	/**
 	 * Render markdown-like formatting in messages.
 	 *
 	 * The marker is stripped here, before rendering: it is angle-bracketed
@@ -418,6 +434,11 @@
 				currentStep={$onboardingStore.currentStep}
 				on:stepClick={handleStepNavigate}
 			/>
+
+			<!-- Sits under the step rail deliberately: the steps say where you are in the
+			     conversation, this says how much of the brand actually exists yet. They
+			     diverge, because a step can be walked past without answering everything. -->
+			<BrandCompletionMeter profile={$onboardingStore.profile} on:resolve={handleResolveItem} />
 
 			<div class="chat-area" bind:this={chatContainer}>
 				{#if $onboardingStore.isLoading && $onboardingStore.messages.length === 0}

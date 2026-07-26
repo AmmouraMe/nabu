@@ -36,7 +36,14 @@ const authHandler: Handle = async ({ event, resolve }) => {
 						.first<{ is_admin: number }>();
 
 					if (userRecord) {
-						sessionData.isAdmin = userRecord.is_admin === 1;
+						// The owner is always an admin. Without the `|| isOwner`, this
+						// refresh silently demotes them: an owner identified by
+						// GITHUB_OWNER_ID / DISCORD_OWNER_ID need not carry is_admin = 1
+						// in the row, so a freshly created owner would come back
+						// isOwner: true, isAdmin: false and still be refused by every
+						// admin route that gates on isAdmin. It also means an accidental
+						// demote in Admin → Users cannot lock the owner out.
+						sessionData.isAdmin = userRecord.is_admin === 1 || sessionData.isOwner === true;
 					}
 				} catch {
 					// Database error - continue with session data from cookie

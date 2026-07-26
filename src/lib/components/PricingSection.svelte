@@ -9,6 +9,7 @@
 		type PricingFeature,
 		type TierId
 	} from '$lib/utils/pricing';
+	import PricingFeatureValue from './PricingFeatureValue.svelte';
 
 	export let isLoggedIn = false;
 
@@ -47,8 +48,8 @@
 		</div>
 		<h2 class="pricing-title">One plan per brand. Mix&nbsp;and&nbsp;match.</h2>
 		<p class="pricing-subtitle">
-			Every brand gets its own plan. Upgrade or downgrade each brand independently—pay
-			only for what each one needs.
+			Every brand gets its own plan. Upgrade or downgrade each brand independently—pay only for what
+			each one needs.
 		</p>
 
 		<!-- Billing toggle -->
@@ -78,11 +79,7 @@
 	<!-- Tier Cards -->
 	<div class="tier-grid">
 		{#each PRICING_TIERS as tier (tier.id)}
-			<div
-				class="tier-card"
-				class:highlighted={tier.highlighted}
-				aria-label="{tier.name} plan"
-			>
+			<div class="tier-card" class:highlighted={tier.highlighted} aria-label="{tier.name} plan">
 				{#if tier.highlighted}
 					<div class="popular-tag">Most Popular</div>
 				{/if}
@@ -108,7 +105,17 @@
 
 				<a href={ctaHref(tier.id)} class="tier-cta" class:primary={tier.highlighted}>
 					{tier.cta}
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
 						<line x1="5" y1="12" x2="19" y2="12" />
 						<polyline points="12 5 19 12 12 19" />
 					</svg>
@@ -117,38 +124,126 @@
 				<!-- Highlights -->
 				<ul class="tier-highlights" role="list">
 					<li>
-						<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+						<svg
+							class="check"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+						>
 						Unlimited brands
 					</li>
 					<li>
-						<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+						<svg
+							class="check"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+						>
 						{tier.limits.aiTextGenerations.toLocaleString()} AI text generations/mo
 					</li>
 					<li>
-						<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+						<svg
+							class="check"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+						>
 						{tier.limits.aiImageGenerations.toLocaleString()} image generations/mo
 					</li>
 					<li>
-						<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+						<svg
+							class="check"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+						>
 						{tier.limits.aiVideoGenerations} video generations/mo
 					</li>
 					<li>
-						<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+						<svg
+							class="check"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+						>
 						{tier.limits.storageGB} GB storage
 					</li>
 					<li>
-						<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+						<svg
+							class="check"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+						>
 						{FREE_SOCIAL_ACCOUNTS_PER_BRAND} social accounts per brand
 					</li>
 					{#if tier.id !== 'starter'}
 						<li>
-							<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+							<svg
+								class="check"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+							>
 							Auto-publish to social
 						</li>
 					{/if}
 					{#if tier.id === 'business'}
 						<li>
-							<svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
+							<svg
+								class="check"
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg
+							>
 							Priority AI &amp; support
 						</li>
 					{/if}
@@ -161,13 +256,72 @@
 	<div class="comparison">
 		<h3 class="comparison-title">Full feature comparison</h3>
 
+		<!--
+			Mobile layout. A three-plan table cannot fit a phone (200px feature column +
+			3×120px = 560px against a 390px screen), and sideways scrolling hid the
+			Business column entirely. So below the breakpoint each feature becomes its own
+			block with a three-up plan strip.
+
+			The one thing cards normally lose versus a table is the ability to follow a
+			single plan down the page. The highlighted tier keeps a continuous tinted lane
+			in both layouts to preserve exactly that.
+		-->
+		<div class="fc" aria-label="Feature comparison across plans">
+			{#each categories as cat}
+				<section class="fc-group">
+					<h4 class="fc-cat">{cat.label}</h4>
+
+					{#each PRICING_FEATURES.filter((f) => f.category === cat.id) as feature}
+						<article class="fc-item">
+							<h5 class="fc-name">
+								{feature.name}
+								{#if feature.tooltip}
+									<span class="feature-tip" title={feature.tooltip}>
+										<svg
+											width="14"
+											height="14"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											aria-hidden="true"
+											><circle cx="12" cy="12" r="10" /><line
+												x1="12"
+												y1="16"
+												x2="12"
+												y2="12"
+											/><line x1="12" y1="8" x2="12.01" y2="8" /></svg
+										>
+									</span>
+								{/if}
+							</h5>
+
+							<div class="fc-plans">
+								{#each PRICING_TIERS as tier}
+									{@const val = tierValue(feature, tier.id)}
+									<div class="fc-plan" class:lane={tier.highlighted}>
+										<span class="fc-plan-name">{tier.name}</span>
+										<span class="fc-plan-val">
+											<PricingFeatureValue value={val} />
+										</span>
+									</div>
+								{/each}
+							</div>
+						</article>
+					{/each}
+				</section>
+			{/each}
+		</div>
+
 		<div class="comparison-table-wrapper">
 			<table class="comparison-table" aria-label="Feature comparison across plans">
 				<thead>
 					<tr>
 						<th class="feature-col">Feature</th>
 						{#each PRICING_TIERS as tier}
-							<th class="tier-col">{tier.name}</th>
+							<th class="tier-col" class:lane={tier.highlighted}>{tier.name}</th>
 						{/each}
 					</tr>
 				</thead>
@@ -183,20 +337,30 @@
 									{feature.name}
 									{#if feature.tooltip}
 										<span class="feature-tip" title={feature.tooltip}>
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+											<svg
+												width="14"
+												height="14"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												aria-hidden="true"
+												><circle cx="12" cy="12" r="10" /><line
+													x1="12"
+													y1="16"
+													x2="12"
+													y2="12"
+												/><line x1="12" y1="8" x2="12.01" y2="8" /></svg
+											>
 										</span>
 									{/if}
 								</td>
 								{#each PRICING_TIERS as tier}
 									{@const val = tierValue(feature, tier.id)}
-									<td class="tier-cell">
-										{#if val === true}
-											<svg class="icon-yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Included"><polyline points="20 6 9 17 4 12" /></svg>
-										{:else if val === false}
-											<svg class="icon-no" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Not included"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-										{:else}
-											<span class="tier-value">{val}</span>
-										{/if}
+									<td class="tier-cell" class:lane={tier.highlighted}>
+										<PricingFeatureValue value={val} />
 									</td>
 								{/each}
 							</tr>
@@ -215,46 +379,45 @@
 				<summary>Can I switch plans later?</summary>
 				<p>
 					Yes. Upgrade or downgrade at any time. When upgrading, you'll be prorated for the
-					remaining billing period. When downgrading, the change takes effect at your next
-					billing cycle.
+					remaining billing period. When downgrading, the change takes effect at your next billing
+					cycle.
 				</p>
 			</details>
 			<details class="faq-item">
 				<summary>What happens when I hit my AI generation limits?</summary>
 				<p>
-					You'll receive a notification as you approach your limit. Once reached, you can
-					upgrade your plan or wait for your limits to reset at the start of your next
-					billing cycle.
+					You'll receive a notification as you approach your limit. Once reached, you can upgrade
+					your plan or wait for your limits to reset at the start of your next billing cycle.
 				</p>
 			</details>
 			<details class="faq-item">
 				<summary>Do I need a credit card for the free plan?</summary>
 				<p>
-					No. The Starter plan is completely free — no credit card required. Just create an
-					account and start building your brand.
+					No. The Starter plan is completely free — no credit card required. Just create an account
+					and start building your brand.
 				</p>
 			</details>
 			<details class="faq-item">
 				<summary>What AI models are used?</summary>
 				<p>
 					Nabu uses the latest OpenAI models for text (GPT-5.2), images (DALL-E), audio
-					(text-to-speech), and video (Sora). Pro and Business plans let you choose specific
-					models for different tasks.
+					(text-to-speech), and video (Sora). Pro and Business plans let you choose specific models
+					for different tasks.
 				</p>
 			</details>
 			<details class="faq-item">
 				<summary>Can I use Nabu for multiple brands?</summary>
 				<p>
-					The Starter plan covers one brand. Pro supports up to 5 brands with separate
-					identities, and Business supports up to 25 — each with their own colors,
-					typography, voice, and content.
+					The Starter plan covers one brand. Pro supports up to 5 brands with separate identities,
+					and Business supports up to 25 — each with their own colors, typography, voice, and
+					content.
 				</p>
 			</details>
 			<details class="faq-item">
 				<summary>Is there a trial for paid plans?</summary>
 				<p>
-					Pro comes with a 14-day free trial with full access. Business plans
-					include a guided onboarding call and custom trial period.
+					Pro comes with a 14-day free trial with full access. Business plans include a guided
+					onboarding call and custom trial period.
 				</p>
 			</details>
 		</div>
@@ -370,7 +533,10 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
-		transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+		transition:
+			border-color var(--transition-fast),
+			box-shadow var(--transition-fast),
+			transform var(--transition-fast);
 	}
 
 	.tier-card:hover {
@@ -381,11 +547,15 @@
 	.tier-card.highlighted {
 		border-color: var(--color-primary);
 		background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
-		box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-md);
+		box-shadow:
+			0 0 0 1px var(--color-primary),
+			var(--shadow-md);
 	}
 
 	.tier-card.highlighted:hover {
-		box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-lg);
+		box-shadow:
+			0 0 0 1px var(--color-primary),
+			var(--shadow-lg);
 	}
 
 	.popular-tag {
@@ -523,11 +693,131 @@
 		margin: 0 0 var(--spacing-lg);
 	}
 
+	/* ── Mobile comparison ────────────────────────────────────────────────────
+	   Default layout. The table is the enhancement, not the baseline: a phone
+	   cannot show three plan columns, and the previous horizontal scroll left the
+	   Business column undiscoverable. */
+
+	.fc-group {
+		margin-bottom: var(--spacing-lg);
+	}
+
+	.fc-cat {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		margin: 0 0 var(--spacing-sm);
+		font-size: 0.72rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--color-primary);
+	}
+
+	/* Rule runs to the edge so categories read as bands, giving the eye somewhere
+	   to rest between groups of features. */
+	.fc-cat::after {
+		content: '';
+		flex: 1;
+		height: 1px;
+		background: linear-gradient(
+			to right,
+			color-mix(in srgb, var(--color-primary) 35%, transparent),
+			transparent
+		);
+	}
+
+	.fc-item {
+		padding: var(--spacing-sm) 0;
+		border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+	}
+
+	.fc-item:last-child {
+		border-bottom: none;
+	}
+
+	.fc-name {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		margin: 0 0 var(--spacing-xs);
+		font-size: 0.88rem;
+		font-weight: 500;
+		line-height: 1.3;
+		color: var(--color-text);
+	}
+
+	/* Equal thirds: three plans always fit a 320px viewport, so nothing scrolls. */
+	.fc-plans {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 1px;
+		background: color-mix(in srgb, var(--color-border) 45%, transparent);
+		border-radius: var(--radius-md);
+		overflow: hidden;
+	}
+
+	.fc-plan {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: flex-start;
+		gap: 2px;
+		/* Uniform height so the three cells line up and the eye can run straight down
+		   a plan, but no taller than the two-line limits actually need. */
+		min-height: 2.9rem;
+		padding: 6px 4px;
+		background: var(--color-surface);
+		text-align: center;
+	}
+
+	/* The signature: the recommended plan keeps an unbroken tinted lane down the
+	   whole comparison. It is what a table gives you and cards usually lose —
+	   following one plan without re-reading the label on every row. */
+	.fc-plan.lane {
+		background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+	}
+
+	.fc-plan-name {
+		font-size: 0.6rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--color-text-secondary);
+	}
+
+	.fc-plan.lane .fc-plan-name {
+		color: var(--color-primary);
+	}
+
+	.fc-plan-val {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex: 1;
+		min-height: 1.25rem;
+	}
+
 	.comparison-table-wrapper {
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
+		/* Hidden on phones; the card layout above covers this range. */
+		display: none;
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
+	}
+
+	/* ── Wide screens ─────────────────────────────────────────────────────────
+	   Past this width all three plans fit honestly, and a table beats cards for
+	   cross-plan comparison. 46rem is where the 200px feature column plus three
+	   tier columns stop needing to scroll. */
+	@media (min-width: 46rem) {
+		.fc {
+			display: none;
+		}
+
+		.comparison-table-wrapper {
+			display: block;
+			overflow: hidden;
+		}
 	}
 
 	.comparison-table {
@@ -559,8 +849,11 @@
 		min-width: 200px;
 	}
 
+	/* Wide enough that the longest real limits — "Upload only", "3 per brand" —
+	   stay on one line. At 120px they wrapped and pushed those rows taller than
+	   their neighbours, which broke the horizontal rhythm of the table. */
 	.tier-col {
-		width: 120px;
+		width: 140px;
 	}
 
 	.category-row td {
@@ -597,19 +890,20 @@
 		vertical-align: middle;
 	}
 
-	.icon-yes {
-		color: var(--color-success);
+	/* Same lane as the mobile strip, so both layouts point at the same plan in the
+	   same language. On the table it also does the job the old design lacked: a
+	   column you can follow without tracking back to the header. */
+	.tier-col.lane,
+	.tier-cell.lane {
+		background: color-mix(in srgb, var(--color-primary) 7%, transparent);
 	}
 
-	.icon-no {
-		color: color-mix(in srgb, var(--color-text-secondary) 40%, transparent);
+	.tier-col.lane {
+		color: var(--color-primary);
 	}
 
-	.tier-value {
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: var(--color-text);
-	}
+	/* icon-yes / icon-no / value text now live in PricingFeatureValue, so the card
+	   and table layouts cannot drift apart. */
 
 	/* ===== FAQ ===== */
 	.faq {

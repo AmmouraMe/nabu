@@ -161,6 +161,16 @@ describe('computeBrandCompletion', () => {
 		}
 	});
 
+	it('gives every item a short label and an icon for the foundation rail', () => {
+		for (const item of BRAND_COMPLETION_ITEMS) {
+			expect(item.icon).toBeTruthy();
+			expect(item.short.length).toBeGreaterThan(0);
+			// Long enough to identify, short enough to sit under a 30px circle without
+			// wrapping — anything past this breaks the rail's alignment.
+			expect(item.short.length).toBeLessThanOrEqual(10);
+		}
+	});
+
 	it('has unique keys', () => {
 		const keys = BRAND_COMPLETION_ITEMS.map((i) => i.key);
 		expect(new Set(keys).size).toBe(keys.length);

@@ -31,6 +31,10 @@ export interface CompletionItem {
 	/** Profile field this tracks; also the key an editor writes back to. */
 	key: string;
 	label: string;
+	/** Fits under a circle in the foundation rail, where `label` would not. */
+	short: string;
+	/** Shown in the rail until the item is done, mirroring the step rail above it. */
+	icon: string;
 	group: CompletionGroup;
 	/** 3 = load-bearing, 2 = valuable, 1 = nice to have. */
 	weight: 1 | 2 | 3;
@@ -64,6 +68,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'brandName',
 		label: 'Brand name',
+		short: 'Name',
+		icon: '🏷️',
 		group: 'identity',
 		weight: 3,
 		card: 'text',
@@ -75,6 +81,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'tagline',
 		label: 'Tagline',
+		short: 'Tagline',
+		icon: '💬',
 		group: 'identity',
 		weight: 2,
 		card: 'text',
@@ -84,6 +92,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'missionStatement',
 		label: 'Mission statement',
+		short: 'Mission',
+		icon: '🎯',
 		group: 'identity',
 		weight: 3,
 		card: 'text',
@@ -93,6 +103,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'elevatorPitch',
 		label: 'Elevator pitch',
+		short: 'Pitch',
+		icon: '🛗',
 		group: 'identity',
 		weight: 2,
 		card: 'text',
@@ -102,6 +114,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'visionStatement',
 		label: 'Vision statement',
+		short: 'Vision',
+		icon: '🔭',
 		group: 'identity',
 		weight: 1,
 		card: 'text',
@@ -113,6 +127,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'targetAudience',
 		label: 'Target audience',
+		short: 'Audience',
+		icon: '👥',
 		group: 'audience',
 		weight: 3,
 		card: 'text',
@@ -122,6 +138,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'valueProposition',
 		label: 'Value proposition',
+		short: 'Value',
+		icon: '💎',
 		group: 'audience',
 		weight: 3,
 		card: 'text',
@@ -131,6 +149,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'customerPainPoints',
 		label: 'Customer pain points',
+		short: 'Pains',
+		icon: '🩹',
 		group: 'audience',
 		weight: 2,
 		card: 'text',
@@ -142,6 +162,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'brandArchetype',
 		label: 'Brand archetype',
+		short: 'Archetype',
+		icon: '🎭',
 		group: 'personality',
 		weight: 2,
 		card: 'choice',
@@ -151,6 +173,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'toneOfVoice',
 		label: 'Tone of voice',
+		short: 'Tone',
+		icon: '🗣️',
 		group: 'personality',
 		weight: 3,
 		card: 'text',
@@ -160,6 +184,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'brandPersonalityTraits',
 		label: 'Personality traits',
+		short: 'Traits',
+		icon: '🧠',
 		group: 'personality',
 		weight: 2,
 		card: 'text',
@@ -171,6 +197,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'primaryColor',
 		label: 'Primary color',
+		short: 'Primary',
+		icon: '🎨',
 		group: 'visual',
 		weight: 3,
 		card: 'color',
@@ -180,6 +208,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'secondaryColor',
 		label: 'Secondary color',
+		short: 'Secondary',
+		icon: '🖌️',
 		group: 'visual',
 		weight: 2,
 		card: 'color',
@@ -189,6 +219,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'accentColor',
 		label: 'Accent color',
+		short: 'Accent',
+		icon: '✨',
 		group: 'visual',
 		weight: 2,
 		card: 'color',
@@ -198,6 +230,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'typographyHeading',
 		label: 'Heading font',
+		short: 'Headings',
+		icon: '🔠',
 		group: 'visual',
 		weight: 2,
 		card: 'typography',
@@ -207,6 +241,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'typographyBody',
 		label: 'Body font',
+		short: 'Body font',
+		icon: '🔡',
 		group: 'visual',
 		weight: 2,
 		card: 'typography',
@@ -216,6 +252,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'logoUrl',
 		label: 'Logo',
+		short: 'Logo',
+		icon: '🖼️',
 		group: 'visual',
 		weight: 3,
 		card: 'logo',
@@ -229,6 +267,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'industry',
 		label: 'Industry',
+		short: 'Industry',
+		icon: '🏭',
 		group: 'positioning',
 		weight: 2,
 		card: 'text',
@@ -238,6 +278,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'uniqueSellingPoints',
 		label: 'Unique selling points',
+		short: 'USPs',
+		icon: '⭐',
 		group: 'positioning',
 		weight: 2,
 		card: 'text',
@@ -247,6 +289,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'marketPosition',
 		label: 'Market position',
+		short: 'Position',
+		icon: '📊',
 		group: 'positioning',
 		weight: 1,
 		card: 'choice',
@@ -256,6 +300,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'competitors',
 		label: 'Competitors',
+		short: 'Rivals',
+		icon: '⚔️',
 		group: 'positioning',
 		weight: 1,
 		card: 'text',
@@ -267,6 +313,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'originStory',
 		label: 'Origin story',
+		short: 'Origin',
+		icon: '📖',
 		group: 'story',
 		weight: 2,
 		card: 'text',
@@ -276,6 +324,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'brandValues',
 		label: 'Brand values',
+		short: 'Values',
+		icon: '🧭',
 		group: 'story',
 		weight: 2,
 		card: 'text',
@@ -285,6 +335,8 @@ export const BRAND_COMPLETION_ITEMS: CompletionItem[] = [
 	{
 		key: 'brandPromise',
 		label: 'Brand promise',
+		short: 'Promise',
+		icon: '🤝',
 		group: 'story',
 		weight: 1,
 		card: 'text',

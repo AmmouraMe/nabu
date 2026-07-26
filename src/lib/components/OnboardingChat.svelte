@@ -36,7 +36,7 @@
 	import BrandColorCard from './BrandColorCard.svelte';
 	import GoogleFontPicker from './GoogleFontPicker.svelte';
 	import BrandLogoCard from './BrandLogoCard.svelte';
-	import type { CompletionItem } from '$lib/services/brand-completion';
+	import { computeBrandCompletion, type CompletionItem } from '$lib/services/brand-completion';
 
 	/** Optional brand profile ID to load a specific brand for continued onboarding */
 	export let brandId: string | undefined = undefined;
@@ -334,6 +334,13 @@
 
 	/** Card kinds with a real inline editor. Everything else stays conversational. */
 	const DIRECT_EDIT_CARDS = new Set(['color', 'typography', 'logo']);
+
+	// The completion banner reports on the brand, not on how far the conversation got,
+	// so it needs the same numbers the meter uses.
+	$: foundation = computeBrandCompletion($onboardingStore.profile);
+	$: foundationPercent = foundation.percent;
+	$: foundationRemaining = foundation.missing.length;
+	$: foundationComplete = foundation.percent === 100;
 
 	// Narrowed here rather than in the markup: Svelte's template parser cannot read a
 	// TS `as` cast to a union type inside an expression.
@@ -669,8 +676,27 @@
 
 				{#if $onboardingStore.currentStep === 'complete'}
 					<div class="completion-banner" in:fly={{ y: 20 }}>
-						<h3>🎉 Brand Foundation Complete!</h3>
-						<p>Your brand style guide is ready. You can continue chatting to refine any details.</p>
+						<!--
+						Gated on the *brand*, not the step. This previously fired on
+						`currentStep === 'complete'` alone, so it cheerfully announced "Brand
+						Foundation Complete!" above a 19% meter — reaching the last step of the
+						conversation says nothing about whether the brand got filled in.
+					-->
+						{#if foundationComplete}
+							<h3>🎉 Brand Foundation Complete!</h3>
+							<p>
+								Your brand style guide is ready. You can continue chatting to refine any details.
+							</p>
+						{:else}
+							<h3>Style guide drafted</h3>
+							<!-- One line, deliberately. The longer version wrapped to three lines on a
+							     phone and cost 65px of a screen with little to spare, and the rail directly
+							     above already shows which items are outstanding. -->
+							<p>
+								Foundation {foundationPercent}% filled in · {foundationRemaining}
+								{foundationRemaining === 1 ? 'item' : 'items'} to go
+							</p>
+						{/if}
 						<div class="completion-actions">
 							<!-- An anchor, not a button: this is navigation, so middle-click and
 							     open-in-new-tab should work. Guarded on the id because the banner can
@@ -1307,22 +1333,48 @@
 		min-width: 0;
 	}
 
+	/* This is permanent chrome once the last step is reached, so it is sized as a
+	   status strip rather than a celebration page. It measured 203px at 320px wide —
+	   more than the composer and step rail combined — on a screen whose whole job is
+	   showing a conversation. Centred column on phones, single row once there is
+	   width for one. */
 	.completion-banner {
-		padding: var(--spacing-md) var(--spacing-lg);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 4px;
+		padding: var(--spacing-sm) var(--spacing-md);
 		border-bottom: 1px solid var(--color-border);
 		text-align: center;
 	}
 
 	.completion-banner h3 {
-		font-size: 1rem;
-		margin-bottom: var(--spacing-xs);
+		font-size: 0.9rem;
+		margin: 0;
 		color: var(--color-text);
 	}
 
 	.completion-banner p {
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		color: var(--color-text-secondary);
-		margin-bottom: var(--spacing-md);
+		margin: 0;
+	}
+
+	/* Past this width the three parts fit on one line, which halves the height the
+	   banner takes out of the conversation. */
+	@media (min-width: 34rem) {
+		.completion-banner {
+			flex-direction: row;
+			justify-content: center;
+			flex-wrap: wrap;
+			gap: var(--spacing-xs) var(--spacing-sm);
+		}
+
+		.completion-banner p::before {
+			content: '·';
+			margin-right: var(--spacing-xs);
+			opacity: 0.5;
+		}
 	}
 
 	.completion-actions {
@@ -1339,6 +1391,9 @@
 	   the brand teal and has separate light/dark values, so this needs no theme
 	   handling of its own. */
 	.primary-btn {
+		display: inline-flex;
+		align-items: center;
+		min-height: 36px;
 		padding: var(--spacing-xs) var(--spacing-md);
 		background: var(--color-primary);
 		color: var(--color-background);
@@ -1357,6 +1412,9 @@
 	}
 
 	.secondary-btn {
+		display: inline-flex;
+		align-items: center;
+		min-height: 36px;
 		padding: var(--spacing-xs) var(--spacing-md);
 		background: none;
 		color: var(--color-text-secondary);

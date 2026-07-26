@@ -12,6 +12,7 @@
 		BRAND_COMPLETION_ITEMS,
 		type CompletionItem
 	} from '$lib/services/brand-completion';
+	import BrandIcon from './BrandIcon.svelte';
 	import type { BrandProfile } from '$lib/types/onboarding';
 
 	/** Null while the profile is still loading; the meter renders at 0 rather than hiding. */
@@ -19,11 +20,22 @@
 	/** Collapsed to just the bar — used where space is tight. */
 	export let compact = false;
 
+	/**
+	 * Whether the 24-circle rail is open on a phone.
+	 *
+	 * Closed by default there, and it matters: expanded, this component measured 336px
+	 * of a 844px screen. With the site nav, step rail, banner and composer that left
+	 * 129px — about two lines — for the conversation the page exists for. Wide screens
+	 * have the room, so CSS keeps the rail open past the breakpoint regardless.
+	 */
+	let railOpen = false;
+
 	const dispatch = createEventDispatcher<{ resolve: CompletionItem }>();
 
 	$: completion = computeBrandCompletion(profile);
 	$: nextBest = completion.nextBest;
 	$: done = completion.percent === 100;
+	$: remaining = completion.missing.length;
 </script>
 
 <div class="completion-meter" class:compact>
@@ -35,7 +47,34 @@
 				Brand foundation
 			{/if}
 		</span>
-		<span class="meter-percent" class:done>{completion.percent}%</span>
+
+		<!-- Count, not just a percentage: "20 left" is a number you can act on, whereas
+		     19% only tells you how you are doing. Doubles as the rail's toggle on mobile. -->
+		<button
+			class="rail-toggle"
+			aria-expanded={railOpen}
+			aria-controls="foundation-rail"
+			on:click={() => (railOpen = !railOpen)}
+		>
+			<span class="meter-percent" class:done>{completion.percent}%</span>
+			{#if !done}
+				<span class="remaining">{remaining} left</span>
+			{/if}
+			<span class="chev" class:open={railOpen} aria-hidden="true">
+				<svg
+					width="12"
+					height="12"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+				>
+			</span>
+		</button>
+
+		<span class="meter-percent desktop-percent" class:done>{completion.percent}%</span>
 	</div>
 
 	<div
@@ -59,7 +98,12 @@
 			a set you can fill in any order. Drawing a line between them would imply an
 			order that does not exist.
 		-->
-		<nav class="foundation-rail" aria-label="Brand foundation items">
+		<nav
+			class="foundation-rail"
+			class:open={railOpen}
+			id="foundation-rail"
+			aria-label="Brand foundation items"
+		>
 			{#each BRAND_COMPLETION_ITEMS as item (item.key)}
 				{@const isDone = completion.completed.includes(item)}
 				<button
@@ -85,7 +129,7 @@
 								<polyline points="3 8.5 6.5 12 13 4" />
 							</svg>
 						{:else}
-							<span class="fi-emoji">{item.icon}</span>
+							<BrandIcon name={item.icon} size={15} />
 						{/if}
 					</span>
 					<span class="fi-label">{item.short}</span>
@@ -168,11 +212,52 @@
 	   Same circle language as the step rail above, so the two read as siblings.
 	   It wraps rather than scrolls: 24 items never fit one line on a phone, and
 	   sideways scrolling would hide the tail exactly like the pricing table did. */
+	/* Closed on phones, where it would otherwise take 336px of an 844px screen and
+	   leave two lines for the conversation. Opens on tap, and is always open past the
+	   breakpoint where the room exists. */
 	.foundation-rail {
-		display: flex;
+		display: none;
 		flex-wrap: wrap;
 		gap: var(--spacing-xs) var(--spacing-sm);
 		margin-top: var(--spacing-sm);
+	}
+
+	.foundation-rail.open {
+		display: flex;
+	}
+
+	.rail-toggle {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		/* 40px tall so it is a comfortable thumb target, not a 26px hairline. */
+		min-height: 40px;
+		padding: 0 4px;
+		margin: -8px -4px;
+		background: none;
+		border: none;
+		color: var(--color-text-secondary);
+		cursor: pointer;
+	}
+
+	.remaining {
+		font-size: 0.68rem;
+		color: var(--color-text-secondary);
+	}
+
+	.chev {
+		display: inline-flex;
+		transition: transform var(--transition-fast);
+	}
+
+	.chev.open {
+		transform: rotate(180deg);
+	}
+
+	/* The bare percentage belongs to wide screens, where the rail is always open and
+	   there is nothing to toggle. */
+	.desktop-percent {
+		display: none;
 	}
 
 	.fi {
@@ -246,11 +331,6 @@
 		height: 15px;
 	}
 
-	.fi-emoji {
-		font-size: 0.85rem;
-		line-height: 1;
-	}
-
 	/* Labels stay visible at every width, unlike the step rail which drops them on
 	   mobile. That rail is a sequence, so position hints at identity; these 24 items
 	   are a set in no fixed order, and unlabelled they would be a wall of tiny emoji.
@@ -272,14 +352,27 @@
 		font-weight: 700;
 	}
 
-	@media (min-width: 40rem) {
+	/* Force-open needs vertical room, not just horizontal. Gated on width alone, a
+	   1280×800 laptop gave the open rail plus banner 92% of the screen and left 81px
+	   — smaller than the phone case this was meant to fix. Height is the real
+	   constraint, so short viewports keep the toggle. */
+	@media (min-width: 40rem) and (min-height: 900px) {
+		/* Room enough to keep every item on screen permanently. */
+		.foundation-rail {
+			display: flex;
+		}
+
+		.rail-toggle {
+			display: none;
+		}
+
+		.desktop-percent {
+			display: inline;
+		}
+
 		.fi-dot {
 			width: 36px;
 			height: 36px;
-		}
-
-		.fi-emoji {
-			font-size: 0.95rem;
 		}
 
 		.fi-check {
@@ -313,7 +406,9 @@
 
 	.next-action {
 		flex-shrink: 0;
-		padding: 4px var(--spacing-sm);
+		/* The page's main call to action should not be its smallest tap target. */
+		min-height: 36px;
+		padding: 6px var(--spacing-md);
 		background: none;
 		color: var(--color-primary);
 		border: 1px solid var(--color-border);

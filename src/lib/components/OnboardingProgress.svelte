@@ -5,6 +5,7 @@
 	 */
 	import { createEventDispatcher } from 'svelte';
 	import type { OnboardingStep } from '$lib/types/onboarding';
+	import BrandIcon from './BrandIcon.svelte';
 
 	export let currentStep: OnboardingStep = 'welcome';
 
@@ -18,16 +19,16 @@
 	}
 
 	const steps: { id: OnboardingStep; label: string; icon: string; shortLabel: string }[] = [
-		{ id: 'welcome', label: 'Welcome', shortLabel: 'Welcome', icon: '👋' },
-		{ id: 'brand_assessment', label: 'Assessment', shortLabel: 'Assess', icon: '🔍' },
-		{ id: 'brand_identity', label: 'Identity', shortLabel: 'Identity', icon: '💡' },
-		{ id: 'target_audience', label: 'Audience', shortLabel: 'Audience', icon: '🎯' },
-		{ id: 'brand_personality', label: 'Personality', shortLabel: 'Persona', icon: '🧠' },
-		{ id: 'visual_identity', label: 'Visual Identity', shortLabel: 'Visual', icon: '🎨' },
-		{ id: 'market_positioning', label: 'Positioning', shortLabel: 'Position', icon: '📊' },
-		{ id: 'brand_story', label: 'Story', shortLabel: 'Story', icon: '📖' },
-		{ id: 'style_guide', label: 'Style Guide', shortLabel: 'Guide', icon: '📋' },
-		{ id: 'complete', label: 'Complete', shortLabel: 'Done', icon: '🎉' }
+		{ id: 'welcome', label: 'Welcome', shortLabel: 'Welcome', icon: 'welcome' },
+		{ id: 'brand_assessment', label: 'Assessment', shortLabel: 'Assess', icon: 'assess' },
+		{ id: 'brand_identity', label: 'Identity', shortLabel: 'Identity', icon: 'identity' },
+		{ id: 'target_audience', label: 'Audience', shortLabel: 'Audience', icon: 'audience' },
+		{ id: 'brand_personality', label: 'Personality', shortLabel: 'Persona', icon: 'archetype' },
+		{ id: 'visual_identity', label: 'Visual Identity', shortLabel: 'Visual', icon: 'visual' },
+		{ id: 'market_positioning', label: 'Positioning', shortLabel: 'Position', icon: 'position' },
+		{ id: 'brand_story', label: 'Story', shortLabel: 'Story', icon: 'origin' },
+		{ id: 'style_guide', label: 'Style Guide', shortLabel: 'Guide', icon: 'guide' },
+		{ id: 'complete', label: 'Complete', shortLabel: 'Done', icon: 'done' }
 	];
 
 	$: currentIndex = steps.findIndex((s) => s.id === currentStep);
@@ -38,7 +39,7 @@
 <header class="progress-header" role="navigation" aria-label="Onboarding progress">
 	<!-- Mobile: compact current-step display -->
 	<div class="mobile-summary">
-		<span class="mobile-step-icon">{steps[currentIndex]?.icon}</span>
+		<span class="mobile-step-icon"><BrandIcon name={steps[currentIndex]?.icon ?? 'welcome'} size={16} /></span>
 		<span class="mobile-step-label">{currentLabel}</span>
 		<span class="mobile-step-count">{currentIndex + 1}/{steps.length}</span>
 	</div>
@@ -77,7 +78,7 @@
 							<polyline points="3 8.5 6.5 12 13 4" />
 						</svg>
 					{:else}
-						<span class="step-emoji">{step.icon}</span>
+						<BrandIcon name={step.icon} size={15} />
 					{/if}
 				</span>
 				<span class="step-label">{step.shortLabel}</span>
@@ -147,14 +148,17 @@
 	}
 
 	/* ─── Steps nav ─── */
+	/* Wraps rather than scrolls. It used to be overflow-x:auto, which meant the last
+	   step sat 2px off the right edge at 320px and could only be reached by dragging
+	   — the same trap as the pricing table. Wrapping keeps every step reachable at
+	   any width. */
 	.steps {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: flex-start;
+		justify-content: center;
 		padding: var(--spacing-xs) var(--spacing-sm);
-		gap: 0;
-		overflow-x: auto;
-		-webkit-overflow-scrolling: touch;
-		scrollbar-width: none; /* Firefox */
+		gap: 2px;
 	}
 
 	.steps::-webkit-scrollbar {
@@ -171,8 +175,13 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		justify-content: center;
 		gap: 4px;
-		padding: 0;
+		/* Padding on the button rather than the dot: the circle keeps its 26px look
+		   while the tap area reaches a thumb-friendly 40px. */
+		padding: 7px 5px;
+		min-width: 40px;
+		min-height: 40px;
 		border: none;
 		background: none;
 		cursor: pointer;
@@ -200,6 +209,8 @@
 		justify-content: center;
 		border: 2px solid var(--color-border);
 		background-color: var(--color-background);
+		/* Monochrome glyphs inherit this, so a circle's state colours its icon. */
+		color: var(--color-text-secondary);
 		transition: all var(--transition-fast);
 		position: relative;
 	}
@@ -207,12 +218,14 @@
 	.step.active .step-dot {
 		border-color: var(--color-primary);
 		background-color: var(--color-primary);
+		color: var(--color-background);
 		box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 	}
 
 	.step.completed .step-dot {
 		border-color: var(--color-success);
 		background-color: var(--color-success);
+		color: var(--color-background);
 	}
 
 	.step.future .step-dot {
@@ -225,14 +238,7 @@
 		transform: scale(1.08);
 	}
 
-	.step-emoji {
-		font-size: 0.7rem;
-		line-height: 1;
-	}
 
-	.step.active .step-emoji {
-		filter: brightness(10);
-	}
 
 	.check-icon {
 		width: 14px;
@@ -265,6 +271,7 @@
 
 	/* ─── Connectors between steps ─── */
 	.connector {
+		display: none;
 		flex: 1;
 		height: 2px;
 		background-color: var(--color-border);
@@ -281,6 +288,11 @@
 
 	/* ─── Tablet: hide mobile summary, more step spacing ─── */
 	@media (min-width: 640px) {
+		/* Enough room for one unbroken row, so the connecting line is true again. */
+		.connector {
+			display: block;
+		}
+
 		.mobile-summary {
 			display: none;
 		}
@@ -299,9 +311,6 @@
 			height: 32px;
 		}
 
-		.step-emoji {
-			font-size: 0.85rem;
-		}
 	}
 
 	/* ─── Desktop: show labels + more breathing room ─── */
@@ -320,9 +329,6 @@
 			height: 36px;
 		}
 
-		.step-emoji {
-			font-size: 0.95rem;
-		}
 
 		.check-icon {
 			width: 16px;
@@ -356,9 +362,6 @@
 			height: 40px;
 		}
 
-		.step-emoji {
-			font-size: 1.05rem;
-		}
 
 		.step-label {
 			font-size: 0.6rem;

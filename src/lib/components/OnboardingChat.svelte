@@ -17,7 +17,7 @@
 		loadExistingProfile,
 		resetOnboarding
 	} from '$lib/stores/onboarding';
-	import type { OnboardingStep, OnboardingAttachment } from '$lib/types/onboarding';
+	import type { OnboardingStep, OnboardingAttachment, BrandProfile } from '$lib/types/onboarding';
 	import {
 		ONBOARDING_STEPS,
 		getNextStep,
@@ -33,6 +33,7 @@
 	} from '$lib/utils/attachments';
 	import { renderMessageHtml } from '$lib/utils/message-format';
 	import BrandCompletionMeter from './BrandCompletionMeter.svelte';
+	import BrandColorCard from './BrandColorCard.svelte';
 	import type { CompletionItem } from '$lib/services/brand-completion';
 
 	/** Optional brand profile ID to load a specific brand for continued onboarding */
@@ -323,17 +324,55 @@
 	}
 
 	/**
-	 * Act on the meter's "next best thing" suggestion by steering the conversation to
-	 * it, rather than opening a separate editor. Keeping it in the chat is the point:
-	 * the Brand Architect asks about the field, and the existing per-step extraction
-	 * captures the answer, so the meter moves without any new save path.
+	 * The one card currently open, or null. Deliberately singular: the meter offers a
+	 * single next step, so opening a stack of editors would contradict it.
+	 */
+	let activeCard: CompletionItem | null = null;
+	let cardSaving = false;
+
+	/** Card kinds with a real inline editor. Everything else stays conversational. */
+	const DIRECT_EDIT_CARDS = new Set(['color']);
+
+	/**
+	 * Act on the meter's "next best thing" suggestion.
+	 *
+	 * Colours (and later fonts and logos) get a card, because picking one by describing
+	 * it in prose is a poor trade. Everything else — mission, audience, story — is
+	 * genuinely better as conversation, so it steers the chat instead and lets the
+	 * existing per-step extraction capture the answer with no new save path.
 	 */
 	async function handleResolveItem(event: CustomEvent<CompletionItem>) {
 		const item = event.detail;
 		if (!item || $onboardingStore.isStreaming) return;
+
+		if (DIRECT_EDIT_CARDS.has(item.card)) {
+			activeCard = item;
+			await tick();
+			scrollToBottom();
+			return;
+		}
+
 		await sendMessage(`Let's work on my ${item.label.toLowerCase()}.`);
 		await tick();
 		scrollToBottom();
+	}
+
+	/**
+	 * Persist a card edit. `updateBrandData` PATCHes and refreshes the store, so the
+	 * meter recomputes on its own — there is no separate progress state to keep in sync.
+	 */
+	async function handleCardSave(event: CustomEvent<{ field: string; value: string }>) {
+		const { field, value } = event.detail;
+		cardSaving = true;
+		try {
+			await updateBrandData({ [field]: value } as Partial<BrandProfile>);
+			activeCard = null;
+		} catch (err) {
+			console.error('Failed to save brand field:', err);
+			// Leave the card open on failure so the choice is not silently lost.
+		} finally {
+			cardSaving = false;
+		}
 	}
 
 	/**
@@ -495,6 +534,28 @@
 						</div>
 					</div>
 				{/each}
+
+				<!-- Inline editor card. Sits at the end of the transcript so it reads as the
+				     latest turn in the conversation rather than a modal interrupting it. -->
+				{#if activeCard}
+					<div class="inline-card" in:fly={{ y: 20, duration: 250, easing: quintOut }}>
+						<div class="message-avatar">
+							<span class="avatar-icon">✨</span>
+						</div>
+						<div class="card-body">
+							{#if activeCard.card === 'color'}
+								<BrandColorCard
+									field={activeCard.key}
+									label={activeCard.label}
+									profile={$onboardingStore.profile}
+									saving={cardSaving}
+									on:save={handleCardSave}
+									on:dismiss={() => (activeCard = null)}
+								/>
+							{/if}
+						</div>
+					</div>
+				{/if}
 
 				{#if $onboardingStore.streamingStatus}
 					<div class="streaming-status-bar" in:fade={{ duration: 150 }}>
@@ -1189,6 +1250,19 @@
 	}
 
 	/* Completion banner */
+	/* Mirrors the assistant message layout so a card reads as part of the
+	   conversation, not as something bolted on beside it. */
+	.inline-card {
+		display: flex;
+		gap: var(--spacing-sm);
+		padding: 0 var(--spacing-lg) var(--spacing-sm);
+	}
+
+	.inline-card .card-body {
+		flex: 1;
+		min-width: 0;
+	}
+
 	.completion-banner {
 		padding: var(--spacing-md) var(--spacing-lg);
 		border-bottom: 1px solid var(--color-border);

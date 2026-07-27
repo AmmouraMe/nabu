@@ -12,7 +12,8 @@
 					<span class="logo-text">Nabu</span>
 				</a>
 				<p class="footer-tagline">
-					Marketing automation with optional AI-generated content — helping you build and grow products from scratch.
+					Marketing automation with optional AI-generated content — helping you build and grow
+					products from scratch.
 				</p>
 				<div class="footer-badge">
 					<svg
@@ -59,6 +60,14 @@
 				</div>
 
 				<div class="footer-section">
+					<h3 class="footer-heading">Developers</h3>
+					<ul class="footer-links">
+						<li><a href="/docs/api">API reference</a></li>
+						<li><a href="/api/v1/openapi.json">OpenAPI spec</a></li>
+					</ul>
+				</div>
+
+				<div class="footer-section">
 					<h3 class="footer-heading">Legal</h3>
 					<ul class="footer-links">
 						<li><a href="/privacy">Privacy Policy</a></li>
@@ -71,11 +80,13 @@
 		<!-- Bottom Bar -->
 		<div class="footer-bottom">
 			<p class="footer-copyright">
-				© {currentYear} Nabu. Created by <a
+				© {currentYear} Nabu. Created by
+				<a
 					href="https://davis9001.dev"
 					target="_blank"
 					rel="noopener noreferrer"
-					class="starspace-link">davis9001</a>, incubated in
+					class="starspace-link">davis9001</a
+				>, incubated in
 				<a
 					href="https://starspace.group"
 					target="_blank"

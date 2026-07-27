@@ -15,9 +15,10 @@ export interface LogoBrandContext {
 	logoConcept?: string | null;
 }
 
-export type LogoStyle = 'wordmark' | 'lettermark' | 'abstract' | 'mascot' | 'emblem';
-
-export const LOGO_STYLES: LogoStyle[] = ['wordmark', 'lettermark', 'abstract', 'mascot', 'emblem'];
+// Canonical list lives in the shared spec, which the public docs render — defining
+// styles twice is how documentation starts lying.
+export { LOGO_STYLES, type LogoStyle } from '$lib/api-spec';
+import { LOGO_STYLES, type LogoStyle } from '$lib/api-spec';
 
 /**
  * What each style actually asks the model for. Generic prompts return illustrations;

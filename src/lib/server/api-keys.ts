@@ -24,14 +24,10 @@ const KEY_PREFIX = 'nabu_sk_';
 /** Bytes of entropy in a key. 32 bytes = 256 bits. */
 const KEY_BYTES = 32;
 
-export type ApiScope = 'brands:read' | 'brands:write' | 'assets:read' | 'assets:write';
-
-export const ALL_SCOPES: ApiScope[] = [
-	'brands:read',
-	'brands:write',
-	'assets:read',
-	'assets:write'
-];
+// Re-exported from the shared spec rather than restated here: the docs page renders
+// that list, so defining scopes twice is how documentation starts lying.
+export { ALL_SCOPES, type ApiScope } from '$lib/api-spec';
+import { ALL_SCOPES, type ApiScope } from '$lib/api-spec';
 
 export interface ApiKeyRecord {
 	id: string;

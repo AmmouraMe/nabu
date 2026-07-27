@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { getBrandAssetSummary } from '$lib/services/brand-assets';
+import { requireBrandAccess } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/assets/summary
@@ -12,6 +13,8 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	const brandProfileId = url.searchParams.get('brandProfileId');
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'read');
 
 	const summary = await getBrandAssetSummary(platform.env.DB, brandProfileId);
 	return json({ summary });

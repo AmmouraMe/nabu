@@ -5,6 +5,7 @@ import {
 	getMediaVariants,
 	deleteMediaVariant
 } from '$lib/services/brand-assets';
+import { brandOfMedia, brandOfVariant, requireAssetAccess } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/assets/variants
@@ -16,6 +17,13 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	const brandMediaId = url.searchParams.get('brandMediaId');
 	if (!brandMediaId) throw error(400, 'brandMediaId required');
+
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfMedia(platform.env.DB, brandMediaId),
+		'read'
+	);
 
 	const variants = await getMediaVariants(platform.env.DB, brandMediaId);
 	return json({ variants });
@@ -36,6 +44,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		throw error(400, 'Missing required fields');
 	}
 
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfMedia(platform.env.DB, brandMediaId),
+		'write'
+	);
+
 	const variant = await createMediaVariant(platform.env.DB, body);
 	return json({ variant }, { status: 201 });
 };
@@ -50,6 +65,14 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 
 	const id = url.searchParams.get('id');
 	if (!id) throw error(400, 'id required');
+
+	// Two hops: variant → its media asset → the owning brand.
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfVariant(platform.env.DB, id),
+		'write'
+	);
 
 	await deleteMediaVariant(platform.env.DB, id);
 	return json({ success: true });

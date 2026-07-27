@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
+import { requireBrandAccess } from '$lib/server/brand-access';
 
 /**
  * POST /api/brand/assets/upload
@@ -24,6 +25,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		throw error(400, 'Valid mediaType required (image, audio, video)');
 	}
 	if (!category) throw error(400, 'category required');
+
+	// Before the object is written: the R2 key is built from `brandProfileId`, so an
+	// unauthorised call would plant a file inside another brand's namespace.
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
 
 	const assetName = name || file.name;
 

@@ -3,6 +3,7 @@
  * Covers GET and POST /api/brand/assets/texts/revisions
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { withBrandAccess } from '../fixtures/brand-access';
 
 vi.mock('$lib/services/text-history', () => ({
 	getTextRevisions: vi.fn(),
@@ -23,15 +24,20 @@ describe('Brand Text Revisions API', () => {
 		vi.resetModules();
 		mockPlatform = {
 			env: {
-				DB: {
-					prepare: vi.fn().mockReturnValue({
-						bind: vi.fn().mockReturnValue({
-							first: vi.fn().mockResolvedValue(null),
-							all: vi.fn().mockResolvedValue({ results: [] }),
-							run: vi.fn().mockResolvedValue({ success: true })
+				// Wrapped so the route's ownership check answers — `u1` owns the text asset
+				// these tests operate on.
+				DB: withBrandAccess(
+					{
+						prepare: vi.fn().mockReturnValue({
+							bind: vi.fn().mockReturnValue({
+								first: vi.fn().mockResolvedValue(null),
+								all: vi.fn().mockResolvedValue({ results: [] }),
+								run: vi.fn().mockResolvedValue({ success: true })
+							})
 						})
-					})
-				}
+					},
+					{ userId: 'u1' }
+				)
 			}
 		};
 	});

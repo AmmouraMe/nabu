@@ -9,6 +9,7 @@ import {
 	deleteBrandMedia,
 	getLogoAssets
 } from '$lib/services/brand-assets';
+import { brandOfMedia, requireAssetAccess, requireBrandAccess } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/assets/media
@@ -20,6 +21,8 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	const brandProfileId = url.searchParams.get('brandProfileId');
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'read');
 
 	const mediaType = url.searchParams.get('mediaType');
 	const category = url.searchParams.get('category');
@@ -57,6 +60,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		throw error(400, 'Missing required fields');
 	}
 
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
+
 	const media = await createBrandMedia(platform.env.DB, body);
 	return json({ media }, { status: 201 });
 };
@@ -74,6 +79,15 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 
 	if (!id) throw error(400, 'id required');
 
+	// Addressed by asset id, so the brand comes from the row rather than the caller —
+	// a `brandProfileId` in the body would be the caller's claim, not a fact.
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfMedia(platform.env.DB, id),
+		'write'
+	);
+
 	await updateBrandMedia(platform.env.DB, id, updates);
 	return json({ success: true });
 };
@@ -88,6 +102,13 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 
 	const id = url.searchParams.get('id');
 	if (!id) throw error(400, 'id required');
+
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfMedia(platform.env.DB, id),
+		'write'
+	);
 
 	await deleteBrandMedia(platform.env.DB, id);
 	return json({ success: true });

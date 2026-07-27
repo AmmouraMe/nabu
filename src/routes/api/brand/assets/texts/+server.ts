@@ -8,6 +8,7 @@ import {
 	deleteBrandText
 } from '$lib/services/brand-assets';
 import { updateBrandFieldWithVersion } from '$lib/services/brand';
+import { brandOfText, requireAssetAccess, requireBrandAccess } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/assets/texts
@@ -19,6 +20,8 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	const brandProfileId = url.searchParams.get('brandProfileId');
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'read');
 
 	const category = url.searchParams.get('category');
 
@@ -54,6 +57,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!brandProfileId || !category || !key || !label || !value) {
 		throw error(400, 'Missing required fields');
 	}
+
+	// Write access covers both effects below: the text asset, and the profile field
+	// this can optionally overwrite.
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
 
 	const text = await createBrandText(platform.env.DB, {
 		brandProfileId,
@@ -100,6 +107,13 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 
 	if (!id) throw error(400, 'id required');
 
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfText(platform.env.DB, id),
+		'write'
+	);
+
 	await updateBrandText(platform.env.DB, id, {
 		...updates,
 		userId: locals.user.id,
@@ -119,6 +133,13 @@ export const DELETE: RequestHandler = async ({ url, platform, locals }) => {
 
 	const id = url.searchParams.get('id');
 	if (!id) throw error(400, 'id required');
+
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfText(platform.env.DB, id),
+		'write'
+	);
 
 	await deleteBrandText(platform.env.DB, id);
 	return json({ success: true });

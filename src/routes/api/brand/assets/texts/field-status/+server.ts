@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { getMatchingProfileField, getProfileFieldValue } from '$lib/services/brand';
+import { requireBrandAccess } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/assets/texts/field-status
@@ -21,6 +22,10 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	if (!brandProfileId || !category || !key) {
 		throw error(400, 'brandProfileId, category, and key are required');
 	}
+
+	// Authorised before the mapping is even consulted: the reply leaks a profile
+	// field's current value for whatever brand is named.
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'read');
 
 	const match = getMatchingProfileField(category, key);
 

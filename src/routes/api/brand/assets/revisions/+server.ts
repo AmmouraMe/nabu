@@ -8,6 +8,7 @@ import {
 } from '$lib/services/media-history';
 import { logMediaActivity } from '$lib/services/media-history';
 import { updateBrandMedia } from '$lib/services/brand-assets';
+import { brandOfMedia, brandOfMediaRevision, requireAssetAccess } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/assets/revisions
@@ -19,6 +20,13 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	const brandMediaId = url.searchParams.get('brandMediaId');
 	if (!brandMediaId) throw error(400, 'brandMediaId required');
+
+	await requireAssetAccess(
+		platform.env.DB,
+		locals.user.id,
+		await brandOfMedia(platform.env.DB, brandMediaId),
+		'read'
+	);
 
 	const current = url.searchParams.get('current') === 'true';
 	if (current) {
@@ -45,6 +53,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		const { revisionId, brandProfileId } = body;
 		if (!revisionId) throw error(400, 'revisionId required');
 		if (!brandProfileId) throw error(400, 'brandProfileId required');
+
+		// The revision's own brand decides access — `brandProfileId` from the body is a
+		// claim. It is still required by the contract and used for the activity log, so
+		// it must match, or the revert would write its audit entry into another brand.
+		const owningBrand = await brandOfMediaRevision(platform.env.DB, revisionId);
+		await requireAssetAccess(platform.env.DB, locals.user.id, owningBrand, 'write');
+		if (brandProfileId !== owningBrand) throw error(404, 'Revision not found');
 
 		const newRevision = await revertToRevision(platform.env.DB, revisionId, locals.user.id);
 
@@ -89,6 +104,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	} = body;
 	if (!brandMediaId) throw error(400, 'brandMediaId required');
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+
+	const owningBrand = await brandOfMedia(platform.env.DB, brandMediaId);
+	await requireAssetAccess(platform.env.DB, locals.user.id, owningBrand, 'write');
+	if (brandProfileId !== owningBrand) throw error(404, 'Asset not found');
 
 	const revision = await createMediaRevision(platform.env.DB, {
 		brandMediaId,

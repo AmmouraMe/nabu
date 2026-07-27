@@ -46,6 +46,26 @@ describe('buildLogoPrompt', () => {
 		expect(buildLogoPrompt({ brandName: 'X' })).toContain('at most two colours');
 	});
 
+	it('builds around a single colour when only the primary is real', () => {
+		const p = buildLogoPrompt({
+			brandName: 'X',
+			primaryColor: '#3498db',
+			secondaryColor: 'something greenish'
+		});
+		expect(p).toContain('Built around the colour #3498db');
+		expect(p).not.toContain('something greenish');
+	});
+
+	it('skips industry and personality when they hold only whitespace', () => {
+		const p = buildLogoPrompt({
+			brandName: 'X',
+			industry: '   ',
+			brandPersonalityTraits: '  '
+		});
+		expect(p).not.toContain('Industry:');
+		expect(p).not.toContain('Personality:');
+	});
+
 	it('includes an agreed logo concept when present', () => {
 		const p = buildLogoPrompt({ brandName: 'X', logoConcept: 'a monkey mid-spin' });
 		expect(p).toContain('a monkey mid-spin');

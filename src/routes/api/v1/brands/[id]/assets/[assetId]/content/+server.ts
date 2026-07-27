@@ -14,8 +14,8 @@ import { apiError } from '$lib/server/api-keys';
  *
  * The asset is looked up **scoped to the brand in the path**, so an id belonging to
  * another brand resolves to nothing even when the caller can read this one. Taking
- * the R2 key from the caller instead — which is what the session route does — would
- * turn this into a read-anything endpoint.
+ * the R2 key from the caller — which is what the session route does — is what made
+ * that route a read-anything endpoint until its keys were authorised by prefix.
  */
 export const GET: RequestHandler = async (event) => {
 	const auth = await requireApiKey(event, 'assets:read');

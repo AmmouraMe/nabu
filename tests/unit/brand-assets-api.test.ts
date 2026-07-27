@@ -98,6 +98,21 @@ const mockBucket = { get: vi.fn(), put: vi.fn(), delete: vi.fn() };
 const authedLocals = { user: { id: 'user-1' } };
 const noUser = { user: null };
 
+/**
+ * A DB in which `user-1` owns every brand. The file route authorises the key's brand
+ * before reading R2, so these tests need an ownership answer to reach the R2 branches
+ * they are actually about.
+ */
+const ownerDB = {
+	prepare: vi.fn().mockImplementation((sql: string) => ({
+		bind: vi.fn().mockReturnValue({
+			first: vi
+				.fn()
+				.mockResolvedValue(sql.includes('FROM brand_profiles') ? { user_id: 'user-1' } : null)
+		})
+	}))
+};
+
 // ═══════════════════════════════════════════════════════════════
 // GET/POST/PATCH/DELETE /api/brand/assets/media
 // ═══════════════════════════════════════════════════════════════
@@ -992,7 +1007,7 @@ describe('GET /api/brand/assets/file', () => {
 		try {
 			await GET({
 				url: makeUrl('/x'),
-				platform: { env: { BUCKET: mockBucket } },
+				platform: { env: { BUCKET: mockBucket, DB: ownerDB } },
 				locals: authedLocals
 			} as any);
 			expect.fail();
@@ -1006,8 +1021,10 @@ describe('GET /api/brand/assets/file', () => {
 		mockBucket.get.mockResolvedValue(null);
 		try {
 			await GET({
-				url: makeUrl('/x', { key: 'missing.png' }),
-				platform: { env: { BUCKET: mockBucket } },
+				// A key the caller *is* allowed to read, so this reaches the R2 miss —
+				// an unauthorised key answers 404 too, but never gets that far.
+				url: makeUrl('/x', { key: 'brands/bp-1/image/missing.png' }),
+				platform: { env: { BUCKET: mockBucket, DB: ownerDB } },
 				locals: authedLocals
 			} as any);
 			expect.fail();
@@ -1025,12 +1042,14 @@ describe('GET /api/brand/assets/file', () => {
 		});
 		const res = await GET({
 			url: makeUrl('/x', { key: 'brands/bp-1/audio/voice.mp3' }),
-			platform: { env: { BUCKET: mockBucket } },
+			platform: { env: { BUCKET: mockBucket, DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 		expect(res.headers.get('Content-Type')).toBe('audio/mpeg');
 		expect(res.headers.get('Content-Length')).toBe('1234');
-		expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+		// `private`, not `public`: the response is authorised per user now, so a shared
+		// cache holding it would hand one user's asset to the next caller.
+		expect(res.headers.get('Cache-Control')).toBe('private, max-age=31536000, immutable');
 	});
 });
 

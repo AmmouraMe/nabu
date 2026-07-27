@@ -43,13 +43,21 @@ function createMockPlatform(kvOverrides?: Record<string, string | null>) {
 	return {
 		env: {
 			DB: {
-				prepare: vi.fn().mockReturnValue({
+				// The route authorises the brand before generating anything, so the
+				// ownership lookup has to answer for these tests to reach the flow they
+				// are about. Only that exact query is answered — everything else stays
+				// null, as before.
+				prepare: vi.fn().mockImplementation((sql: string) => ({
 					bind: vi.fn().mockReturnValue({
-						first: vi.fn().mockResolvedValue(null),
+						first: vi
+							.fn()
+							.mockResolvedValue(
+								sql.includes('SELECT user_id FROM brand_profiles') ? { user_id: 'user-1' } : null
+							),
 						all: vi.fn().mockResolvedValue({ results: [] }),
 						run: vi.fn().mockResolvedValue({ success: true })
 					})
-				})
+				}))
 			},
 			KV: {
 				get: vi.fn().mockImplementation((key: string) => {

@@ -122,6 +122,16 @@ const mockDB = {
 		.fn()
 		.mockReturnValue({ bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) })
 };
+/** A DB in which `user-1` owns the brand, for the routes that authorise one. */
+const ownerDB = {
+	prepare: vi.fn().mockImplementation((sql: string) => ({
+		bind: vi.fn().mockReturnValue({
+			first: vi
+				.fn()
+				.mockResolvedValue(sql.includes('FROM brand_profiles') ? { user_id: 'user-1' } : null)
+		})
+	}))
+};
 const mockKV = { get: vi.fn().mockResolvedValue(null) };
 const mockBucket = { put: vi.fn(), get: vi.fn() };
 const authedLocals = { user: { id: 'user-1' } };
@@ -798,11 +808,17 @@ describe('GET /api/brand/assets/generate', () => {
 
 	it('should return specific generation by id', async () => {
 		const { GET } = await import('../../src/routes/api/brand/assets/generate/+server');
-		vi.mocked(getAIGeneration).mockResolvedValue({ id: 'gen-1', status: 'complete' } as any);
+		vi.mocked(getAIGeneration).mockResolvedValue({
+			id: 'gen-1',
+			status: 'complete',
+			brandProfileId: 'bp-1'
+		} as any);
 
 		const res = await GET({
 			url: makeUrl('/x', { id: 'gen-1' }),
-			platform: { env: { DB: mockDB } },
+			// The generation's brand is authorised before it is returned, so the caller has
+			// to actually own it.
+			platform: { env: { DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 		const data = await res.json();
@@ -844,7 +860,7 @@ describe('GET /api/brand/assets/generate', () => {
 
 		const res = await GET({
 			url: makeUrl('/x', { brandProfileId: 'bp-1', type: 'image' }),
-			platform: { env: { DB: mockDB } },
+			platform: { env: { DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 		const data = await res.json();

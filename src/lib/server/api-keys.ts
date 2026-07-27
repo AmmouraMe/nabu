@@ -5,11 +5,12 @@
  *
  * 1. **Only hashes are stored.** The plaintext is shown once at creation and never
  *    again. A dump of `api_keys` must not yield usable credentials.
- * 2. **Every brand access is checked.** The session-authenticated routes this API
- *    sits beside do *not* do that — `/api/brand/assets/generate` accepts any
- *    `brandProfileId` from any logged-in user, which both leaks other people's
- *    assets and spends their AI quota. A key handed to a third-party application is
- *    a far wider blast radius, so authorisation is resolved on every request here.
+ * 2. **Every brand access is checked.** Building this surfaced that the
+ *    session-authenticated routes beside it did *not* — `/api/brand/assets/generate`
+ *    accepted any `brandProfileId` from any logged-in user, and
+ *    `/api/brand/assets/file` served any R2 key. Both are closed now, and the rule
+ *    they use is the same one enforced here: it lives in `brand-access.ts` so the two
+ *    sides cannot drift apart.
  *
  * Uses Web Crypto only, so it runs on Workers.
  */
@@ -28,6 +29,7 @@ const KEY_BYTES = 32;
 // that list, so defining scopes twice is how documentation starts lying.
 export { ALL_SCOPES, type ApiScope } from '$lib/api-spec';
 import { ALL_SCOPES, type ApiScope } from '$lib/api-spec';
+import { resolveUserBrandRole, type BrandRole } from './brand-access';
 
 export interface ApiKeyRecord {
 	id: string;
@@ -166,16 +168,16 @@ export function hasScope(principal: ApiPrincipal, scope: ApiScope): boolean {
 	return principal.scopes.includes(scope);
 }
 
-export type BrandRole = 'owner' | 'manager' | 'editor' | 'viewer';
-
-/** Roles that may change a brand or its assets. */
-const WRITE_ROLES: BrandRole[] = ['owner', 'manager', 'editor'];
+// The ownership rule itself lives in `brand-access.ts`, because the session routes
+// need exactly the same rule. Re-exported here so `/api/v1` callers keep importing
+// authorisation from one place.
+export { roleCanWrite, type BrandRole } from './brand-access';
 
 /**
  * Resolve what this principal may do with a brand.
  *
- * Checks direct ownership first, then a `brand_access` grant. Returns null when the
- * key has no relationship to the brand at all — callers must treat that as 404
+ * Adds the key-scope restriction on top of the shared user rule. Returns null when
+ * the key has no relationship to the brand at all — callers must treat that as 404
  * rather than 403, so the API does not confirm that an id exists to someone with no
  * business knowing.
  */
@@ -189,28 +191,7 @@ export async function resolveBrandRole(
 		return null;
 	}
 
-	const owned = await db
-		.prepare('SELECT user_id FROM brand_profiles WHERE id = ?')
-		.bind(brandProfileId)
-		.first<{ user_id: string }>();
-
-	if (!owned) return null;
-	if (owned.user_id === principal.userId) return 'owner';
-
-	const grant = await db
-		.prepare('SELECT role FROM brand_access WHERE brand_profile_id = ? AND user_id = ?')
-		.bind(brandProfileId, principal.userId)
-		.first<{ role: string }>();
-
-	if (!grant) return null;
-	if (grant.role === 'manager' || grant.role === 'editor' || grant.role === 'viewer') {
-		return grant.role;
-	}
-	return null;
-}
-
-export function roleCanWrite(role: BrandRole): boolean {
-	return WRITE_ROLES.includes(role);
+	return resolveUserBrandRole(db, principal.userId, brandProfileId);
 }
 
 /** Shape every API error the same way, so clients can branch on `code`. */

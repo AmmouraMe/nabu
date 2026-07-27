@@ -229,6 +229,18 @@ describe('Brand Text Suggestions — unmapped field branch', () => {
 // 3. /api/brand/assets/file — R2 file not found / no BUCKET (lines 14, 19)
 // ═══════════════════════════════════════════════════════════════
 describe('Brand Assets File — R2 branches', () => {
+	// The route authorises the key's brand before touching R2, so these branches are
+	// only reachable for a caller who owns it.
+	const ownerDB = {
+		prepare: vi.fn().mockImplementation((sql: string) => ({
+			bind: vi.fn().mockReturnValue({
+				first: vi
+					.fn()
+					.mockResolvedValue(sql.includes('FROM brand_profiles') ? { user_id: 'user-1' } : null)
+			})
+		}))
+	};
+
 	it('GET: throws 404 when R2 object not found', async () => {
 		const { GET } = await import('../../src/routes/api/brand/assets/file/+server');
 		mockBucket.get.mockResolvedValue(null);
@@ -236,7 +248,7 @@ describe('Brand Assets File — R2 branches', () => {
 		try {
 			await GET({
 				url: makeUrl('/x', { key: 'brands/foo/image.png' }),
-				platform: { env: { BUCKET: mockBucket } },
+				platform: { env: { BUCKET: mockBucket, DB: ownerDB } },
 				locals: authedLocals
 			} as any);
 			expect.fail();
@@ -256,7 +268,7 @@ describe('Brand Assets File — R2 branches', () => {
 
 		const res = await GET({
 			url: makeUrl('/x', { key: 'brands/foo/image.png' }),
-			platform: { env: { BUCKET: mockBucket } },
+			platform: { env: { BUCKET: mockBucket, DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 
@@ -274,7 +286,7 @@ describe('Brand Assets File — R2 branches', () => {
 
 		const res = await GET({
 			url: makeUrl('/x', { key: 'brands/foo/unknown.bin' }),
-			platform: { env: { BUCKET: mockBucket } },
+			platform: { env: { BUCKET: mockBucket, DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 

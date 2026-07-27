@@ -16,11 +16,17 @@ import { createBrandMedia } from '$lib/services/brand-assets';
 import { logMediaActivity, createMediaRevision } from '$lib/services/media-history';
 import { getEnabledVideoKey } from '$lib/services/video-registry';
 import { getBrandProfile, buildBrandContextString } from '$lib/services/onboarding';
+import { requireBrandAccess, resolveUserBrandRole } from '$lib/server/brand-access';
 import type { AIGenerationProvider } from '$lib/types/brand-assets';
 
 /**
  * GET /api/brand/assets/generate
  * List AI generations for a brand, or get a specific generation by ID.
+ *
+ * Both forms are authorised against the brand: this route used to hand any
+ * generation, and any brand's whole generation history, to any logged-in user who
+ * named an id. Unreachable answers 404 rather than 403 so it cannot be used to
+ * discover which ids exist.
  */
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
@@ -30,11 +36,20 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	if (generationId) {
 		const generation = await getAIGeneration(platform.env.DB, generationId);
 		if (!generation) throw error(404, 'Generation not found');
+		const role = await resolveUserBrandRole(
+			platform.env.DB,
+			locals.user.id,
+			generation.brandProfileId
+		);
+		// Same answer as a missing generation — the caller learns nothing either way.
+		if (!role) throw error(404, 'Generation not found');
 		return json({ generation });
 	}
 
 	const brandProfileId = url.searchParams.get('brandProfileId');
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'read');
 
 	const type = url.searchParams.get('type') as 'image' | 'audio' | 'video' | null;
 	const generations = await getAIGenerationsByBrand(
@@ -62,6 +77,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		throw error(400, 'Valid type required (image, audio, video)');
 	}
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+
+	// Before anything is generated: this writes assets into the brand and spends the
+	// AI budget, so it needs write access, not merely a session.
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
 
 	// Audio is text-to-speech — the prompt IS the content, so it's always required
 	if (type === 'audio' && !prompt.trim()) {

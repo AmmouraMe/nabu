@@ -1,10 +1,10 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import {
-  getTextRevisions,
-  getCurrentTextRevision,
-  revertTextToRevision,
-  createTextRevision
+	getTextRevisions,
+	getCurrentTextRevision,
+	revertTextToRevision,
+	createTextRevision
 } from '$lib/services/text-history';
 import { updateBrandText } from '$lib/services/brand-assets';
 
@@ -13,20 +13,20 @@ import { updateBrandText } from '$lib/services/brand-assets';
  * Get revision history for a text asset.
  */
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
-  if (!locals.user) throw error(401, 'Unauthorized');
-  if (!platform?.env?.DB) throw error(500, 'Platform not available');
+	if (!locals.user) throw error(401, 'Unauthorized');
+	if (!platform?.env?.DB) throw error(500, 'Platform not available');
 
-  const brandTextId = url.searchParams.get('brandTextId');
-  if (!brandTextId) throw error(400, 'brandTextId required');
+	const brandTextId = url.searchParams.get('brandTextId');
+	if (!brandTextId) throw error(400, 'brandTextId required');
 
-  const current = url.searchParams.get('current') === 'true';
-  if (current) {
-    const revision = await getCurrentTextRevision(platform.env.DB, brandTextId);
-    return json({ revision });
-  }
+	const current = url.searchParams.get('current') === 'true';
+	if (current) {
+		const revision = await getCurrentTextRevision(platform.env.DB, brandTextId);
+		return json({ revision });
+	}
 
-  const revisions = await getTextRevisions(platform.env.DB, brandTextId);
-  return json({ revisions });
+	const revisions = await getTextRevisions(platform.env.DB, brandTextId);
+	return json({ revisions });
 };
 
 /**
@@ -34,41 +34,41 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
  * Revert a text asset to a previous revision, or create a new revision.
  */
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
-  if (!locals.user) throw error(401, 'Unauthorized');
-  if (!platform?.env?.DB) throw error(500, 'Platform not available');
+	if (!locals.user) throw error(401, 'Unauthorized');
+	if (!platform?.env?.DB) throw error(500, 'Platform not available');
 
-  const body = await request.json();
-  const { action } = body;
+	const body = await request.json();
+	const { action } = body;
 
-  if (action === 'revert') {
-    const { revisionId } = body;
-    if (!revisionId) throw error(400, 'revisionId required');
+	if (action === 'revert') {
+		const { revisionId } = body;
+		if (!revisionId) throw error(400, 'revisionId required');
 
-    const newRevision = await revertTextToRevision(platform.env.DB, revisionId, locals.user.id);
+		const newRevision = await revertTextToRevision(platform.env.DB, revisionId, locals.user.id);
 
-    // Update the text asset to the reverted value
-    await updateBrandText(platform.env.DB, newRevision.brandTextId, {
-      value: newRevision.value,
-      label: newRevision.label
-      // Don't pass userId here to avoid creating a duplicate revision
-    });
+		// Update the text asset to the reverted value
+		await updateBrandText(platform.env.DB, newRevision.brandTextId, {
+			value: newRevision.value,
+			label: newRevision.label
+			// Don't pass userId here to avoid creating a duplicate revision
+		});
 
-    return json({ revision: newRevision });
-  }
+		return json({ revision: newRevision });
+	}
 
-  // Default: create a new revision
-  const { brandTextId, value, label, changeSource, changeNote } = body;
-  if (!brandTextId) throw error(400, 'brandTextId required');
-  if (!value) throw error(400, 'value required');
+	// Default: create a new revision
+	const { brandTextId, value, label, changeSource, changeNote } = body;
+	if (!brandTextId) throw error(400, 'brandTextId required');
+	if (!value) throw error(400, 'value required');
 
-  const revision = await createTextRevision(platform.env.DB, {
-    brandTextId,
-    value,
-    label,
-    changeSource: changeSource || 'manual',
-    userId: locals.user.id,
-    changeNote
-  });
+	const revision = await createTextRevision(platform.env.DB, {
+		brandTextId,
+		value,
+		label,
+		changeSource: changeSource || 'manual',
+		userId: locals.user.id,
+		changeNote
+	});
 
-  return json({ revision }, { status: 201 });
+	return json({ revision }, { status: 201 });
 };

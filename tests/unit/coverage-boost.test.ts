@@ -4,6 +4,7 @@
  *          chat/models, brand/assets/texts, ai-keys/reorder, file-archive
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { withBrandAccess } from '../fixtures/brand-access';
 
 // ─── text-history.ts (75% branches) ──────────────────
 
@@ -339,7 +340,8 @@ describe('Brand Assets Texts API - Extended coverage', () => {
     updateBrandFieldWithVersion: vi.fn().mockResolvedValue(undefined)
   }));
 
-  const mockPlatform = { env: { DB: {} } };
+  // Texts routes authorise the brand first; `u1` owns what these tests touch.
+  const mockPlatform = { env: { DB: withBrandAccess({}, { userId: 'u1' }) } };
 
   it('GET should return texts by category when category param is set', async () => {
     const { getBrandTextsByCategory } = await import('$lib/services/brand-assets');

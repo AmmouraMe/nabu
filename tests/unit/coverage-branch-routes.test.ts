@@ -112,6 +112,7 @@ import { getRevisionById } from '$lib/services/text-history';
 import { createFileArchiveEntry } from '$lib/services/file-archive';
 import { syncFieldToTextAsset } from '$lib/services/brand-assets';
 import { getAllEnabledAIKeys, streamChatCompletionWithFallback } from '$lib/services/openai-chat';
+import { withBrandAccess } from '../fixtures/brand-access';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -125,15 +126,20 @@ function makeUrl(path: string, params: Record<string, string> = {}) {
 	return u;
 }
 
-const mockDB = {
-	prepare: vi.fn().mockReturnValue({
-		bind: vi.fn().mockReturnValue({
-			first: vi.fn().mockResolvedValue(null),
-			all: vi.fn().mockResolvedValue({ results: [] }),
-			run: vi.fn().mockResolvedValue({})
+// Wrapped so the brand guard on the asset routes answers; `user-1` owns what these
+// tests touch, leaving them free to exercise the branches they are about.
+const mockDB = withBrandAccess(
+	{
+		prepare: vi.fn().mockReturnValue({
+			bind: vi.fn().mockReturnValue({
+				first: vi.fn().mockResolvedValue(null),
+				all: vi.fn().mockResolvedValue({ results: [] }),
+				run: vi.fn().mockResolvedValue({})
+			})
 		})
-	})
-};
+	},
+	{ userId: 'user-1' }
+);
 const mockBucket = { get: vi.fn(), put: vi.fn(), delete: vi.fn() };
 const mockKV = { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() };
 const authedLocals = { user: { id: 'user-1' } };

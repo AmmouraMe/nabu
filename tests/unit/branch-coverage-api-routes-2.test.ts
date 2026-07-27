@@ -118,6 +118,7 @@ import {
 	getAllEnabledAIKeys,
 	streamChatCompletionWithFallback
 } from '$lib/services/openai-chat';
+import { withBrandAccess } from '../fixtures/brand-access';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -131,7 +132,9 @@ function makeUrl(path: string, params: Record<string, string> = {}) {
 	return u;
 }
 
-const mockDB = { prepare: vi.fn() };
+// The asset routes authorise the brand before acting; `user-1` owns what these
+// tests touch, so they reach the branches they are about.
+const mockDB = withBrandAccess({ prepare: vi.fn() }, { userId: 'user-1' });
 const mockBucket = { get: vi.fn(), put: vi.fn(), delete: vi.fn() };
 const authedLocals = { user: { id: 'user-1' } };
 const noUser = { user: null };

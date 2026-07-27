@@ -77,6 +77,78 @@ export async function requireBrandAccess(
 	return role;
 }
 
+/**
+ * Assert access to whatever brand owns an asset, given the resolved brand id.
+ *
+ * A null id means the asset does not exist, which answers the same 404 as an asset
+ * the caller may not reach — the two must be indistinguishable, or the route becomes
+ * a way to test which ids are real.
+ *
+ * Pair with the `brandOf*` resolvers below:
+ *
+ *   await requireAssetAccess(db, userId, await brandOfMedia(db, id), 'write');
+ */
+export async function requireAssetAccess(
+	db: D1Database,
+	userId: string,
+	brandProfileId: string | null,
+	need: 'read' | 'write'
+): Promise<BrandRole> {
+	if (!brandProfileId) throw error(404, 'Not found');
+	return requireBrandAccess(db, userId, brandProfileId, need);
+}
+
+/**
+ * Resolvers from an asset id to the brand that owns it.
+ *
+ * Several routes are addressed by asset id rather than brand id, so authorising them
+ * means one hop through the owning row first. Each returns null when the id matches
+ * nothing, which callers turn into a 404.
+ */
+
+async function brandIdFrom(db: D1Database, sql: string, id: string): Promise<string | null> {
+	const row = await db.prepare(sql).bind(id).first<{ brand_profile_id: string }>();
+	return row?.brand_profile_id ?? null;
+}
+
+export function brandOfMedia(db: D1Database, brandMediaId: string) {
+	return brandIdFrom(db, 'SELECT brand_profile_id FROM brand_media WHERE id = ?', brandMediaId);
+}
+
+export function brandOfText(db: D1Database, brandTextId: string) {
+	return brandIdFrom(db, 'SELECT brand_profile_id FROM brand_texts WHERE id = ?', brandTextId);
+}
+
+export function brandOfMediaRevision(db: D1Database, revisionId: string) {
+	return brandIdFrom(
+		db,
+		`SELECT bm.brand_profile_id FROM media_revisions mr
+		 JOIN brand_media bm ON bm.id = mr.brand_media_id
+		 WHERE mr.id = ?`,
+		revisionId
+	);
+}
+
+export function brandOfTextRevision(db: D1Database, revisionId: string) {
+	return brandIdFrom(
+		db,
+		`SELECT bt.brand_profile_id FROM brand_text_revisions btr
+		 JOIN brand_texts bt ON bt.id = btr.brand_text_id
+		 WHERE btr.id = ?`,
+		revisionId
+	);
+}
+
+export function brandOfVariant(db: D1Database, variantId: string) {
+	return brandIdFrom(
+		db,
+		`SELECT bm.brand_profile_id FROM brand_media_variants v
+		 JOIN brand_media bm ON bm.id = v.brand_media_id
+		 WHERE v.id = ?`,
+		variantId
+	);
+}
+
 /** What an R2 key belongs to, derived from its prefix. */
 export type R2Owner = { kind: 'brand'; brandProfileId: string } | { kind: 'user'; userId: string };
 

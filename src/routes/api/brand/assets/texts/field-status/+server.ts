@@ -11,33 +11,29 @@ import { getMatchingProfileField, getProfileFieldValue } from '$lib/services/bra
  * Returns: { matchesField, fieldName?, fieldLabel?, currentValue? }
  */
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
-  if (!locals.user) throw error(401, 'Unauthorized');
-  if (!platform?.env?.DB) throw error(500, 'Platform not available');
+	if (!locals.user) throw error(401, 'Unauthorized');
+	if (!platform?.env?.DB) throw error(500, 'Platform not available');
 
-  const brandProfileId = url.searchParams.get('brandProfileId');
-  const category = url.searchParams.get('category');
-  const key = url.searchParams.get('key');
+	const brandProfileId = url.searchParams.get('brandProfileId');
+	const category = url.searchParams.get('category');
+	const key = url.searchParams.get('key');
 
-  if (!brandProfileId || !category || !key) {
-    throw error(400, 'brandProfileId, category, and key are required');
-  }
+	if (!brandProfileId || !category || !key) {
+		throw error(400, 'brandProfileId, category, and key are required');
+	}
 
-  const match = getMatchingProfileField(category, key);
+	const match = getMatchingProfileField(category, key);
 
-  if (!match) {
-    return json({ matchesField: false });
-  }
+	if (!match) {
+		return json({ matchesField: false });
+	}
 
-  const currentValue = await getProfileFieldValue(
-    platform.env.DB,
-    brandProfileId,
-    match.fieldName
-  );
+	const currentValue = await getProfileFieldValue(platform.env.DB, brandProfileId, match.fieldName);
 
-  return json({
-    matchesField: true,
-    fieldName: match.fieldName,
-    fieldLabel: match.fieldLabel,
-    currentValue
-  });
+	return json({
+		matchesField: true,
+		fieldName: match.fieldName,
+		fieldLabel: match.fieldLabel,
+		currentValue
+	});
 };

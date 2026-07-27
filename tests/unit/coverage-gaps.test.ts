@@ -3,6 +3,7 @@
  * Each test targets specific uncovered branch lines identified from coverage.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { withBrandAccess } from '../fixtures/brand-access';
 
 vi.mock('@sveltejs/kit', () => ({
 	error: (status: number, msg: string) => {
@@ -747,7 +748,8 @@ describe('Brand Assets Texts - setAsProfileField branch', () => {
 					profileFieldName: 'tagline'
 				})
 			}),
-			platform: { env: { DB: mockDB() } },
+			// The route authorises the brand before writing; `u1` owns bp1 here.
+			platform: { env: { DB: withBrandAccess(mockDB(), { userId: 'u1', brandProfileId: 'bp1' }) } },
 			locals: { user: { id: 'u1' } }
 		} as any);
 

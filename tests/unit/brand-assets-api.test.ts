@@ -80,6 +80,7 @@ import {
 } from '$lib/services/media-history';
 
 import { getMatchingProfileField, getProfileFieldValue } from '$lib/services/brand';
+import { withBrandAccess } from '../fixtures/brand-access';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -93,25 +94,14 @@ function makeUrl(path: string, params: Record<string, string> = {}) {
 	return u;
 }
 
-const mockDB = { prepare: vi.fn() };
+// Every route here authorises the brand before acting, so the mock has to answer the
+// guard's ownership and asset-to-brand lookups; `user-1` owns everything it touches.
+// The refusal path has its own tests in brand-assets-idor.test.ts.
+const mockDB = withBrandAccess({ prepare: vi.fn() }, { userId: 'user-1' });
 const mockBucket = { get: vi.fn(), put: vi.fn(), delete: vi.fn() };
 const authedLocals = { user: { id: 'user-1' } };
 const noUser = { user: null };
-
-/**
- * A DB in which `user-1` owns every brand. The file route authorises the key's brand
- * before reading R2, so these tests need an ownership answer to reach the R2 branches
- * they are actually about.
- */
-const ownerDB = {
-	prepare: vi.fn().mockImplementation((sql: string) => ({
-		bind: vi.fn().mockReturnValue({
-			first: vi
-				.fn()
-				.mockResolvedValue(sql.includes('FROM brand_profiles') ? { user_id: 'user-1' } : null)
-		})
-	}))
-};
+const ownerDB = mockDB;
 
 // ═══════════════════════════════════════════════════════════════
 // GET/POST/PATCH/DELETE /api/brand/assets/media

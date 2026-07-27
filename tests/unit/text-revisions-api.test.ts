@@ -25,10 +25,12 @@ import {
 } from '$lib/services/text-history';
 
 import { updateBrandText } from '$lib/services/brand-assets';
+import { withBrandAccess } from '../fixtures/brand-access';
 
 // ─── Helpers ────────────────────────────────────────────────────
 
-const mockPlatform = { env: { DB: {} } };
+// The route resolves the text's owning brand before acting; `user-1` owns it.
+const mockPlatform = { env: { DB: withBrandAccess({}, { userId: 'user-1' }) } };
 const mockUser = { id: 'user-1', email: 'test@example.com' };
 
 function makeUrl(params: Record<string, string>) {
@@ -87,7 +89,7 @@ describe('Text Revisions API', () => {
 
       const data = await response.json();
       expect(data.revisions).toHaveLength(2);
-      expect(getTextRevisions).toHaveBeenCalledWith({}, 'text-1');
+      expect(getTextRevisions).toHaveBeenCalledWith(mockPlatform.env.DB, 'text-1');
     });
 
     it('should return current revision when current=true', async () => {
@@ -103,7 +105,7 @@ describe('Text Revisions API', () => {
 
       const data = await response.json();
       expect(data.revision).toBeDefined();
-      expect(getCurrentTextRevision).toHaveBeenCalledWith({}, 'text-1');
+      expect(getCurrentTextRevision).toHaveBeenCalledWith(mockPlatform.env.DB, 'text-1');
     });
   });
 
@@ -133,9 +135,9 @@ describe('Text Revisions API', () => {
 
       const data = await response.json();
       expect(data.revision.changeSource).toBe('revert');
-      expect(revertTextToRevision).toHaveBeenCalledWith({}, 'rev-1', 'user-1');
+      expect(revertTextToRevision).toHaveBeenCalledWith(mockPlatform.env.DB, 'rev-1', 'user-1');
       // Should also update the text asset
-      expect(updateBrandText).toHaveBeenCalledWith({}, 'text-1', {
+      expect(updateBrandText).toHaveBeenCalledWith(mockPlatform.env.DB, 'text-1', {
         value: 'Original value',
         label: 'Tagline'
       });

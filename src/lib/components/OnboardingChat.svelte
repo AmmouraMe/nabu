@@ -7,7 +7,7 @@
 	import { onMount, afterUpdate, tick } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
-	import OnboardingProgress from './OnboardingProgress.svelte';
+	import BrandProgressHeader from './BrandProgressHeader.svelte';
 	import {
 		onboardingStore,
 		sendMessage,
@@ -32,7 +32,6 @@
 		MAX_ATTACHMENTS
 	} from '$lib/utils/attachments';
 	import { renderMessageHtml } from '$lib/utils/message-format';
-	import BrandCompletionMeter from './BrandCompletionMeter.svelte';
 	import BrandColorCard from './BrandColorCard.svelte';
 	import GoogleFontPicker from './GoogleFontPicker.svelte';
 	import BrandLogoCard from './BrandLogoCard.svelte';
@@ -500,15 +499,16 @@
 	{:else}
 		<!-- Onboarding Chat Interface -->
 		<div class="chat-layout" in:fade={{ duration: 200 }}>
-			<OnboardingProgress
+			<!-- One header for both measures: where you are in the conversation, and how
+			     much of the brand actually exists. They diverge — a step can be walked
+			     past without answering everything — so the header draws them in different
+			     languages rather than two matching rails of circles. -->
+			<BrandProgressHeader
 				currentStep={$onboardingStore.currentStep}
+				profile={$onboardingStore.profile}
 				on:stepClick={handleStepNavigate}
+				on:resolve={handleResolveItem}
 			/>
-
-			<!-- Sits under the step rail deliberately: the steps say where you are in the
-			     conversation, this says how much of the brand actually exists yet. They
-			     diverge, because a step can be walked past without answering everything. -->
-			<BrandCompletionMeter profile={$onboardingStore.profile} on:resolve={handleResolveItem} />
 
 			<div class="chat-area" bind:this={chatContainer}>
 				{#if $onboardingStore.isLoading && $onboardingStore.messages.length === 0}

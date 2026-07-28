@@ -153,10 +153,7 @@
 	}
 
 	/** Reactive list of currently visible brand color fields */
-	$: visibleFields = [
-		...CORE_BRAND_FIELDS,
-		...EXTRA_BRAND_FIELDS.slice(0, extraColorCount)
-	];
+	$: visibleFields = [...CORE_BRAND_FIELDS, ...EXTRA_BRAND_FIELDS.slice(0, extraColorCount)];
 	$: ALL_BRAND_KEYS = visibleFields.map((f) => f.key);
 
 	$: {
@@ -200,9 +197,7 @@
 	// Build a merged view used by preview + contrast (brand + derived)
 	$: mergedTheme = {
 		...derivedColors,
-		...Object.fromEntries(
-			Object.entries(localColors).filter(([_, v]) => v && isValidHex(v))
-		)
+		...Object.fromEntries(Object.entries(localColors).filter(([_, v]) => v && isValidHex(v)))
 	} as Record<string, string>;
 
 	$: if (activeField && localColors[activeField]) {
@@ -462,7 +457,9 @@
 	function handleSvPointerDown(e: MouseEvent | TouchEvent) {
 		if (!activeField) {
 			// Auto-select first empty brand color field on first tap
-			const emptyField = visibleFields.find((f) => !localColors[f.key] || localColors[f.key] === '');
+			const emptyField = visibleFields.find(
+				(f) => !localColors[f.key] || localColors[f.key] === ''
+			);
 			if (emptyField) {
 				activeField = emptyField.key;
 			} else {
@@ -496,7 +493,10 @@
 		const hex = hsvToHex(Math.round(activeHue), s, v);
 		setColor(activeField, hex);
 		const hsl = hexToHsl(hex);
-		if (hsl) { activeSatHsl = hsl.s; activeLightHsl = hsl.l; }
+		if (hsl) {
+			activeSatHsl = hsl.s;
+			activeLightHsl = hsl.l;
+		}
 	}
 
 	function handleTouchHue(e: TouchEvent) {
@@ -511,7 +511,10 @@
 		const hex = hsvToHex(h, Math.round(activeSatHsv), Math.round(activeValHsv));
 		setColor(activeField, hex);
 		const hsl = hexToHsl(hex);
-		if (hsl) { activeSatHsl = hsl.s; activeLightHsl = hsl.l; }
+		if (hsl) {
+			activeSatHsl = hsl.s;
+			activeLightHsl = hsl.l;
+		}
 	}
 
 	function handleHueInteraction(e: MouseEvent | PointerEvent) {
@@ -637,11 +640,7 @@
 
 	function handleHueSliderChange() {
 		if (!activeField) return;
-		const hex = hsvToHex(
-			Math.round(activeHue),
-			Math.round(activeSatHsv),
-			Math.round(activeValHsv)
-		);
+		const hex = hsvToHex(Math.round(activeHue), Math.round(activeSatHsv), Math.round(activeValHsv));
 		setColor(activeField, hex);
 		const hsl = hexToHsl(hex);
 		if (hsl) {
@@ -853,10 +852,20 @@
 
 		const hsv = hexToHsv(normalized[0]?.value || primary);
 		const hsl = hexToHsl(normalized[0]?.value || primary);
-		if (hsv) { activeHue = hsv.h; activeSatHsv = hsv.s; activeValHsv = hsv.v; }
-		if (hsl) { activeSatHsl = hsl.s; activeLightHsl = hsl.l; }
+		if (hsv) {
+			activeHue = hsv.h;
+			activeSatHsv = hsv.s;
+			activeValHsv = hsv.v;
+		}
+		if (hsl) {
+			activeSatHsl = hsl.s;
+			activeLightHsl = hsl.l;
+		}
 
-		tick().then(() => { drawSvPicker(); drawHueStrip(); });
+		tick().then(() => {
+			drawSvPicker();
+			drawHueStrip();
+		});
 	}
 
 	function applyExtractedAndGenerate() {
@@ -921,7 +930,12 @@
 	}
 </script>
 
-<svelte:window on:mousemove={handleGlobalPointerMove} on:mouseup={handleGlobalPointerUp} on:touchmove|passive={handleGlobalPointerMove} on:touchend={handleGlobalPointerUp} />
+<svelte:window
+	on:mousemove={handleGlobalPointerMove}
+	on:mouseup={handleGlobalPointerUp}
+	on:touchmove|passive={handleGlobalPointerMove}
+	on:touchend={handleGlobalPointerUp}
+/>
 
 <div class="color-editor">
 	<!-- ─── LOGO ─── -->
@@ -933,12 +947,25 @@
 			<!-- Icon (Square) -->
 			<div class="logo-variant">
 				<span class="logo-variant-label">Icon</span>
-				<button class="logo-area logo-area--icon" on:click={handleLogoClick} aria-label="Edit icon logo">
+				<button
+					class="logo-area logo-area--icon"
+					on:click={handleLogoClick}
+					aria-label="Edit icon logo"
+				>
 					{#if logoUrl}
 						<img src={logoUrl} alt="Brand logo icon" class="logo-image" />
 					{:else}
 						<div class="logo-placeholder">
-							<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<svg
+								width="28"
+								height="28"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
 								<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
 								<circle cx="8.5" cy="8.5" r="1.5" />
 								<polyline points="21 15 16 10 5 21" />
@@ -951,12 +978,25 @@
 			<!-- Horizontal (Icon + Name side by side) -->
 			<div class="logo-variant logo-variant--wide">
 				<span class="logo-variant-label">Horizontal</span>
-				<button class="logo-area logo-area--horizontal" on:click={() => dispatch('editlogo', { variant: 'horizontal' })} aria-label="Edit horizontal logo">
+				<button
+					class="logo-area logo-area--horizontal"
+					on:click={() => dispatch('editlogo', { variant: 'horizontal' })}
+					aria-label="Edit horizontal logo"
+				>
 					{#if logoHorizontalUrl}
 						<img src={logoHorizontalUrl} alt="Horizontal brand logo" class="logo-image" />
 					{:else}
 						<div class="logo-placeholder">
-							<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<svg
+								width="28"
+								height="28"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
 								<rect x="1" y="5" width="14" height="14" rx="2" ry="2" />
 								<line x1="17" y1="8" x2="23" y2="8" />
 								<line x1="17" y1="12" x2="23" y2="12" />
@@ -970,12 +1010,25 @@
 			<!-- Vertical (Icon above Name) -->
 			<div class="logo-variant">
 				<span class="logo-variant-label">Vertical</span>
-				<button class="logo-area logo-area--vertical" on:click={() => dispatch('editlogo', { variant: 'vertical' })} aria-label="Edit vertical logo">
+				<button
+					class="logo-area logo-area--vertical"
+					on:click={() => dispatch('editlogo', { variant: 'vertical' })}
+					aria-label="Edit vertical logo"
+				>
 					{#if logoVerticalUrl}
 						<img src={logoVerticalUrl} alt="Vertical brand logo" class="logo-image" />
 					{:else}
 						<div class="logo-placeholder">
-							<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+							<svg
+								width="28"
+								height="28"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
 								<rect x="5" y="2" width="14" height="14" rx="2" ry="2" />
 								<line x1="6" y1="19" x2="18" y2="19" />
 								<line x1="8" y1="22" x2="16" y2="22" />
@@ -994,8 +1047,21 @@
 		{#if logoUrl}
 			<div class="logo-extract-section">
 				{#if !extractedPalette && !isExtractingColors}
-					<button class="extract-btn" on:click={extractColorsFromLogo} aria-label="Extract colors from logo">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<button
+						class="extract-btn"
+						on:click={extractColorsFromLogo}
+						aria-label="Extract colors from logo"
+					>
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
 							<path d="M12 2 L2 7 L12 12 L22 7 Z" />
 							<path d="M2 17 L12 22 L22 17" />
 							<path d="M2 12 L12 17 L22 12" />
@@ -1019,11 +1085,7 @@
 					<div class="extracted-preview">
 						<span class="extract-label">Colors found in your logo:</span>
 						<div class="extracted-swatches">
-							{#each [
-								{ color: extractedPalette.primary, label: 'Primary' },
-								{ color: extractedPalette.secondary, label: 'Secondary' },
-								{ color: extractedPalette.accent, label: 'Accent' }
-							] as swatch}
+							{#each [{ color: extractedPalette.primary, label: 'Primary' }, { color: extractedPalette.secondary, label: 'Secondary' }, { color: extractedPalette.accent, label: 'Accent' }] as swatch}
 								<div class="extracted-swatch-card">
 									<span class="extracted-swatch" style="background-color: {swatch.color}"></span>
 									<span class="extracted-swatch-label">{swatch.label}</span>
@@ -1033,7 +1095,16 @@
 						</div>
 						<div class="extracted-actions">
 							<button class="extract-apply-btn" on:click={applyExtractedAndGenerate}>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
 									<polyline points="20 6 9 17 4 12" />
 								</svg>
 								Apply &amp; Build Full Theme
@@ -1060,8 +1131,21 @@
 			</p>
 
 			{#if logoUrl}
-				<button class="starter-btn starter-btn--featured" on:click={extractColorsFromLogo} disabled={isExtractingColors}>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<button
+					class="starter-btn starter-btn--featured"
+					on:click={extractColorsFromLogo}
+					disabled={isExtractingColors}
+				>
+					<svg
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<path d="M12 2 L2 7 L12 12 L22 7 Z" />
 						<path d="M2 17 L12 22 L22 17" />
 						<path d="M2 12 L12 17 L22 12" />
@@ -1074,7 +1158,16 @@
 			{/if}
 
 			<button class="starter-btn" on:click={() => (showPresets = true)}>
-				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
 					<rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
 					<rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
 				</svg>
@@ -1094,17 +1187,33 @@
 			<div class="presets-header">
 				<h3 class="section-label">PRESET THEMES</h3>
 				<button class="close-btn" on:click={() => (showPresets = false)} aria-label="Close presets">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
+					>
 				</button>
 			</div>
 			<div class="presets-grid">
 				{#each PRESET_THEMES as preset}
-					<button class="preset-card" on:click={() => applyPreset(preset)} aria-label="Apply {preset.name} theme">
+					<button
+						class="preset-card"
+						on:click={() => applyPreset(preset)}
+						aria-label="Apply {preset.name} theme"
+					>
 						<div class="preset-swatches">
 							<span class="preset-swatch" style="background:{preset.colors.primaryColor}"></span>
 							<span class="preset-swatch" style="background:{preset.colors.secondaryColor}"></span>
 							<span class="preset-swatch" style="background:{preset.colors.accentColor}"></span>
-							<span class="preset-swatch preset-swatch--bg" style="background:{preset.colors.backgroundColor}; border: 1px solid {preset.colors.borderColor}"></span>
+							<span
+								class="preset-swatch preset-swatch--bg"
+								style="background:{preset.colors.backgroundColor}; border: 1px solid {preset.colors
+									.borderColor}"
+							></span>
 						</div>
 						<div class="preset-info">
 							<strong>{preset.name}</strong>
@@ -1130,7 +1239,15 @@
 			>
 				<span class="pal-swatch" class:empty={!value} style="background: {value || 'transparent'}">
 					{#if !value}
-						<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+						<svg
+							width="10"
+							height="10"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="3"
+							stroke-linecap="round"
+						>
 							<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
 						</svg>
 					{/if}
@@ -1141,12 +1258,25 @@
 		{#if visibleFields.length < MAX_BRAND_COLORS}
 			<button
 				class="pal-item pal-item--add"
-				on:click={() => { extraColorCount = Math.min(extraColorCount + 1, MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length); }}
+				on:click={() => {
+					extraColorCount = Math.min(
+						extraColorCount + 1,
+						MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length
+					);
+				}}
 				title="Add brand color"
 				aria-label="Add brand color"
 			>
 				<span class="pal-swatch empty">
-					<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+					<svg
+						width="10"
+						height="10"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="3"
+						stroke-linecap="round"
+					>
 						<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
 					</svg>
 				</span>
@@ -1193,10 +1323,13 @@
 		<!-- Active field info + hex copy -->
 		{#if activeField}
 			{@const val = localColors[activeField] || ''}
-			{@const fieldDef = [...CORE_BRAND_FIELDS, ...EXTRA_BRAND_FIELDS].find((f) => f.key === activeField)}
+			{@const fieldDef = [...CORE_BRAND_FIELDS, ...EXTRA_BRAND_FIELDS].find(
+				(f) => f.key === activeField
+			)}
 			<div class="active-bar">
 				<label class="active-swatch-wrap">
-					<span class="active-swatch" style="background: {val || 'transparent'}" class:empty={!val}></span>
+					<span class="active-swatch" style="background: {val || 'transparent'}" class:empty={!val}
+					></span>
 					<input
 						type="color"
 						value={val || '#000000'}
@@ -1215,12 +1348,37 @@
 					{/if}
 				</div>
 				{#if val && isValidHex(val)}
-					<button class="hex-copy" on:click={() => activeField && copyHex(val, activeField)} title="Copy hex">
+					<button
+						class="hex-copy"
+						on:click={() => activeField && copyHex(val, activeField)}
+						title="Copy hex"
+					>
 						<span class="hex-val">{val}</span>
 						{#if copyFeedbackField === activeField}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="var(--color-success)"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg
+							>
 						{:else}
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path
+									d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+								/></svg
+							>
 						{/if}
 					</button>
 				{/if}
@@ -1319,7 +1477,16 @@
 			aria-expanded={showHarmony}
 		>
 			<span class="section-toggle-title">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
 					<circle cx="12" cy="12" r="10" />
 					<circle cx="12" cy="12" r="4" />
 					<line x1="12" y1="2" x2="12" y2="6" />
@@ -1329,7 +1496,18 @@
 				</svg>
 				Color Harmony
 			</span>
-			<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="chevron" class:rotate={showHarmony}>
+			<svg
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				class="chevron"
+				class:rotate={showHarmony}
+			>
 				<polyline points="6 9 12 15 18 9" />
 			</svg>
 		</button>
@@ -1365,9 +1543,14 @@
 				{@const value = localColors[field.key] || ''}
 				{@const isActive = activeField === field.key}
 				<div class="color-row" class:active={isActive}>
-					<button class="color-row-main" on:click={() => handleFieldClick(field.key)} aria-label="Edit {field.label} color">
+					<button
+						class="color-row-main"
+						on:click={() => handleFieldClick(field.key)}
+						aria-label="Edit {field.label} color"
+					>
 						<label class="swatch-wrap" aria-label="Pick {field.label} with color chooser">
-							<span class="swatch" style="background:{value || 'transparent'}" class:empty={!value}></span>
+							<span class="swatch" style="background:{value || 'transparent'}" class:empty={!value}
+							></span>
 							<input
 								type="color"
 								value={value || '#000000'}
@@ -1385,7 +1568,7 @@
 					<div class="field-controls">
 						<input
 							type="text"
-							value={value}
+							{value}
 							on:input={(e) => handleHexInput(field.key, e.currentTarget.value)}
 							on:focus={() => handleFieldClick(field.key)}
 							class="hex-input"
@@ -1395,8 +1578,21 @@
 							aria-label="{field.label} hex value"
 						/>
 						{#if value}
-							<button class="clear-btn" on:click|stopPropagation={() => clearColor(field.key)} aria-label="Clear {field.label}" title="Clear">
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+							<button
+								class="clear-btn"
+								on:click|stopPropagation={() => clearColor(field.key)}
+								aria-label="Clear {field.label}"
+								title="Clear"
+							>
+								<svg
+									width="12"
+									height="12"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
+								>
 							</button>
 						{/if}
 						{#if field.removable}
@@ -1409,7 +1605,15 @@
 								aria-label="Remove {field.label}"
 								title="Remove color"
 							>
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
+								<svg
+									width="12"
+									height="12"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg
+								>
 							</button>
 						{/if}
 					</div>
@@ -1420,9 +1624,22 @@
 			{#if visibleFields.length < MAX_BRAND_COLORS}
 				<button
 					class="add-color-row"
-					on:click={() => { extraColorCount = Math.min(extraColorCount + 1, MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length); }}
+					on:click={() => {
+						extraColorCount = Math.min(
+							extraColorCount + 1,
+							MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length
+						);
+					}}
 				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+					<svg
+						width="14"
+						height="14"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2.5"
+						stroke-linecap="round"
+					>
 						<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
 					</svg>
 					Add Brand Color
@@ -1432,13 +1649,32 @@
 			<!-- Auto-generate buttons (shown when primary is set) -->
 			{#if localColors['primaryColor'] && isValidHex(localColors['primaryColor'])}
 				<div class="generate-row">
-					<button class="gen-btn" on:click={generateFromPrimary} title="Fill empty fields automatically">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+					<button
+						class="gen-btn"
+						on:click={generateFromPrimary}
+						title="Fill empty fields automatically"
+					>
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<path
+								d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+							/>
 						</svg>
 						Auto-fill empty colors from Primary
 					</button>
-					<button class="gen-btn gen-btn--secondary" on:click={generateAll} title="Regenerate all non-primary colors">
+					<button
+						class="gen-btn gen-btn--secondary"
+						on:click={generateAll}
+						title="Regenerate all non-primary colors"
+					>
 						Regenerate All
 					</button>
 				</div>
@@ -1460,8 +1696,19 @@
 				"
 			>
 				<!-- Mini nav -->
-				<div class="preview-nav" style="background: {mergedTheme.surfaceColor || '#1a1a1a'}; border-bottom: 1px solid {mergedTheme.borderColor || '#333'};">
-					<span class="preview-brand" style="color: {localColors.primaryColor || '#3b82f6'}; {localLogoFont ? `font-family: '${localLogoFont}', sans-serif` : localHeadingFont ? `font-family: '${localHeadingFont}', sans-serif` : ''}">⬡ Brand</span>
+				<div
+					class="preview-nav"
+					style="background: {mergedTheme.surfaceColor ||
+						'#1a1a1a'}; border-bottom: 1px solid {mergedTheme.borderColor || '#333'};"
+				>
+					<span
+						class="preview-brand"
+						style="color: {localColors.primaryColor || '#3b82f6'}; {localLogoFont
+							? `font-family: '${localLogoFont}', sans-serif`
+							: localHeadingFont
+								? `font-family: '${localHeadingFont}', sans-serif`
+								: ''}">⬡ Brand</span
+					>
 					<div class="preview-links">
 						<span style="color: {mergedTheme.textColor || '#f8f9fa'}">Home</span>
 						<span style="color: {mergedTheme.textSecondaryColor || '#888'}">About</span>
@@ -1470,30 +1717,83 @@
 				</div>
 
 				<!-- Hero section -->
-				<div class="preview-hero" style="border-bottom: 1px solid {mergedTheme.borderColor || '#333'};">
-					<h4 class="preview-hero-title" style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont ? `font-family: '${localHeadingFont}', sans-serif` : ''}">Your Brand,<br/>Realized</h4>
-					<p class="preview-hero-sub" style="color: {mergedTheme.textSecondaryColor || '#888'}">See how your colors work together in context.</p>
+				<div
+					class="preview-hero"
+					style="border-bottom: 1px solid {mergedTheme.borderColor || '#333'};"
+				>
+					<h4
+						class="preview-hero-title"
+						style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont
+							? `font-family: '${localHeadingFont}', sans-serif`
+							: ''}"
+					>
+						Your Brand,<br />Realized
+					</h4>
+					<p class="preview-hero-sub" style="color: {mergedTheme.textSecondaryColor || '#888'}">
+						See how your colors work together in context.
+					</p>
 					<div class="preview-buttons">
-						<span class="preview-btn" style="background: {localColors.primaryColor || '#3b82f6'}; color: {localColors.primaryColor && shouldUseDarkText(localColors.primaryColor) ? '#000' : '#fff'}">Get Started</span>
-						<span class="preview-btn preview-btn--outline" style="border-color: {localColors.secondaryColor || '#8b5cf6'}; color: {localColors.secondaryColor || '#8b5cf6'}">Learn More</span>
+						<span
+							class="preview-btn"
+							style="background: {localColors.primaryColor ||
+								'#3b82f6'}; color: {localColors.primaryColor &&
+							shouldUseDarkText(localColors.primaryColor)
+								? '#000'
+								: '#fff'}">Get Started</span
+						>
+						<span
+							class="preview-btn preview-btn--outline"
+							style="border-color: {localColors.secondaryColor ||
+								'#8b5cf6'}; color: {localColors.secondaryColor || '#8b5cf6'}">Learn More</span
+						>
 					</div>
 				</div>
 
 				<!-- Content card -->
-				<div class="preview-card" style="background: {mergedTheme.surfaceColor || '#1a1a1a'}; border: 1px solid {mergedTheme.borderColor || '#333'};">
-					<h5 class="preview-title" style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont ? `font-family: '${localHeadingFont}', sans-serif` : ''}">Feature Card</h5>
-					<p class="preview-subtitle" style="color: {mergedTheme.textSecondaryColor || '#888'}">Components with your theme palette applied.</p>
-					<div class="preview-input" style="background: {mergedTheme.backgroundColor || '#0a0a0a'}; border: 1px solid {mergedTheme.borderColor || '#333'}; color: {mergedTheme.textSecondaryColor || '#888'};">
+				<div
+					class="preview-card"
+					style="background: {mergedTheme.surfaceColor ||
+						'#1a1a1a'}; border: 1px solid {mergedTheme.borderColor || '#333'};"
+				>
+					<h5
+						class="preview-title"
+						style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont
+							? `font-family: '${localHeadingFont}', sans-serif`
+							: ''}"
+					>
+						Feature Card
+					</h5>
+					<p class="preview-subtitle" style="color: {mergedTheme.textSecondaryColor || '#888'}">
+						Components with your theme palette applied.
+					</p>
+					<div
+						class="preview-input"
+						style="background: {mergedTheme.backgroundColor ||
+							'#0a0a0a'}; border: 1px solid {mergedTheme.borderColor ||
+							'#333'}; color: {mergedTheme.textSecondaryColor || '#888'};"
+					>
 						Search or type a command...
 					</div>
 					<div class="preview-status">
-						<span class="preview-badge" style="background: {mergedTheme.successColor || '#22c55e'}">Success</span>
-						<span class="preview-badge" style="background: {mergedTheme.warningColor || '#f59e0b'}">Warning</span>
-						<span class="preview-badge" style="background: {mergedTheme.errorColor || '#ef4444'}">Error</span>
+						<span class="preview-badge" style="background: {mergedTheme.successColor || '#22c55e'}"
+							>Success</span
+						>
+						<span class="preview-badge" style="background: {mergedTheme.warningColor || '#f59e0b'}"
+							>Warning</span
+						>
+						<span class="preview-badge" style="background: {mergedTheme.errorColor || '#ef4444'}"
+							>Error</span
+						>
 					</div>
 					<div class="preview-accent-bar">
-						<span class="preview-accent-dot" style="background: {localColors.accentColor || '#06b6d4'}"></span>
-						<span style="color: {localColors.accentColor || '#06b6d4'}; font-size: 0.65rem; font-weight: 600;">Accent highlight</span>
+						<span
+							class="preview-accent-dot"
+							style="background: {localColors.accentColor || '#06b6d4'}"
+						></span>
+						<span
+							style="color: {localColors.accentColor ||
+								'#06b6d4'}; font-size: 0.65rem; font-weight: 600;">Accent highlight</span
+						>
 					</div>
 				</div>
 			</div>
@@ -1509,7 +1809,16 @@
 				aria-expanded={showContrastMatrix}
 			>
 				<span class="section-toggle-title">
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<circle cx="12" cy="12" r="10" />
 						<path d="M12 2a10 10 0 0 1 0 20" fill="currentColor" opacity="0.3" />
 					</svg>
@@ -1522,7 +1831,18 @@
 							{passing}/{contrastPairs.length} AA
 						</span>
 					{/if}
-					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="chevron" class:rotate={showContrastMatrix}>
+					<svg
+						width="12"
+						height="12"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="chevron"
+						class:rotate={showContrastMatrix}
+					>
 						<polyline points="6 9 12 15 18 9" />
 					</svg>
 				</div>
@@ -1552,9 +1872,17 @@
 	<!-- ─── TYPOGRAPHY ─── -->
 	<div class="editor-section">
 		<h3 class="section-label">TYPOGRAPHY</h3>
-		<button class="font-row" class:open={fontPickerField === 'typographyLogo'} on:click={() => handleFontClick('typographyLogo')}>
+		<button
+			class="font-row"
+			class:open={fontPickerField === 'typographyLogo'}
+			on:click={() => handleFontClick('typographyLogo')}
+		>
 			<span class="font-label">Logo Font</span>
-			<span class="font-value" class:empty={!localLogoFont} style={localLogoFont ? `font-family: '${localLogoFont}', sans-serif` : ''}>
+			<span
+				class="font-value"
+				class:empty={!localLogoFont}
+				style={localLogoFont ? `font-family: '${localLogoFont}', sans-serif` : ''}
+			>
 				{localLogoFont || 'Choose logo font...'}
 			</span>
 		</button>
@@ -1566,9 +1894,17 @@
 				on:close={handleFontPickerClose}
 			/>
 		{/if}
-		<button class="font-row" class:open={fontPickerField === 'typographyHeading'} on:click={() => handleFontClick('typographyHeading')}>
+		<button
+			class="font-row"
+			class:open={fontPickerField === 'typographyHeading'}
+			on:click={() => handleFontClick('typographyHeading')}
+		>
 			<span class="font-label">Heading Font</span>
-			<span class="font-value" class:empty={!localHeadingFont} style={localHeadingFont ? `font-family: '${localHeadingFont}', sans-serif` : ''}>
+			<span
+				class="font-value"
+				class:empty={!localHeadingFont}
+				style={localHeadingFont ? `font-family: '${localHeadingFont}', sans-serif` : ''}
+			>
 				{localHeadingFont || 'Choose heading font...'}
 			</span>
 		</button>
@@ -1580,9 +1916,17 @@
 				on:close={handleFontPickerClose}
 			/>
 		{/if}
-		<button class="font-row" class:open={fontPickerField === 'typographyBody'} on:click={() => handleFontClick('typographyBody')}>
+		<button
+			class="font-row"
+			class:open={fontPickerField === 'typographyBody'}
+			on:click={() => handleFontClick('typographyBody')}
+		>
 			<span class="font-label">Body Font</span>
-			<span class="font-value" class:empty={!localBodyFont} style={localBodyFont ? `font-family: '${localBodyFont}', sans-serif` : ''}>
+			<span
+				class="font-value"
+				class:empty={!localBodyFont}
+				style={localBodyFont ? `font-family: '${localBodyFont}', sans-serif` : ''}
+			>
 				{localBodyFont || 'Choose body font...'}
 			</span>
 		</button>
@@ -1955,7 +2299,8 @@
 	}
 
 	.pal-swatch.empty {
-		background: repeating-conic-gradient(var(--color-border) 0% 25%, transparent 0% 50%) 50% / 8px 8px !important;
+		background: repeating-conic-gradient(var(--color-border) 0% 25%, transparent 0% 50%) 50% / 8px
+			8px !important;
 	}
 
 	.pal-item.active .pal-swatch {
@@ -2096,7 +2441,8 @@
 	}
 
 	.active-swatch.empty {
-		background: repeating-conic-gradient(var(--color-border) 0% 25%, transparent 0% 50%) 50% / 10px 10px;
+		background: repeating-conic-gradient(var(--color-border) 0% 25%, transparent 0% 50%) 50% / 10px
+			10px;
 	}
 
 	.active-info {
@@ -2302,7 +2648,8 @@
 	   HARMONY
 	   ═══════════════════════════════════════════════════ */
 
-	.harmony-panel, .contrast-section {
+	.harmony-panel,
+	.contrast-section {
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		overflow: hidden;
@@ -2585,7 +2932,8 @@
 	}
 
 	.swatch.empty {
-		background: repeating-conic-gradient(var(--color-border) 0% 25%, transparent 0% 50%) 50% / 10px 10px;
+		background: repeating-conic-gradient(var(--color-border) 0% 25%, transparent 0% 50%) 50% / 10px
+			10px;
 	}
 
 	.native-picker {
@@ -3070,7 +3418,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.extract-error {

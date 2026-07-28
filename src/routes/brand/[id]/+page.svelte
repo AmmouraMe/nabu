@@ -11,7 +11,12 @@
 	import AITextQuickGenerate from '$lib/components/AITextQuickGenerate.svelte';
 	import TextRevisionHistory from '$lib/components/TextRevisionHistory.svelte';
 	import { labelToKey } from '$lib/utils/text';
-	import { FIELD_TO_TEXT_MAPPING, FIELD_TO_PRESET_KEY, IMAGE_FIELDS, getMatchingProfileField } from '$lib/services/brand';
+	import {
+		FIELD_TO_TEXT_MAPPING,
+		FIELD_TO_PRESET_KEY,
+		IMAGE_FIELDS,
+		getMatchingProfileField
+	} from '$lib/services/brand';
 	import { getEmptyTextFields } from '$lib/services/brand-ai-fill';
 
 	export let data: PageData;
@@ -107,8 +112,8 @@
 		collapsedSections = collapsedSections;
 	}
 
-	$: visualSection = sections.find(s => s.id === 'visual') ?? null;
-	$: otherSections = sections.filter(s => s.id !== 'visual');
+	$: visualSection = sections.find((s) => s.id === 'visual') ?? null;
+	$: otherSections = sections.filter((s) => s.id !== 'visual');
 
 	// Tab navigation
 	let activeTab: 'profile' | 'text' | 'images' | 'audio' | 'videos' = 'profile';
@@ -145,9 +150,10 @@
 
 	// Derived key/label from preset or custom entry
 	$: currentPresets = aiPresets;
-	$: selectedPreset = selectedPresetKey && selectedPresetKey !== '__custom__'
-		? currentPresets.find(p => p.key === selectedPresetKey) ?? null
-		: null;
+	$: selectedPreset =
+		selectedPresetKey && selectedPresetKey !== '__custom__'
+			? (currentPresets.find((p) => p.key === selectedPresetKey) ?? null)
+			: null;
 	$: newTextLabel = selectedPreset ? selectedPreset.label : customLabel;
 	$: newTextKey = selectedPreset ? selectedPreset.key : labelToKey(customLabel);
 
@@ -160,7 +166,13 @@
 
 	// AI fill empty fields
 	let aiFilling = false;
-	let aiFillResults: Array<{ field: string; label: string; status: 'success' | 'error'; value?: string; error?: string }> | null = null;
+	let aiFillResults: Array<{
+		field: string;
+		label: string;
+		status: 'success' | 'error';
+		value?: string;
+		error?: string;
+	}> | null = null;
 	let aiFillMessage: string | null = null;
 
 	$: emptyTextFieldCount = profile ? getEmptyTextFields(profile).length : 0;
@@ -186,10 +198,26 @@
 	// Text categories config
 	const textCategoryInfo: Record<string, { label: string; icon: string; description: string }> = {
 		names: { label: 'Names', icon: '🏷️', description: 'Brand name, legal name, DBA, abbreviation' },
-		messaging: { label: 'Messaging', icon: '💬', description: 'Tagline, slogan, elevator pitch, value proposition' },
-		descriptions: { label: 'Descriptions', icon: '📝', description: 'Short bio, long bio, boilerplate, about us' },
-		legal: { label: 'Legal', icon: '⚖️', description: 'Copyright notice, trademark text, disclaimers' },
-		social: { label: 'Social', icon: '📱', description: 'Social media bios — Twitter, Instagram, LinkedIn' },
+		messaging: {
+			label: 'Messaging',
+			icon: '💬',
+			description: 'Tagline, slogan, elevator pitch, value proposition'
+		},
+		descriptions: {
+			label: 'Descriptions',
+			icon: '📝',
+			description: 'Short bio, long bio, boilerplate, about us'
+		},
+		legal: {
+			label: 'Legal',
+			icon: '⚖️',
+			description: 'Copyright notice, trademark text, disclaimers'
+		},
+		social: {
+			label: 'Social',
+			icon: '📱',
+			description: 'Social media bios — Twitter, Instagram, LinkedIn'
+		},
 		voice: { label: 'Voice', icon: '🎤', description: 'Tone guidelines, vocabulary, key phrases' }
 	};
 
@@ -203,11 +231,14 @@
 	$: completionPercent = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
 
 	// Group text assets by category
-	$: textsByCategory = textAssets.reduce((groups, text) => {
-		if (!groups[text.category]) groups[text.category] = [];
-		groups[text.category].push(text);
-		return groups;
-	}, {} as Record<string, TextAsset[]>);
+	$: textsByCategory = textAssets.reduce(
+		(groups, text) => {
+			if (!groups[text.category]) groups[text.category] = [];
+			groups[text.category].push(text);
+			return groups;
+		},
+		{} as Record<string, TextAsset[]>
+	);
 
 	onMount(async () => {
 		await loadProfile();
@@ -259,7 +290,8 @@
 		// If the field has a text preset mapping, navigate to the Text tab
 		const preset = FIELD_TO_PRESET_KEY[fieldKey];
 		if (preset) {
-			const stringValue = currentValue != null && typeof currentValue === 'string' ? currentValue : undefined;
+			const stringValue =
+				currentValue != null && typeof currentValue === 'string' ? currentValue : undefined;
 			navigateToTextAsset(preset.category, preset.presetKey, stringValue);
 			return;
 		}
@@ -425,7 +457,7 @@
 					const pending = pendingTextEdit;
 					pendingTextEdit = null;
 					const match = textAssets.find(
-						t => t.category === pending.category && t.key === pending.presetKey
+						(t) => t.category === pending.category && t.key === pending.presetKey
 					);
 					if (match) {
 						// Found matching text asset — open its editor
@@ -444,19 +476,25 @@
 					}
 				}
 			} else if (tab === 'images') {
-				const res = await fetch(`/api/brand/assets/media?brandProfileId=${data.brandId}&mediaType=image`);
+				const res = await fetch(
+					`/api/brand/assets/media?brandProfileId=${data.brandId}&mediaType=image`
+				);
 				if (res.ok) {
 					const result = await res.json();
 					imageAssets = result.media;
 				}
 			} else if (tab === 'audio') {
-				const res = await fetch(`/api/brand/assets/media?brandProfileId=${data.brandId}&mediaType=audio`);
+				const res = await fetch(
+					`/api/brand/assets/media?brandProfileId=${data.brandId}&mediaType=audio`
+				);
 				if (res.ok) {
 					const result = await res.json();
 					audioAssets = result.media;
 				}
 			} else if (tab === 'videos') {
-				const res = await fetch(`/api/brand/assets/media?brandProfileId=${data.brandId}&mediaType=video`);
+				const res = await fetch(
+					`/api/brand/assets/media?brandProfileId=${data.brandId}&mediaType=video`
+				);
 				if (res.ok) {
 					const result = await res.json();
 					videoAssets = result.media;
@@ -592,12 +630,22 @@
 		}
 	}
 
-	async function generateFromPreset(preset: { key: string; label: string; promptTemplate: string }) {
+	async function generateFromPreset(preset: {
+		key: string;
+		label: string;
+		promptTemplate: string;
+	}) {
 		selectedPresetKey = preset.key;
 		await generateTextWithAI(preset.promptTemplate);
 	}
 
-	async function generateEditTextWithAI(textId: string, category: string, key: string, label: string, customPrompt?: string) {
+	async function generateEditTextWithAI(
+		textId: string,
+		category: string,
+		key: string,
+		label: string,
+		customPrompt?: string
+	) {
 		aiEditGenerating = true;
 		aiError = null;
 		try {
@@ -669,7 +717,9 @@
 			// Refresh profile data so the Profile tab reflects the change
 			await loadProfile();
 			// Auto-dismiss success message after 3 seconds
-			setTimeout(() => { pushSuccessMessage = null; }, 3000);
+			setTimeout(() => {
+				pushSuccessMessage = null;
+			}, 3000);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to push to profile';
 		} finally {
@@ -698,7 +748,13 @@
 		vertical: 'Vertical'
 	};
 
-	async function setImageAsProfileLogo(e: CustomEvent<{ asset: import('$lib/types/brand-assets').BrandMediaAsset; url: string; variant?: 'icon' | 'horizontal' | 'vertical' }>) {
+	async function setImageAsProfileLogo(
+		e: CustomEvent<{
+			asset: import('$lib/types/brand-assets').BrandMediaAsset;
+			url: string;
+			variant?: 'icon' | 'horizontal' | 'vertical';
+		}>
+	) {
 		if (!profile || settingProfileImage) return;
 		const { asset, url, variant = 'icon' } = e.detail;
 		const fieldName = LOGO_VARIANT_FIELDS[variant] || 'logoUrl';
@@ -722,7 +778,9 @@
 			}
 			profileImageSuccess = `${variantLabel} logo updated from "${asset.name}"`;
 			await loadProfile();
-			setTimeout(() => { profileImageSuccess = null; }, 3000);
+			setTimeout(() => {
+				profileImageSuccess = null;
+			}, 3000);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to set logo';
 		} finally {
@@ -759,12 +817,16 @@
 
 			const result = await res.json();
 			aiFillResults = result.results;
-			aiFillMessage = result.totalFilled > 0
-				? `Filled ${result.totalFilled} field${result.totalFilled !== 1 ? 's' : ''} with AI${result.totalFailed > 0 ? ` (${result.totalFailed} failed)` : ''}`
-				: result.message || 'No fields to fill';
+			aiFillMessage =
+				result.totalFilled > 0
+					? `Filled ${result.totalFilled} field${result.totalFilled !== 1 ? 's' : ''} with AI${result.totalFailed > 0 ? ` (${result.totalFailed} failed)` : ''}`
+					: result.message || 'No fields to fill';
 
 			await loadProfile();
-			setTimeout(() => { aiFillMessage = null; aiFillResults = null; }, 5000);
+			setTimeout(() => {
+				aiFillMessage = null;
+				aiFillResults = null;
+			}, 5000);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to fill empty fields';
 		} finally {
@@ -772,7 +834,9 @@
 		}
 	}
 
-	async function handleColorsBatchChange(e: CustomEvent<{ colors: { key: string; value: string }[] }>) {
+	async function handleColorsBatchChange(
+		e: CustomEvent<{ colors: { key: string; value: string }[] }>
+	) {
 		if (!profile || isSaving) return;
 		const profileRecord = profile as unknown as Record<string, unknown>;
 		const changed = e.detail.colors.filter((c) => profileRecord[c.key] !== c.value);
@@ -906,7 +970,13 @@
 		{#if aiFillMessage}
 			<div class="success-banner">
 				<span>✨ {aiFillMessage}</span>
-				<button on:click={() => { aiFillMessage = null; aiFillResults = null; }} aria-label="Dismiss">×</button>
+				<button
+					on:click={() => {
+						aiFillMessage = null;
+						aiFillResults = null;
+					}}
+					aria-label="Dismiss">×</button
+				>
 			</div>
 		{/if}
 
@@ -970,8 +1040,10 @@
 			>
 				<span class="tab-icon">🎬</span>
 				<span class="tab-label">Videos</span>
-				{#if assetSummary && (assetSummary.videoCount + assetSummary.videoGenerationsCount) > 0}
-					<span class="tab-badge">{assetSummary.videoCount + assetSummary.videoGenerationsCount}</span>
+				{#if assetSummary && assetSummary.videoCount + assetSummary.videoGenerationsCount > 0}
+					<span class="tab-badge"
+						>{assetSummary.videoCount + assetSummary.videoGenerationsCount}</span
+					>
 				{/if}
 			</button>
 		</div>
@@ -981,10 +1053,25 @@
 			<!-- Visual Identity — full width at top -->
 			{#if visualSection}
 				<section class="brand-section brand-section--visual">
-					<button class="section-header section-header--toggle" on:click={() => toggleSection('visual')} aria-expanded={!collapsedSections['visual']}>
+					<button
+						class="section-header section-header--toggle"
+						on:click={() => toggleSection('visual')}
+						aria-expanded={!collapsedSections['visual']}
+					>
 						<span class="section-icon">{visualSection.icon}</span>
 						<h2 class="section-title">{visualSection.title}</h2>
-						<svg class="collapse-chevron" class:collapsed={collapsedSections['visual']} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+						<svg
+							class="collapse-chevron"
+							class:collapsed={collapsedSections['visual']}
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+						>
 					</button>
 
 					{#if !collapsedSections['visual']}
@@ -1039,10 +1126,25 @@
 			<div class="sections-grid">
 				{#each otherSections as section}
 					<section class="brand-section">
-						<button class="section-header section-header--toggle" on:click={() => toggleSection(section.id)} aria-expanded={!collapsedSections[section.id]}>
+						<button
+							class="section-header section-header--toggle"
+							on:click={() => toggleSection(section.id)}
+							aria-expanded={!collapsedSections[section.id]}
+						>
 							<span class="section-icon">{section.icon}</span>
 							<h2 class="section-title">{section.title}</h2>
-							<svg class="collapse-chevron" class:collapsed={collapsedSections[section.id]} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+							<svg
+								class="collapse-chevron"
+								class:collapsed={collapsedSections[section.id]}
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+							>
 						</button>
 
 						{#if !collapsedSections[section.id]}
@@ -1055,7 +1157,7 @@
 										type={field.type}
 										isEditing={editingField === field.key}
 										hasTextSuggestions={!!FIELD_TO_TEXT_MAPPING[field.key]}
-										editValue={editValue}
+										{editValue}
 										on:edit={() => startEditing(field.key, field.value)}
 										on:save={(e) => saveField(field.key, field.type, e.detail?.value)}
 										on:cancel={cancelEditing}
@@ -1069,7 +1171,7 @@
 				{/each}
 			</div>
 
-		<!-- ═══ Text Tab ═══ -->
+			<!-- ═══ Text Tab ═══ -->
 		{:else if activeTab === 'text'}
 			<div class="asset-tab">
 				<div class="asset-tab-header">
@@ -1091,7 +1193,15 @@
 						<div class="form-row two-col">
 							<label class="form-label">
 								Category
-								<select bind:value={newTextCategory} on:change={() => { selectedPresetKey = ''; customLabel = ''; newTextValue = ''; }} class="form-input">
+								<select
+									bind:value={newTextCategory}
+									on:change={() => {
+										selectedPresetKey = '';
+										customLabel = '';
+										newTextValue = '';
+									}}
+									class="form-input"
+								>
 									{#each Object.entries(textCategoryInfo) as [key, info]}
 										<option value={key}>{info.icon} {info.label}</option>
 									{/each}
@@ -1113,7 +1223,12 @@
 						{#if selectedPresetKey === '__custom__'}
 							<label class="form-label">
 								Name
-								<input type="text" bind:value={customLabel} placeholder="e.g. Brand Anthem, Welcome Message" class="form-input" />
+								<input
+									type="text"
+									bind:value={customLabel}
+									placeholder="e.g. Brand Anthem, Welcome Message"
+									class="form-input"
+								/>
 								{#if customLabel}
 									<span class="form-hint">Key: <code>{newTextKey}</code></span>
 								{/if}
@@ -1123,7 +1238,12 @@
 						{#if selectedPresetKey}
 							<label class="form-label">
 								Value
-								<textarea bind:value={newTextValue} placeholder="Enter text content or use AI to generate..." class="form-textarea" rows="3"></textarea>
+								<textarea
+									bind:value={newTextValue}
+									placeholder="Enter text content or use AI to generate..."
+									class="form-textarea"
+									rows="3"
+								></textarea>
 							</label>
 
 							<!-- AI Generation Section -->
@@ -1141,7 +1261,8 @@
 														generateTextWithAI();
 													}
 												}}
-												disabled={aiGenerating || (selectedPresetKey === '__custom__' && !customLabel)}
+												disabled={aiGenerating ||
+													(selectedPresetKey === '__custom__' && !customLabel)}
 												title="Auto-generate based on type and brand context"
 											>
 												{aiGenerating ? '⏳ Generating...' : '🪄 Auto'}
@@ -1183,7 +1304,11 @@
 								</div>
 							{/if}
 
-							<button class="save-btn" on:click={addTextAsset} disabled={!newTextKey || !newTextLabel || !newTextValue}>
+							<button
+								class="save-btn"
+								on:click={addTextAsset}
+								disabled={!newTextKey || !newTextLabel || !newTextValue}
+							>
 								Save Text Asset
 							</button>
 						{/if}
@@ -1200,7 +1325,10 @@
 						<p>No text assets yet</p>
 						<p class="empty-hint">Add brand names, taglines, bios, legal copy, and more.</p>
 						{#if data.hasAIProviders}
-							<button class="add-asset-btn ai empty-cta" on:click={() => (showAITextGenerate = true)}>
+							<button
+								class="add-asset-btn ai empty-cta"
+								on:click={() => (showAITextGenerate = true)}
+							>
 								✨ Generate with AI
 							</button>
 						{/if}
@@ -1238,7 +1366,13 @@
 															{#if data.hasAIProviders}
 																<button
 																	class="toolbar-btn ai"
-																	on:click={() => generateEditTextWithAI(text.id, text.category, text.key, text.label)}
+																	on:click={() =>
+																		generateEditTextWithAI(
+																			text.id,
+																			text.category,
+																			text.key,
+																			text.label
+																		)}
 																	disabled={aiEditGenerating}
 																	title="Regenerate this text using AI"
 																>
@@ -1255,8 +1389,13 @@
 															{/if}
 														</div>
 														<div class="edit-toolbar-right">
-															<button class="toolbar-btn cancel" on:click={cancelEditingText}>Cancel</button>
-															<button class="toolbar-btn save" on:click={() => saveTextAsset(text.id)}>Save Changes</button>
+															<button class="toolbar-btn cancel" on:click={cancelEditingText}
+																>Cancel</button
+															>
+															<button
+																class="toolbar-btn save"
+																on:click={() => saveTextAsset(text.id)}>Save Changes</button
+															>
 														</div>
 													</div>
 													{#if showAiEditPrompt}
@@ -1269,7 +1408,14 @@
 															></textarea>
 															<button
 																class="toolbar-btn ai"
-																on:click={() => generateEditTextWithAI(text.id, text.category, text.key, text.label, aiEditCustomPrompt)}
+																on:click={() =>
+																	generateEditTextWithAI(
+																		text.id,
+																		text.category,
+																		text.key,
+																		text.label,
+																		aiEditCustomPrompt
+																	)}
 																disabled={aiEditGenerating || !aiEditCustomPrompt}
 															>
 																{aiEditGenerating ? '⏳ Generating...' : '✨ Generate with Prompt'}
@@ -1280,19 +1426,33 @@
 											{:else}
 												<p class="text-asset-value">{text.value}</p>
 												<div class="text-asset-actions">
-													<button class="edit-btn" on:click={() => startEditingText(text)}>Edit</button>
+													<button class="edit-btn" on:click={() => startEditingText(text)}
+														>Edit</button
+													>
 													{#if getMatchingProfileField(text.category, text.key)}
 														<button
 															class="push-btn"
 															on:click={() => pushTextToProfile(text.id)}
 															disabled={pushingTextId === text.id}
-															title="Push this value to the profile's {getMatchingProfileField(text.category, text.key)?.fieldLabel} field"
+															title="Push this value to the profile's {getMatchingProfileField(
+																text.category,
+																text.key
+															)?.fieldLabel} field"
 														>
 															{pushingTextId === text.id ? '⏳...' : '📤 Push to Profile'}
 														</button>
 													{/if}
-													<button class="history-btn" on:click={() => { textHistoryId = text.id; textHistoryLabel = text.label; }} title="Revision history">History</button>
-													<button class="delete-btn" on:click={() => deleteTextAsset(text.id)}>Delete</button>
+													<button
+														class="history-btn"
+														on:click={() => {
+															textHistoryId = text.id;
+															textHistoryLabel = text.label;
+														}}
+														title="Revision history">History</button
+													>
+													<button class="delete-btn" on:click={() => deleteTextAsset(text.id)}
+														>Delete</button
+													>
 												</div>
 											{/if}
 										</div>
@@ -1308,11 +1468,15 @@
 				<AITextQuickGenerate
 					brandProfileId={data.brandId}
 					on:close={() => (showAITextGenerate = false)}
-					on:saved={() => { showAITextGenerate = false; loadTabAssets('text'); loadProfile(); }}
+					on:saved={() => {
+						showAITextGenerate = false;
+						loadTabAssets('text');
+						loadProfile();
+					}}
 				/>
 			{/if}
 
-		<!-- ═══ Images Tab ═══ -->
+			<!-- ═══ Images Tab ═══ -->
 		{:else if activeTab === 'images'}
 			<div class="asset-tab">
 				{#if profileImageSuccess}
@@ -1329,7 +1493,7 @@
 				/>
 			</div>
 
-		<!-- ═══ Audio Tab ═══ -->
+			<!-- ═══ Audio Tab ═══ -->
 		{:else if activeTab === 'audio'}
 			<div class="asset-tab">
 				<MediaGallery
@@ -1341,7 +1505,7 @@
 				/>
 			</div>
 
-		<!-- ═══ Videos Tab ═══ -->
+			<!-- ═══ Videos Tab ═══ -->
 		{:else if activeTab === 'videos'}
 			<div class="asset-tab">
 				<MediaGallery
@@ -1368,20 +1532,31 @@
 
 	<!-- Text Revision History Modal -->
 	{#if textHistoryId}
-		{@const historyText = textAssets.find(t => t.id === textHistoryId)}
+		{@const historyText = textAssets.find((t) => t.id === textHistoryId)}
 		<TextRevisionHistory
 			brandTextId={textHistoryId}
 			textLabel={textHistoryLabel || ''}
 			brandProfileId={profile?.id ?? ''}
-			canPushToProfile={historyText ? !!getMatchingProfileField(historyText.category, historyText.key) : false}
-			on:close={() => { textHistoryId = null; textHistoryLabel = null; }}
-			on:revert={() => { textHistoryId = null; textHistoryLabel = null; loadTabAssets('text'); }}
+			canPushToProfile={historyText
+				? !!getMatchingProfileField(historyText.category, historyText.key)
+				: false}
+			on:close={() => {
+				textHistoryId = null;
+				textHistoryLabel = null;
+			}}
+			on:revert={() => {
+				textHistoryId = null;
+				textHistoryLabel = null;
+				loadTabAssets('text');
+			}}
 			on:pushed={(e) => {
 				textHistoryId = null;
 				textHistoryLabel = null;
 				pushSuccessMessage = `Updated ${e.detail.label} on profile`;
 				loadProfile();
-				setTimeout(() => { pushSuccessMessage = null; }, 3000);
+				setTimeout(() => {
+					pushSuccessMessage = null;
+				}, 3000);
 			}}
 		/>
 	{/if}
@@ -1602,7 +1777,9 @@
 		font-weight: 600;
 		cursor: pointer;
 		white-space: nowrap;
-		transition: background-color var(--transition-fast), opacity var(--transition-fast);
+		transition:
+			background-color var(--transition-fast),
+			opacity var(--transition-fast);
 	}
 
 	.ai-fill-btn:hover:not(:disabled) {
@@ -1625,7 +1802,9 @@
 	}
 
 	@keyframes ai-fill-spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	/* Error banner */
@@ -2005,12 +2184,16 @@
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
 		padding: var(--spacing-md);
-		transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+		transition:
+			border-color var(--transition-fast),
+			box-shadow var(--transition-fast);
 	}
 
 	.text-asset-card.editing {
 		border-color: var(--color-primary);
-		box-shadow: 0 0 0 1px var(--color-primary), 0 4px 12px rgba(0, 0, 0, 0.08);
+		box-shadow:
+			0 0 0 1px var(--color-primary),
+			0 4px 12px rgba(0, 0, 0, 0.08);
 	}
 
 	.text-asset-header {
@@ -2249,7 +2432,6 @@
 		cursor: not-allowed;
 	}
 
-
 	/* ─── AI Generate Section ─────────────────────────────── */
 
 	.ai-generate-section {
@@ -2322,8 +2504,6 @@
 		flex: 1;
 	}
 
-
-
 	.ai-error {
 		display: flex;
 		align-items: center;
@@ -2345,8 +2525,6 @@
 		font-size: 0.9rem;
 		line-height: 1;
 	}
-
-
 
 	/* ─── Responsive ──────────────────────────────────────── */
 

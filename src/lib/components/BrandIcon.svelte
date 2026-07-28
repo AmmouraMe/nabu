@@ -222,7 +222,47 @@
 				[8, 16, 13, 16]
 			]
 		},
-		done: { paths: ['M5 21V4', 'M5 4h11l-1.5 4L16 12H5'] }
+		done: { paths: ['M5 21V4', 'M5 4h11l-1.5 4L16 12H5'] },
+
+		// ── Asset kinds ──
+		// Used by the brand workspace tabs, which previously ran on emoji: 📋📝🖼️🔊🎬.
+		// Same objection as the rails — different vendors, different weights and hues,
+		// so five of them side by side never read as one set.
+		// A record card: the brand's own details.
+		profile: {
+			paths: ['M4 4h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z'],
+			circles: [[9, 10, 2]],
+			lines: [
+				[14, 9, 18, 9],
+				[14, 13, 18, 13],
+				[6, 16, 12, 16]
+			]
+		},
+		// A page with lines on it.
+		text: {
+			paths: ['M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z', 'M14 3v5h5'],
+			lines: [
+				[9, 13, 15, 13],
+				[9, 17, 15, 17]
+			]
+		},
+		// A framed picture: horizon and sun.
+		image: {
+			paths: ['M3 5h18v14H3z', 'm3 16 5-5 4 4 3-3 6 6'],
+			circles: [[8.5, 8.5, 1.5]]
+		},
+		// A speaker with one wave — two would crowd at 16px.
+		audio: {
+			paths: ['M4 9h4l5-4v14l-5-4H4V9Z', 'M17 9.5a4 4 0 0 1 0 5']
+		},
+		// A clapperboard.
+		video: {
+			paths: ['M3 7h18v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z', 'm3 7 2-4h14l-2 4'],
+			lines: [
+				[9, 3, 7, 7],
+				[15, 3, 13, 7]
+			]
+		}
 	};
 
 	$: glyph = GLYPHS[name] ?? null;

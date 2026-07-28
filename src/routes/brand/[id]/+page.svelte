@@ -4,6 +4,7 @@
 	import type { BrandProfile } from '$lib/types/onboarding';
 	import type { BrandMediaAsset } from '$lib/types/brand-assets';
 	import BrandFieldCard from '$lib/components/BrandFieldCard.svelte';
+	import BrandIcon from '$lib/components/BrandIcon.svelte';
 	import BrandFieldHistory from '$lib/components/BrandFieldHistory.svelte';
 	import BrandTextPicker from '$lib/components/BrandTextPicker.svelte';
 	import BrandColorEditor from '$lib/components/BrandColorEditor.svelte';
@@ -115,8 +116,62 @@
 	$: visualSection = sections.find((s) => s.id === 'visual') ?? null;
 	$: otherSections = sections.filter((s) => s.id !== 'visual');
 
+	/**
+	 * Monochrome glyph per section, keyed by id rather than taken from the section data.
+	 * `getBrandFieldsSummary` still carries an emoji for each, and other callers may
+	 * want it; this workspace uses the icon set the rest of the app moved to.
+	 */
+	const SECTION_ICONS: Record<string, string> = {
+		identity: 'identity',
+		personality: 'archetype',
+		audience: 'audience',
+		visual: 'visual',
+		market: 'position',
+		story: 'origin'
+	};
+
+	/**
+	 * Filled-versus-total per section, so the rail shows *where* a brand is thin rather
+	 * than only that it is 42% overall. Same emptiness test as the headline figure, so
+	 * the parts always add up to the whole.
+	 */
+	$: sectionStats = sections.map((section) => ({
+		id: section.id,
+		title: section.title,
+		filled: section.fields.filter((f) => f.value != null && f.value !== '').length,
+		total: section.fields.length
+	}));
+
 	// Tab navigation
 	let activeTab: 'profile' | 'text' | 'images' | 'audio' | 'videos' = 'profile';
+
+	/**
+	 * The workspace's five surfaces. A list rather than five hand-written buttons: the
+	 * markup was ~60 lines of near-identical blocks that had already drifted apart.
+	 */
+	$: TABS = [
+		{ id: 'profile' as const, label: 'Profile', icon: 'profile', count: 0 },
+		{ id: 'text' as const, label: 'Text', icon: 'text', count: assetSummary?.textCount ?? 0 },
+		{ id: 'images' as const, label: 'Images', icon: 'image', count: assetSummary?.imageCount ?? 0 },
+		{ id: 'audio' as const, label: 'Audio', icon: 'audio', count: assetSummary?.audioCount ?? 0 },
+		{
+			id: 'videos' as const,
+			label: 'Videos',
+			icon: 'video',
+			count: (assetSummary?.videoCount ?? 0) + (assetSummary?.videoGenerationsCount ?? 0)
+		}
+	];
+
+	/** Jump to a section, opening it first — a link to a collapsed section lands nowhere. */
+	function jumpToSection(sectionId: string) {
+		collapsedSections[sectionId] = false;
+		collapsedSections = collapsedSections;
+		requestAnimationFrame(() => {
+			document
+				.getElementById(`section-${sectionId}`)
+				?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		});
+	}
 
 	// Field history modal
 	let historyFieldKey: string | null = null;
@@ -885,11 +940,18 @@
 			<a href="/brand" class="back-link">← Back to Brands</a>
 		</div>
 	{:else if profile}
-		<!-- Header -->
-		<header class="brand-header">
-			<div class="header-content">
-				<div class="header-left">
-					<a href="/brand" class="back-link">← All Brands</a>
+		<!--
+			Two columns on a desktop, one on a phone. Everything you need to *steer* by —
+			what this brand is, how complete it is, and which surface you are on — lives in
+			the rail; the column beside it is nothing but the work. Stacked, as it was, the
+			same material pushed the actual content below the fold and left a 1051px column
+			floating in a 1600px window.
+		-->
+		<div class="workspace">
+			<aside class="rail">
+				<a href="/brand" class="back-link">← All Brands</a>
+
+				<div class="rail-identity">
 					<h1 class="brand-title" class:codename={!profile.brandNameConfirmed}>
 						{profile.brandName || 'New Brand'}
 						{#if !profile.brandNameConfirmed}
@@ -900,37 +962,24 @@
 						<p class="brand-tagline">{profile.tagline}</p>
 					{/if}
 				</div>
-				<div class="header-actions">
-					<a href="/onboarding?brand={profile.id}" class="architect-link">
-						<svg
-							width="16"
-							height="16"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						>
-							<path d="M12 20h9" />
-							<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-						</svg>
-						Brand Architect AI
-					</a>
-				</div>
-			</div>
 
-			<!-- Progress bar -->
-			<div class="completion-bar">
-				<div class="completion-info">
-					<span class="completion-label">Profile Completion</span>
-					<span class="completion-value">{completionPercent}%</span>
-				</div>
-				<div class="progress-track">
-					<div class="progress-fill" style="width: {completionPercent}%"></div>
-				</div>
-				<div class="completion-detail">
-					<span>{filledFields} of {totalFields} fields completed</span>
+				<div class="rail-completion">
+					<div class="completion-info">
+						<span class="completion-label">Profile</span>
+						<span class="completion-value">{completionPercent}%</span>
+					</div>
+					<div
+						class="progress-track"
+						role="progressbar"
+						aria-valuenow={completionPercent}
+						aria-valuemin={0}
+						aria-valuemax={100}
+						aria-label="Profile completion"
+					>
+						<div class="progress-fill" style="width: {completionPercent}%"></div>
+					</div>
+					<p class="completion-detail">{filledFields} of {totalFields} fields</p>
+
 					{#if data.hasAIProviders && emptyTextFieldCount > 0}
 						<button
 							class="ai-fill-btn"
@@ -942,581 +991,577 @@
 								<span class="ai-fill-spinner"></span>
 								Filling {emptyTextFieldCount} fields…
 							{:else}
-								✨ AI Fill {emptyTextFieldCount} Empty Fields
+								Fill {emptyTextFieldCount} empty fields with AI
 							{/if}
 						</button>
 					{/if}
 				</div>
-			</div>
-		</header>
 
-		<!-- Error message -->
-		{#if error}
-			<div class="error-banner">
-				<span>{error}</span>
-				<button on:click={() => (error = null)} aria-label="Dismiss error">×</button>
-			</div>
-		{/if}
-
-		<!-- Push to profile success -->
-		{#if pushSuccessMessage}
-			<div class="success-banner">
-				<span>✅ {pushSuccessMessage}</span>
-				<button on:click={() => (pushSuccessMessage = null)} aria-label="Dismiss">×</button>
-			</div>
-		{/if}
-
-		<!-- AI fill success -->
-		{#if aiFillMessage}
-			<div class="success-banner">
-				<span>✨ {aiFillMessage}</span>
-				<button
-					on:click={() => {
-						aiFillMessage = null;
-						aiFillResults = null;
-					}}
-					aria-label="Dismiss">×</button
-				>
-			</div>
-		{/if}
-
-		<!-- Tab Navigation -->
-		<div class="tab-nav" role="tablist">
-			<button
-				class="tab-btn"
-				class:active={activeTab === 'profile'}
-				on:click={() => switchTab('profile')}
-				role="tab"
-				aria-selected={activeTab === 'profile'}
-			>
-				<span class="tab-icon">📋</span>
-				<span class="tab-label">Profile</span>
-			</button>
-			<button
-				class="tab-btn"
-				class:active={activeTab === 'text'}
-				on:click={() => switchTab('text')}
-				role="tab"
-				aria-selected={activeTab === 'text'}
-			>
-				<span class="tab-icon">📝</span>
-				<span class="tab-label">Text</span>
-				{#if assetSummary && assetSummary.textCount > 0}
-					<span class="tab-badge">{assetSummary.textCount}</span>
-				{/if}
-			</button>
-			<button
-				class="tab-btn"
-				class:active={activeTab === 'images'}
-				on:click={() => switchTab('images')}
-				role="tab"
-				aria-selected={activeTab === 'images'}
-			>
-				<span class="tab-icon">🖼️</span>
-				<span class="tab-label">Images</span>
-				{#if assetSummary && assetSummary.imageCount > 0}
-					<span class="tab-badge">{assetSummary.imageCount}</span>
-				{/if}
-			</button>
-			<button
-				class="tab-btn"
-				class:active={activeTab === 'audio'}
-				on:click={() => switchTab('audio')}
-				role="tab"
-				aria-selected={activeTab === 'audio'}
-			>
-				<span class="tab-icon">🔊</span>
-				<span class="tab-label">Audio</span>
-				{#if assetSummary && assetSummary.audioCount > 0}
-					<span class="tab-badge">{assetSummary.audioCount}</span>
-				{/if}
-			</button>
-			<button
-				class="tab-btn"
-				class:active={activeTab === 'videos'}
-				on:click={() => switchTab('videos')}
-				role="tab"
-				aria-selected={activeTab === 'videos'}
-			>
-				<span class="tab-icon">🎬</span>
-				<span class="tab-label">Videos</span>
-				{#if assetSummary && assetSummary.videoCount + assetSummary.videoGenerationsCount > 0}
-					<span class="tab-badge"
-						>{assetSummary.videoCount + assetSummary.videoGenerationsCount}</span
+				<a href="/onboarding?brand={profile.id}" class="architect-link">
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
 					>
-				{/if}
-			</button>
-		</div>
+						<path d="M12 20h9" />
+						<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+					</svg>
+					Brand Architect AI
+				</a>
 
-		<!-- ═══ Profile Tab ═══ -->
-		{#if activeTab === 'profile'}
-			<!-- Visual Identity — full width at top -->
-			{#if visualSection}
-				<section class="brand-section brand-section--visual">
-					<button
-						class="section-header section-header--toggle"
-						on:click={() => toggleSection('visual')}
-						aria-expanded={!collapsedSections['visual']}
-					>
-						<span class="section-icon">{visualSection.icon}</span>
-						<h2 class="section-title">{visualSection.title}</h2>
-						<svg
-							class="collapse-chevron"
-							class:collapsed={collapsedSections['visual']}
-							width="16"
-							height="16"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2"
-							stroke-linecap="round"
-							stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
-						>
-					</button>
-
-					{#if !collapsedSections['visual']}
-						<BrandColorEditor
-							colors={{
-								primaryColor: profile?.primaryColor,
-								secondaryColor: profile?.secondaryColor,
-								accentColor: profile?.accentColor,
-								brandColor4: profile?.brandColor4,
-								brandColor5: profile?.brandColor5
-							}}
-							logoUrl={profile?.logoUrl}
-							logoHorizontalUrl={profile?.logoHorizontalUrl}
-							logoVerticalUrl={profile?.logoVerticalUrl}
-							logoConcept={profile?.logoConcept}
-							typographyLogo={profile?.typographyLogo}
-							typographyHeading={profile?.typographyHeading}
-							typographyBody={profile?.typographyBody}
-							on:colorchange={(e) => {
-								saveField(e.detail.key, 'color', e.detail.value);
-							}}
-							on:colorsbatchchange={handleColorsBatchChange}
-							on:editlogo={() => switchTab('images')}
-							on:fontchange={async (e) => {
-								if (!profile) return;
-								try {
-									isSaving = true;
-									const res = await fetch('/api/brand/update-field', {
-										method: 'PATCH',
-										headers: { 'Content-Type': 'application/json' },
-										body: JSON.stringify({
-											profileId: profile.id,
-											fieldName: e.detail.field,
-											newValue: e.detail.value,
-											changeSource: 'manual'
-										})
-									});
-									if (!res.ok) throw new Error('Failed to save font');
-									await loadProfile();
-								} catch (err) {
-									error = err instanceof Error ? err.message : 'Failed to save font';
-								} finally {
-									isSaving = false;
-								}
-							}}
-						/>
-					{/if}
-				</section>
-			{/if}
-
-			<!-- Other sections in grid -->
-			<div class="sections-grid">
-				{#each otherSections as section}
-					<section class="brand-section">
+				<div class="rail-nav" role="tablist" aria-label="Brand workspace">
+					{#each TABS as tab (tab.id)}
 						<button
-							class="section-header section-header--toggle"
-							on:click={() => toggleSection(section.id)}
-							aria-expanded={!collapsedSections[section.id]}
+							class="rail-tab"
+							class:active={activeTab === tab.id}
+							on:click={() => switchTab(tab.id)}
+							role="tab"
+							aria-selected={activeTab === tab.id}
 						>
-							<span class="section-icon">{section.icon}</span>
-							<h2 class="section-title">{section.title}</h2>
-							<svg
-								class="collapse-chevron"
-								class:collapsed={collapsedSections[section.id]}
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
-							>
+							<BrandIcon name={tab.icon} size={16} />
+							<span class="rail-tab-label">{tab.label}</span>
+							{#if tab.count > 0}
+								<span class="tab-badge">{tab.count}</span>
+							{/if}
 						</button>
-
-						{#if !collapsedSections[section.id]}
-							<div class="fields-list">
-								{#each section.fields as field (field.key)}
-									<BrandFieldCard
-										fieldKey={field.key}
-										label={field.label}
-										value={field.value}
-										type={field.type}
-										isEditing={editingField === field.key}
-										hasTextSuggestions={!!FIELD_TO_TEXT_MAPPING[field.key]}
-										{editValue}
-										on:edit={() => startEditing(field.key, field.value)}
-										on:save={(e) => saveField(field.key, field.type, e.detail?.value)}
-										on:cancel={cancelEditing}
-										on:history={() => openHistory(field.key, field.label)}
-										on:picktext={() => openTextPicker(field.key, field.label)}
-									/>
-								{/each}
-							</div>
-						{/if}
-					</section>
-				{/each}
-			</div>
-
-			<!-- ═══ Text Tab ═══ -->
-		{:else if activeTab === 'text'}
-			<div class="asset-tab">
-				<div class="asset-tab-header">
-					<h2 class="asset-tab-title">Brand Text Assets</h2>
-					<div class="asset-tab-actions">
-						{#if data.hasAIProviders}
-							<button class="add-asset-btn ai" on:click={() => (showAITextGenerate = true)}>
-								✨ AI Generate
-							</button>
-						{/if}
-						<button class="add-asset-btn" on:click={() => (showAddText = !showAddText)}>
-							{showAddText ? '✕ Cancel' : '+ Add Text'}
-						</button>
-					</div>
+					{/each}
 				</div>
 
-				{#if showAddText}
-					<div class="add-text-form">
-						<div class="form-row two-col">
-							<label class="form-label">
-								Category
-								<select
-									bind:value={newTextCategory}
-									on:change={() => {
-										selectedPresetKey = '';
-										customLabel = '';
-										newTextValue = '';
-									}}
-									class="form-input"
+				<!-- Only meaningful against the profile's sections, and only worth the room
+				     where the rail is a column rather than a stacked header. -->
+				{#if activeTab === 'profile'}
+					<div class="rail-sections">
+						<p class="rail-eyebrow">Sections</p>
+						{#each sectionStats as section (section.id)}
+							<button class="rail-jump" on:click={() => jumpToSection(section.id)}>
+								<span class="rail-jump-title">{section.title}</span>
+								<span class="rail-jump-count" class:full={section.filled === section.total}>
+									{section.filled}/{section.total}
+								</span>
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</aside>
+
+			<div class="workspace-main">
+				<!-- Error message -->
+				{#if error}
+					<div class="error-banner">
+						<span>{error}</span>
+						<button on:click={() => (error = null)} aria-label="Dismiss error">×</button>
+					</div>
+				{/if}
+
+				<!-- Push to profile success -->
+				{#if pushSuccessMessage}
+					<div class="success-banner">
+						<span>✅ {pushSuccessMessage}</span>
+						<button on:click={() => (pushSuccessMessage = null)} aria-label="Dismiss">×</button>
+					</div>
+				{/if}
+
+				<!-- AI fill success -->
+				{#if aiFillMessage}
+					<div class="success-banner">
+						<span>✨ {aiFillMessage}</span>
+						<button
+							on:click={() => {
+								aiFillMessage = null;
+								aiFillResults = null;
+							}}
+							aria-label="Dismiss">×</button
+						>
+					</div>
+				{/if}
+
+				<!-- ═══ Profile Tab ═══ -->
+				{#if activeTab === 'profile'}
+					<!-- Visual Identity — full width at top -->
+					{#if visualSection}
+						<section class="brand-section brand-section--visual" id="section-visual">
+							<button
+								class="section-header section-header--toggle"
+								class:section-header--collapsed={collapsedSections['visual']}
+								on:click={() => toggleSection('visual')}
+								aria-expanded={!collapsedSections['visual']}
+							>
+								<span class="section-icon">
+									<BrandIcon name={SECTION_ICONS[visualSection.id] ?? 'identity'} size={17} />
+								</span>
+								<h2 class="section-title">{visualSection.title}</h2>
+								<svg
+									class="collapse-chevron"
+									class:collapsed={collapsedSections['visual']}
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
 								>
-									{#each Object.entries(textCategoryInfo) as [key, info]}
-										<option value={key}>{info.icon} {info.label}</option>
-									{/each}
-								</select>
-								<span class="form-hint">{textCategoryInfo[newTextCategory]?.description}</span>
-							</label>
-							<label class="form-label">
-								Type
-								<select bind:value={selectedPresetKey} class="form-input">
-									<option value="">— Pick a type —</option>
-									{#each aiPresets as preset}
-										<option value={preset.key}>{preset.label}</option>
-									{/each}
-									<option value="__custom__">✏️ Custom...</option>
-								</select>
-							</label>
+							</button>
+
+							{#if !collapsedSections['visual']}
+								<BrandColorEditor
+									colors={{
+										primaryColor: profile?.primaryColor,
+										secondaryColor: profile?.secondaryColor,
+										accentColor: profile?.accentColor,
+										brandColor4: profile?.brandColor4,
+										brandColor5: profile?.brandColor5
+									}}
+									logoUrl={profile?.logoUrl}
+									logoHorizontalUrl={profile?.logoHorizontalUrl}
+									logoVerticalUrl={profile?.logoVerticalUrl}
+									logoConcept={profile?.logoConcept}
+									typographyLogo={profile?.typographyLogo}
+									typographyHeading={profile?.typographyHeading}
+									typographyBody={profile?.typographyBody}
+									on:colorchange={(e) => {
+										saveField(e.detail.key, 'color', e.detail.value);
+									}}
+									on:colorsbatchchange={handleColorsBatchChange}
+									on:editlogo={() => switchTab('images')}
+									on:fontchange={async (e) => {
+										if (!profile) return;
+										try {
+											isSaving = true;
+											const res = await fetch('/api/brand/update-field', {
+												method: 'PATCH',
+												headers: { 'Content-Type': 'application/json' },
+												body: JSON.stringify({
+													profileId: profile.id,
+													fieldName: e.detail.field,
+													newValue: e.detail.value,
+													changeSource: 'manual'
+												})
+											});
+											if (!res.ok) throw new Error('Failed to save font');
+											await loadProfile();
+										} catch (err) {
+											error = err instanceof Error ? err.message : 'Failed to save font';
+										} finally {
+											isSaving = false;
+										}
+									}}
+								/>
+							{/if}
+						</section>
+					{/if}
+
+					<!-- Other sections in grid -->
+					<div class="sections-grid">
+						{#each otherSections as section}
+							<section class="brand-section" id="section-{section.id}">
+								<button
+									class="section-header section-header--toggle"
+									class:section-header--collapsed={collapsedSections[section.id]}
+									on:click={() => toggleSection(section.id)}
+									aria-expanded={!collapsedSections[section.id]}
+								>
+									<span class="section-icon">
+										<BrandIcon name={SECTION_ICONS[section.id] ?? 'identity'} size={17} />
+									</span>
+									<h2 class="section-title">{section.title}</h2>
+									<svg
+										class="collapse-chevron"
+										class:collapsed={collapsedSections[section.id]}
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg
+									>
+								</button>
+
+								{#if !collapsedSections[section.id]}
+									<div class="fields-list">
+										{#each section.fields as field (field.key)}
+											<BrandFieldCard
+												fieldKey={field.key}
+												label={field.label}
+												value={field.value}
+												type={field.type}
+												isEditing={editingField === field.key}
+												hasTextSuggestions={!!FIELD_TO_TEXT_MAPPING[field.key]}
+												{editValue}
+												on:edit={() => startEditing(field.key, field.value)}
+												on:save={(e) => saveField(field.key, field.type, e.detail?.value)}
+												on:cancel={cancelEditing}
+												on:history={() => openHistory(field.key, field.label)}
+												on:picktext={() => openTextPicker(field.key, field.label)}
+											/>
+										{/each}
+									</div>
+								{/if}
+							</section>
+						{/each}
+					</div>
+
+					<!-- ═══ Text Tab ═══ -->
+				{:else if activeTab === 'text'}
+					<div class="asset-tab">
+						<div class="asset-tab-header">
+							<h2 class="asset-tab-title">Brand Text Assets</h2>
+							<div class="asset-tab-actions">
+								{#if data.hasAIProviders}
+									<button class="add-asset-btn ai" on:click={() => (showAITextGenerate = true)}>
+										✨ AI Generate
+									</button>
+								{/if}
+								<button class="add-asset-btn" on:click={() => (showAddText = !showAddText)}>
+									{showAddText ? '✕ Cancel' : '+ Add Text'}
+								</button>
+							</div>
 						</div>
 
-						{#if selectedPresetKey === '__custom__'}
-							<label class="form-label">
-								Name
-								<input
-									type="text"
-									bind:value={customLabel}
-									placeholder="e.g. Brand Anthem, Welcome Message"
-									class="form-input"
-								/>
-								{#if customLabel}
-									<span class="form-hint">Key: <code>{newTextKey}</code></span>
+						{#if showAddText}
+							<div class="add-text-form">
+								<div class="form-row two-col">
+									<label class="form-label">
+										Category
+										<select
+											bind:value={newTextCategory}
+											on:change={() => {
+												selectedPresetKey = '';
+												customLabel = '';
+												newTextValue = '';
+											}}
+											class="form-input"
+										>
+											{#each Object.entries(textCategoryInfo) as [key, info]}
+												<option value={key}>{info.icon} {info.label}</option>
+											{/each}
+										</select>
+										<span class="form-hint">{textCategoryInfo[newTextCategory]?.description}</span>
+									</label>
+									<label class="form-label">
+										Type
+										<select bind:value={selectedPresetKey} class="form-input">
+											<option value="">— Pick a type —</option>
+											{#each aiPresets as preset}
+												<option value={preset.key}>{preset.label}</option>
+											{/each}
+											<option value="__custom__">✏️ Custom...</option>
+										</select>
+									</label>
+								</div>
+
+								{#if selectedPresetKey === '__custom__'}
+									<label class="form-label">
+										Name
+										<input
+											type="text"
+											bind:value={customLabel}
+											placeholder="e.g. Brand Anthem, Welcome Message"
+											class="form-input"
+										/>
+										{#if customLabel}
+											<span class="form-hint">Key: <code>{newTextKey}</code></span>
+										{/if}
+									</label>
 								{/if}
-							</label>
-						{/if}
 
-						{#if selectedPresetKey}
-							<label class="form-label">
-								Value
-								<textarea
-									bind:value={newTextValue}
-									placeholder="Enter text content or use AI to generate..."
-									class="form-textarea"
-									rows="3"
-								></textarea>
-							</label>
+								{#if selectedPresetKey}
+									<label class="form-label">
+										Value
+										<textarea
+											bind:value={newTextValue}
+											placeholder="Enter text content or use AI to generate..."
+											class="form-textarea"
+											rows="3"
+										></textarea>
+									</label>
 
-							<!-- AI Generation Section -->
-							{#if data.hasAIProviders}
-								<div class="ai-generate-section">
-									<div class="ai-generate-header">
-										<span class="ai-label">✨ AI Generate</span>
-										<div class="ai-actions-row">
-											<button
-												class="ai-btn"
-												on:click={() => {
-													if (selectedPreset) {
-														generateTextWithAI(selectedPreset.promptTemplate);
-													} else {
-														generateTextWithAI();
-													}
-												}}
-												disabled={aiGenerating ||
-													(selectedPresetKey === '__custom__' && !customLabel)}
-												title="Auto-generate based on type and brand context"
-											>
-												{aiGenerating ? '⏳ Generating...' : '🪄 Auto'}
-											</button>
-											<button
-												class="ai-btn secondary"
-												on:click={() => (showAiPrompt = !showAiPrompt)}
-												disabled={aiGenerating}
-											>
-												💬 With Prompt
-											</button>
-										</div>
-									</div>
-
-									{#if showAiPrompt}
-										<div class="ai-prompt-area">
-											<textarea
-												bind:value={aiCustomPrompt}
-												placeholder="Describe what you want, e.g. 'Write a catchy tagline about innovation'..."
-												class="form-textarea"
-												rows="2"
-											></textarea>
-											<button
-												class="ai-btn"
-												on:click={() => generateTextWithAI(aiCustomPrompt)}
-												disabled={aiGenerating || !aiCustomPrompt}
-											>
-												{aiGenerating ? '⏳ Generating...' : '✨ Generate'}
-											</button>
-										</div>
-									{/if}
-
-									{#if aiError}
-										<div class="ai-error">
-											{aiError}
-											<button class="ai-error-dismiss" on:click={() => (aiError = null)}>✕</button>
-										</div>
-									{/if}
-								</div>
-							{/if}
-
-							<button
-								class="save-btn"
-								on:click={addTextAsset}
-								disabled={!newTextKey || !newTextLabel || !newTextValue}
-							>
-								Save Text Asset
-							</button>
-						{/if}
-					</div>
-				{/if}
-
-				{#if assetsLoading}
-					<div class="loading-state small">
-						<div class="spinner"></div>
-					</div>
-				{:else if textAssets.length === 0}
-					<div class="empty-state">
-						<span class="empty-icon">📝</span>
-						<p>No text assets yet</p>
-						<p class="empty-hint">Add brand names, taglines, bios, legal copy, and more.</p>
-						{#if data.hasAIProviders}
-							<button
-								class="add-asset-btn ai empty-cta"
-								on:click={() => (showAITextGenerate = true)}
-							>
-								✨ Generate with AI
-							</button>
-						{/if}
-					</div>
-				{:else}
-					{#each Object.entries(textCategoryInfo) as [catKey, catInfo]}
-						{@const catTexts = textsByCategory[catKey]}
-						{#if catTexts && catTexts.length > 0}
-							<div class="asset-category-group" data-category={catKey}>
-								<div class="asset-category-header">
-									<span>{catInfo.icon}</span>
-									<h3>{catInfo.label}</h3>
-									<span class="category-count">{catTexts.length}</span>
-								</div>
-								<div class="text-assets-list">
-									{#each catTexts as text}
-										<div class="text-asset-card" class:editing={editingTextId === text.id}>
-											<div class="text-asset-header">
-												<span class="text-asset-label">{text.label}</span>
-												<span class="text-asset-key">{text.key}</span>
-												{#if text.language !== 'en'}
-													<span class="lang-badge">{text.language}</span>
-												{/if}
-											</div>
-											{#if editingTextId === text.id}
-												<div class="edit-form">
-													<textarea
-														bind:value={editTextValue}
-														class="form-textarea edit-textarea"
-														rows="4"
-														placeholder="Enter text content..."
-													></textarea>
-													<div class="edit-toolbar">
-														<div class="edit-toolbar-left">
-															{#if data.hasAIProviders}
-																<button
-																	class="toolbar-btn ai"
-																	on:click={() =>
-																		generateEditTextWithAI(
-																			text.id,
-																			text.category,
-																			text.key,
-																			text.label
-																		)}
-																	disabled={aiEditGenerating}
-																	title="Regenerate this text using AI"
-																>
-																	{aiEditGenerating ? '⏳ Generating...' : '✨ AI Regenerate'}
-																</button>
-																<button
-																	class="toolbar-btn"
-																	on:click={() => (showAiEditPrompt = !showAiEditPrompt)}
-																	disabled={aiEditGenerating}
-																	title="Custom AI prompt"
-																>
-																	💬 Custom Prompt
-																</button>
-															{/if}
-														</div>
-														<div class="edit-toolbar-right">
-															<button class="toolbar-btn cancel" on:click={cancelEditingText}
-																>Cancel</button
-															>
-															<button
-																class="toolbar-btn save"
-																on:click={() => saveTextAsset(text.id)}>Save Changes</button
-															>
-														</div>
-													</div>
-													{#if showAiEditPrompt}
-														<div class="custom-prompt-area">
-															<textarea
-																bind:value={aiEditCustomPrompt}
-																placeholder="Describe what you want, e.g. 'Make it more concise' or 'Add a playful tone'..."
-																class="form-textarea prompt-textarea"
-																rows="2"
-															></textarea>
-															<button
-																class="toolbar-btn ai"
-																on:click={() =>
-																	generateEditTextWithAI(
-																		text.id,
-																		text.category,
-																		text.key,
-																		text.label,
-																		aiEditCustomPrompt
-																	)}
-																disabled={aiEditGenerating || !aiEditCustomPrompt}
-															>
-																{aiEditGenerating ? '⏳ Generating...' : '✨ Generate with Prompt'}
-															</button>
-														</div>
-													{/if}
-												</div>
-											{:else}
-												<p class="text-asset-value">{text.value}</p>
-												<div class="text-asset-actions">
-													<button class="edit-btn" on:click={() => startEditingText(text)}
-														>Edit</button
-													>
-													{#if getMatchingProfileField(text.category, text.key)}
-														<button
-															class="push-btn"
-															on:click={() => pushTextToProfile(text.id)}
-															disabled={pushingTextId === text.id}
-															title="Push this value to the profile's {getMatchingProfileField(
-																text.category,
-																text.key
-															)?.fieldLabel} field"
-														>
-															{pushingTextId === text.id ? '⏳...' : '📤 Push to Profile'}
-														</button>
-													{/if}
+									<!-- AI Generation Section -->
+									{#if data.hasAIProviders}
+										<div class="ai-generate-section">
+											<div class="ai-generate-header">
+												<span class="ai-label">✨ AI Generate</span>
+												<div class="ai-actions-row">
 													<button
-														class="history-btn"
+														class="ai-btn"
 														on:click={() => {
-															textHistoryId = text.id;
-															textHistoryLabel = text.label;
+															if (selectedPreset) {
+																generateTextWithAI(selectedPreset.promptTemplate);
+															} else {
+																generateTextWithAI();
+															}
 														}}
-														title="Revision history">History</button
+														disabled={aiGenerating ||
+															(selectedPresetKey === '__custom__' && !customLabel)}
+														title="Auto-generate based on type and brand context"
 													>
-													<button class="delete-btn" on:click={() => deleteTextAsset(text.id)}
-														>Delete</button
+														{aiGenerating ? '⏳ Generating...' : '🪄 Auto'}
+													</button>
+													<button
+														class="ai-btn secondary"
+														on:click={() => (showAiPrompt = !showAiPrompt)}
+														disabled={aiGenerating}
+													>
+														💬 With Prompt
+													</button>
+												</div>
+											</div>
+
+											{#if showAiPrompt}
+												<div class="ai-prompt-area">
+													<textarea
+														bind:value={aiCustomPrompt}
+														placeholder="Describe what you want, e.g. 'Write a catchy tagline about innovation'..."
+														class="form-textarea"
+														rows="2"
+													></textarea>
+													<button
+														class="ai-btn"
+														on:click={() => generateTextWithAI(aiCustomPrompt)}
+														disabled={aiGenerating || !aiCustomPrompt}
+													>
+														{aiGenerating ? '⏳ Generating...' : '✨ Generate'}
+													</button>
+												</div>
+											{/if}
+
+											{#if aiError}
+												<div class="ai-error">
+													{aiError}
+													<button class="ai-error-dismiss" on:click={() => (aiError = null)}
+														>✕</button
 													>
 												</div>
 											{/if}
 										</div>
-									{/each}
-								</div>
+									{/if}
+
+									<button
+										class="save-btn"
+										on:click={addTextAsset}
+										disabled={!newTextKey || !newTextLabel || !newTextValue}
+									>
+										Save Text Asset
+									</button>
+								{/if}
 							</div>
 						{/if}
-					{/each}
+
+						{#if assetsLoading}
+							<div class="loading-state small">
+								<div class="spinner"></div>
+							</div>
+						{:else if textAssets.length === 0}
+							<div class="empty-state">
+								<span class="empty-icon">📝</span>
+								<p>No text assets yet</p>
+								<p class="empty-hint">Add brand names, taglines, bios, legal copy, and more.</p>
+								{#if data.hasAIProviders}
+									<button
+										class="add-asset-btn ai empty-cta"
+										on:click={() => (showAITextGenerate = true)}
+									>
+										✨ Generate with AI
+									</button>
+								{/if}
+							</div>
+						{:else}
+							{#each Object.entries(textCategoryInfo) as [catKey, catInfo]}
+								{@const catTexts = textsByCategory[catKey]}
+								{#if catTexts && catTexts.length > 0}
+									<div class="asset-category-group" data-category={catKey}>
+										<div class="asset-category-header">
+											<span>{catInfo.icon}</span>
+											<h3>{catInfo.label}</h3>
+											<span class="category-count">{catTexts.length}</span>
+										</div>
+										<div class="text-assets-list">
+											{#each catTexts as text}
+												<div class="text-asset-card" class:editing={editingTextId === text.id}>
+													<div class="text-asset-header">
+														<span class="text-asset-label">{text.label}</span>
+														<span class="text-asset-key">{text.key}</span>
+														{#if text.language !== 'en'}
+															<span class="lang-badge">{text.language}</span>
+														{/if}
+													</div>
+													{#if editingTextId === text.id}
+														<div class="edit-form">
+															<textarea
+																bind:value={editTextValue}
+																class="form-textarea edit-textarea"
+																rows="4"
+																placeholder="Enter text content..."
+															></textarea>
+															<div class="edit-toolbar">
+																<div class="edit-toolbar-left">
+																	{#if data.hasAIProviders}
+																		<button
+																			class="toolbar-btn ai"
+																			on:click={() =>
+																				generateEditTextWithAI(
+																					text.id,
+																					text.category,
+																					text.key,
+																					text.label
+																				)}
+																			disabled={aiEditGenerating}
+																			title="Regenerate this text using AI"
+																		>
+																			{aiEditGenerating ? '⏳ Generating...' : '✨ AI Regenerate'}
+																		</button>
+																		<button
+																			class="toolbar-btn"
+																			on:click={() => (showAiEditPrompt = !showAiEditPrompt)}
+																			disabled={aiEditGenerating}
+																			title="Custom AI prompt"
+																		>
+																			💬 Custom Prompt
+																		</button>
+																	{/if}
+																</div>
+																<div class="edit-toolbar-right">
+																	<button class="toolbar-btn cancel" on:click={cancelEditingText}
+																		>Cancel</button
+																	>
+																	<button
+																		class="toolbar-btn save"
+																		on:click={() => saveTextAsset(text.id)}>Save Changes</button
+																	>
+																</div>
+															</div>
+															{#if showAiEditPrompt}
+																<div class="custom-prompt-area">
+																	<textarea
+																		bind:value={aiEditCustomPrompt}
+																		placeholder="Describe what you want, e.g. 'Make it more concise' or 'Add a playful tone'..."
+																		class="form-textarea prompt-textarea"
+																		rows="2"
+																	></textarea>
+																	<button
+																		class="toolbar-btn ai"
+																		on:click={() =>
+																			generateEditTextWithAI(
+																				text.id,
+																				text.category,
+																				text.key,
+																				text.label,
+																				aiEditCustomPrompt
+																			)}
+																		disabled={aiEditGenerating || !aiEditCustomPrompt}
+																	>
+																		{aiEditGenerating
+																			? '⏳ Generating...'
+																			: '✨ Generate with Prompt'}
+																	</button>
+																</div>
+															{/if}
+														</div>
+													{:else}
+														<p class="text-asset-value">{text.value}</p>
+														<div class="text-asset-actions">
+															<button class="edit-btn" on:click={() => startEditingText(text)}
+																>Edit</button
+															>
+															{#if getMatchingProfileField(text.category, text.key)}
+																<button
+																	class="push-btn"
+																	on:click={() => pushTextToProfile(text.id)}
+																	disabled={pushingTextId === text.id}
+																	title="Push this value to the profile's {getMatchingProfileField(
+																		text.category,
+																		text.key
+																	)?.fieldLabel} field"
+																>
+																	{pushingTextId === text.id ? '⏳...' : '📤 Push to Profile'}
+																</button>
+															{/if}
+															<button
+																class="history-btn"
+																on:click={() => {
+																	textHistoryId = text.id;
+																	textHistoryLabel = text.label;
+																}}
+																title="Revision history">History</button
+															>
+															<button class="delete-btn" on:click={() => deleteTextAsset(text.id)}
+																>Delete</button
+															>
+														</div>
+													{/if}
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							{/each}
+						{/if}
+					</div>
+
+					{#if showAITextGenerate && data.brandId}
+						<AITextQuickGenerate
+							brandProfileId={data.brandId}
+							on:close={() => (showAITextGenerate = false)}
+							on:saved={() => {
+								showAITextGenerate = false;
+								loadTabAssets('text');
+								loadProfile();
+							}}
+						/>
+					{/if}
+
+					<!-- ═══ Images Tab ═══ -->
+				{:else if activeTab === 'images'}
+					<div class="asset-tab">
+						{#if profileImageSuccess}
+							<div class="success-banner">{profileImageSuccess}</div>
+						{/if}
+						<MediaGallery
+							brandProfileId={data.brandId ?? ''}
+							mediaType="image"
+							assets={imageAssets}
+							loading={assetsLoading}
+							showSetAsProfile={true}
+							on:refresh={refreshMediaAssets}
+							on:setProfileImage={setImageAsProfileLogo}
+						/>
+					</div>
+
+					<!-- ═══ Audio Tab ═══ -->
+				{:else if activeTab === 'audio'}
+					<div class="asset-tab">
+						<MediaGallery
+							brandProfileId={data.brandId ?? ''}
+							mediaType="audio"
+							assets={audioAssets}
+							loading={assetsLoading}
+							on:refresh={refreshMediaAssets}
+						/>
+					</div>
+
+					<!-- ═══ Videos Tab ═══ -->
+				{:else if activeTab === 'videos'}
+					<div class="asset-tab">
+						<MediaGallery
+							brandProfileId={data.brandId ?? ''}
+							mediaType="video"
+							assets={videoAssets}
+							loading={assetsLoading}
+							on:refresh={refreshMediaAssets}
+						/>
+					</div>
 				{/if}
 			</div>
-
-			{#if showAITextGenerate && data.brandId}
-				<AITextQuickGenerate
-					brandProfileId={data.brandId}
-					on:close={() => (showAITextGenerate = false)}
-					on:saved={() => {
-						showAITextGenerate = false;
-						loadTabAssets('text');
-						loadProfile();
-					}}
-				/>
-			{/if}
-
-			<!-- ═══ Images Tab ═══ -->
-		{:else if activeTab === 'images'}
-			<div class="asset-tab">
-				{#if profileImageSuccess}
-					<div class="success-banner">{profileImageSuccess}</div>
-				{/if}
-				<MediaGallery
-					brandProfileId={data.brandId ?? ''}
-					mediaType="image"
-					assets={imageAssets}
-					loading={assetsLoading}
-					showSetAsProfile={true}
-					on:refresh={refreshMediaAssets}
-					on:setProfileImage={setImageAsProfileLogo}
-				/>
-			</div>
-
-			<!-- ═══ Audio Tab ═══ -->
-		{:else if activeTab === 'audio'}
-			<div class="asset-tab">
-				<MediaGallery
-					brandProfileId={data.brandId ?? ''}
-					mediaType="audio"
-					assets={audioAssets}
-					loading={assetsLoading}
-					on:refresh={refreshMediaAssets}
-				/>
-			</div>
-
-			<!-- ═══ Videos Tab ═══ -->
-		{:else if activeTab === 'videos'}
-			<div class="asset-tab">
-				<MediaGallery
-					brandProfileId={data.brandId ?? ''}
-					mediaType="video"
-					assets={videoAssets}
-					loading={assetsLoading}
-					on:refresh={refreshMediaAssets}
-				/>
-			</div>
-		{/if}
+		</div>
 	{/if}
 
 	<!-- Field History Modal -->
@@ -1574,11 +1619,22 @@
 </div>
 
 <style>
+	/* `width: 100%` is load-bearing, not belt-and-braces. This is a flex item in the
+	   layout's column, and auto side margins on a flex item's cross axis switch off
+	   stretch — so the page sized itself to its content and sat at 1051px inside a
+	   1600px window, which is where "it doesn't use the full page" came from. */
 	.brand-page {
-		max-width: 1400px;
+		width: 100%;
+		max-width: 1800px;
 		margin: 0 auto;
 		padding: var(--spacing-lg) var(--spacing-md);
 		min-height: calc(100vh - 60px);
+	}
+
+	@media (min-width: 1024px) {
+		.brand-page {
+			padding: var(--spacing-lg) var(--spacing-xl);
+		}
 	}
 
 	/* Loading */
@@ -1638,23 +1694,47 @@
 		color: var(--color-primary-hover);
 	}
 
-	/* Header */
-	.brand-header {
-		margin-bottom: var(--spacing-lg);
+	/* ─── Workspace shell ────────────────────────────────── */
+
+	/* One column on a phone: the rail's contents read as an ordinary page header. */
+	.workspace {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--spacing-lg);
 	}
 
-	.header-content {
+	.rail {
 		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
+		flex-direction: column;
 		gap: var(--spacing-md);
-		margin-bottom: var(--spacing-lg);
 	}
 
-	.header-left {
+	.rail-identity {
 		display: flex;
 		flex-direction: column;
 		gap: var(--spacing-xs);
+	}
+
+	/* `minmax(0, …)` on the content column, not `1fr` alone: the color editor and media
+	   galleries contain wide children, and a bare `1fr` lets them push the grid wider
+	   than the viewport instead of scrolling inside it. */
+	@media (min-width: 1024px) {
+		.workspace {
+			/* 13rem, not 17: the app sets a 22px root, so rem here is 1.375× what it
+			   reads as — 17rem was a 374px rail beside the work. */
+			grid-template-columns: 13rem minmax(0, 1fr);
+			gap: var(--spacing-xl);
+			align-items: start;
+		}
+
+		.rail {
+			position: sticky;
+			/* Clears the site nav, which is 64px and sticky itself. */
+			top: calc(64px + var(--spacing-md));
+			max-height: calc(100vh - 64px - var(--spacing-xl));
+			overflow-y: auto;
+			padding-right: var(--spacing-xs);
+		}
 	}
 
 	.brand-title {
@@ -1697,7 +1777,12 @@
 	.architect-link {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: var(--spacing-xs);
+		/* Full width in the rail, so it reads as this page's standing action rather than
+		   a button that happens to sit near the title. */
+		width: 100%;
+		min-height: 40px;
 		padding: var(--spacing-xs) var(--spacing-md);
 		background-color: var(--color-primary);
 		color: var(--color-background);
@@ -1713,8 +1798,23 @@
 		background-color: var(--color-primary-hover);
 	}
 
-	/* Completion bar */
-	.completion-bar {
+	/* Between phone and rail the header is stacked but wide, where a full-bleed button
+	   reads as a banner rather than an action. It goes back to full width in the rail,
+	   where the column *is* its measure. */
+	@media (min-width: 640px) and (max-width: 1023px) {
+		.architect-link,
+		.ai-fill-btn {
+			width: auto;
+			align-self: flex-start;
+		}
+	}
+
+	/* ─── Completion ─────────────────────────────────────── */
+
+	.rail-completion {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xs);
 		background-color: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-md);
@@ -1724,8 +1824,7 @@
 	.completion-info {
 		display: flex;
 		justify-content: space-between;
-		align-items: center;
-		margin-bottom: var(--spacing-xs);
+		align-items: baseline;
 	}
 
 	.completion-label {
@@ -1738,6 +1837,7 @@
 		font-size: 0.8rem;
 		font-weight: 700;
 		color: var(--color-primary);
+		font-variant-numeric: tabular-nums;
 	}
 
 	.progress-track {
@@ -1755,19 +1855,95 @@
 	}
 
 	.completion-detail {
+		font-size: 0.75rem;
+		color: var(--color-text-secondary);
+		margin: 0;
+	}
+
+	/* ─── Section jump list ──────────────────────────────── */
+
+	/* Hidden until the rail is a column. Stacked above the content it points at, a jump
+	   list is just a second copy of the section titles you are about to scroll past. */
+	.rail-sections {
+		display: none;
+	}
+
+	@media (min-width: 1024px) {
+		.rail-sections {
+			display: flex;
+			flex-direction: column;
+			gap: 1px;
+		}
+	}
+
+	.rail-eyebrow {
+		font-size: 0.62rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: var(--color-text-secondary);
+		margin: 0 0 var(--spacing-xs);
+	}
+
+	.rail-jump {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		font-size: 0.75rem;
+		gap: var(--spacing-sm);
+		width: 100%;
+		min-height: 32px;
+		padding: var(--spacing-xs) var(--spacing-sm);
+		background: none;
+		border: none;
+		border-radius: var(--radius-sm);
 		color: var(--color-text-secondary);
-		margin-top: var(--spacing-xs);
+		font-size: 0.78rem;
+		text-align: left;
+		cursor: pointer;
+		transition:
+			background-color var(--transition-fast),
+			color var(--transition-fast);
+	}
+
+	.rail-jump:hover {
+		background-color: var(--color-surface);
+		color: var(--color-text);
+	}
+
+	.rail-jump:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: -2px;
+	}
+
+	.rail-jump-title {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* The count is the point of the list: it says which section is thin, which is what
+	   sends you there. Tabular figures keep the column straight. */
+	.rail-jump-count {
+		flex-shrink: 0;
+		font-size: 0.72rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--color-text-secondary);
+		opacity: 0.8;
+	}
+
+	.rail-jump-count.full {
+		color: var(--color-primary);
+		opacity: 1;
 	}
 
 	/* AI Fill button */
 	.ai-fill-btn {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: var(--spacing-xs);
+		/* Comfortable to hit, and matched to the rail's other action. */
+		min-height: 34px;
+		margin-top: var(--spacing-xs);
 		padding: var(--spacing-xs) var(--spacing-sm);
 		background-color: var(--color-primary);
 		color: var(--color-background);
@@ -1851,21 +2027,29 @@
 		padding: 0 var(--spacing-xs);
 	}
 
-	/* ─── Tab Navigation ─────────────────────────────────── */
+	/* ─── Workspace navigation (in the rail) ─────────────── */
 
-	.tab-nav {
+	/* Mobile first: a scrolling strip of tabs under the brand's details, which is what
+	   fits when the rail is a stacked header. */
+	.rail-nav {
 		display: flex;
 		gap: var(--spacing-xs);
-		margin-bottom: var(--spacing-lg);
 		border-bottom: 1px solid var(--color-border);
 		overflow-x: auto;
 		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
 	}
 
-	.tab-btn {
+	.rail-nav::-webkit-scrollbar {
+		display: none;
+	}
+
+	.rail-tab {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		gap: 7px;
+		/* 44px tall on a phone, where this is a thumb target rather than a pointer one. */
+		min-height: 44px;
 		padding: var(--spacing-sm) var(--spacing-md);
 		background: none;
 		border: none;
@@ -1875,20 +2059,60 @@
 		font-weight: 500;
 		cursor: pointer;
 		white-space: nowrap;
-		transition: all var(--transition-fast);
+		transition:
+			color var(--transition-fast),
+			background-color var(--transition-fast),
+			border-color var(--transition-fast);
 	}
 
-	.tab-btn:hover {
+	.rail-tab:hover {
 		color: var(--color-text);
 	}
 
-	.tab-btn.active {
+	.rail-tab.active {
 		color: var(--color-primary);
 		border-bottom-color: var(--color-primary);
 	}
 
-	.tab-icon {
-		font-size: 1rem;
+	.rail-tab:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: -2px;
+	}
+
+	/* In a column the strip becomes a list: five tabs cannot scroll sideways inside a
+	   13rem rail without hiding the last two, and a rail is tall, not wide. The active
+	   marker moves to the left edge, where a vertical list reads it. */
+	@media (min-width: 1024px) {
+		.rail-nav {
+			flex-direction: column;
+			gap: 1px;
+			border-bottom: none;
+			overflow-x: visible;
+		}
+
+		.rail-tab {
+			min-height: 36px;
+			padding: var(--spacing-xs) var(--spacing-sm);
+			border-bottom: none;
+			border-left: 2px solid transparent;
+			border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+		}
+
+		/* `text-align: left` because a button centres its text by default, which in a
+		   vertical list left every label floating in the middle of its row. */
+		.rail-tab .rail-tab-label {
+			flex: 1;
+			text-align: left;
+		}
+
+		.rail-tab:hover {
+			background-color: var(--color-surface);
+		}
+
+		.rail-tab.active {
+			border-left-color: var(--color-primary);
+			background-color: var(--color-surface);
+		}
 	}
 
 	.tab-badge {
@@ -1908,16 +2132,23 @@
 		margin-bottom: var(--spacing-lg);
 	}
 
+	/* Auto-fit rather than fixed breakpoints: the content column is narrower than the
+	   window once the rail takes its share, and two hard-coded columns at 768px meant
+	   field cards were cramped on a tablet and stranded on a wide monitor. This finds
+	   however many ~22rem columns actually fit — one on a phone, two on a laptop, three
+	   on a wide screen — without the page having to know the rail's width. */
 	.sections-grid {
+		/* 18rem, so a tablet gets two columns rather than one 860px-wide card. Note the
+		   22px root: this is ~396px, not 288. */
+		grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
 		display: grid;
-		grid-template-columns: 1fr;
 		gap: var(--spacing-lg);
+		align-items: start;
 	}
 
-	@media (min-width: 768px) {
-		.sections-grid {
-			grid-template-columns: 1fr 1fr;
-		}
+	/* The jump list scrolls to these, so they must not land under the sticky site nav. */
+	.brand-section {
+		scroll-margin-top: calc(64px + var(--spacing-md));
 	}
 
 	.brand-section {
@@ -1951,6 +2182,14 @@
 		color: var(--color-primary);
 	}
 
+	/* Collapsed, the header keeps a divider and a bottom margin with nothing under
+	   them — a rule pointing at empty space, and a card taller than its contents. */
+	.section-header--collapsed {
+		margin-bottom: 0;
+		padding-bottom: 0;
+		border-bottom: none;
+	}
+
 	.collapse-chevron {
 		margin-left: auto;
 		color: var(--color-text-secondary);
@@ -1962,8 +2201,11 @@
 		transform: rotate(-90deg);
 	}
 
+	/* A line glyph now, not an emoji, so it takes the header's colour like every other
+	   icon in the app. */
 	.section-icon {
-		font-size: 1.3rem;
+		display: inline-flex;
+		color: var(--color-text-secondary);
 	}
 
 	.section-title {
@@ -2533,13 +2775,9 @@
 			grid-template-columns: 1fr;
 		}
 
-		.tab-label {
-			display: none;
-		}
-
-		.tab-icon {
-			font-size: 1.2rem;
-		}
+		/* Tab labels stay at every width. Hiding them left five unlabelled glyphs in a
+		   row on the one screen with least room to guess wrong, and the strip scrolls
+		   sideways anyway, so the words cost nothing. */
 
 		.edit-toolbar {
 			flex-direction: column;
@@ -2557,10 +2795,6 @@
 	}
 
 	@media (max-width: 480px) {
-		.header-content {
-			flex-direction: column;
-		}
-
 		.brand-title {
 			font-size: 1.4rem;
 		}

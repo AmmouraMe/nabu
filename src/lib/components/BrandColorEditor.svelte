@@ -1225,438 +1225,279 @@
 		</div>
 	{/if}
 
-	<!-- ─── PALETTE OVERVIEW BAR ─── -->
-	<div class="palette-bar" role="group" aria-label="Brand color palette overview">
-		{#each visibleFields as field}
-			{@const value = localColors[field.key] || ''}
-			{@const isActive = activeField === field.key}
-			<button
-				class="pal-item"
-				class:active={isActive}
-				on:click={() => handleFieldClick(field.key)}
-				title="{field.label}{value ? ': ' + value : ''}"
-				aria-label="Select {field.label}"
-			>
-				<span class="pal-swatch" class:empty={!value} style="background: {value || 'transparent'}">
-					{#if !value}
-						<svg
-							width="10"
-							height="10"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="3"
-							stroke-linecap="round"
-						>
-							<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-						</svg>
-					{/if}
-				</span>
-				<span class="pal-label">{PALETTE_LABELS[field.key] || ''}</span>
-			</button>
-		{/each}
-		{#if visibleFields.length < MAX_BRAND_COLORS}
-			<button
-				class="pal-item pal-item--add"
-				on:click={() => {
-					extraColorCount = Math.min(
-						extraColorCount + 1,
-						MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length
-					);
-				}}
-				title="Add brand color"
-				aria-label="Add brand color"
-			>
-				<span class="pal-swatch empty">
-					<svg
-						width="10"
-						height="10"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="3"
-						stroke-linecap="round"
-					>
-						<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-					</svg>
-				</span>
-				<span class="pal-label">+</span>
-			</button>
-		{/if}
-	</div>
+	<!--
+		From here to the contrast matrix is the workbench: the tool on the left, the
+		things it edits on the right. Stacked, choosing a colour meant scrolling away
+		from the swatch you were judging it against.
 
-	<!-- ─── MAIN PICKER AREA ─── -->
-	<div class="picker-section">
-		<!-- SV gradient + hue strip -->
-		<div class="picker-container">
-			<div class="sv-wrap">
-				<canvas
-					bind:this={svCanvas}
-					width={svWidth}
-					height={svHeight}
-					class="sv-picker"
-					class:disabled={!activeField}
-					on:mousedown={handleSvPointerDown}
-					on:touchstart|preventDefault={handleSvPointerDown}
-					aria-label="Color brightness and saturation picker"
-				></canvas>
-				{#if !activeField}
-					<div class="sv-overlay">
-						<span>Select a color field to start</span>
-					</div>
-				{/if}
-			</div>
-			<div class="hue-wrap">
-				<canvas
-					bind:this={hueCanvas}
-					width={hueStripWidth}
-					height={svHeight}
-					class="hue-strip"
-					class:disabled={!activeField}
-					on:mousedown={handleHuePointerDown}
-					on:touchstart|preventDefault={handleHuePointerDown}
-					aria-label="Hue selector"
-				></canvas>
-			</div>
-		</div>
-
-		<!-- Active field info + hex copy -->
-		{#if activeField}
-			{@const val = localColors[activeField] || ''}
-			{@const fieldDef = [...CORE_BRAND_FIELDS, ...EXTRA_BRAND_FIELDS].find(
-				(f) => f.key === activeField
-			)}
-			<div class="active-bar">
-				<label class="active-swatch-wrap">
-					<span class="active-swatch" style="background: {val || 'transparent'}" class:empty={!val}
-					></span>
-					<input
-						type="color"
-						value={val || '#000000'}
-						on:input={(e) => activeField && handleNativeColorPick(activeField, e)}
-						class="native-picker"
-						tabindex="-1"
-						aria-label="Open system color picker"
-					/>
-				</label>
-				<div class="active-info">
-					<span class="active-label">{fieldDef?.label || activeField}</span>
-					{#if val && isValidHex(val)}
-						<span class="active-color-name">{getColorName(val)}</span>
-					{:else}
-						<span class="active-no-color">Pick from gradient or enter hex</span>
-					{/if}
-				</div>
-				{#if val && isValidHex(val)}
+		Both wrappers are `display: contents` until there is room for two columns, so on
+		a phone this markup lays out exactly as it did before — same order, same rules,
+		no second code path to keep in step.
+	-->
+	<div class="workbench">
+		<div class="workbench-tool">
+			<!-- ─── PALETTE OVERVIEW BAR ─── -->
+			<div class="palette-bar" role="group" aria-label="Brand color palette overview">
+				{#each visibleFields as field}
+					{@const value = localColors[field.key] || ''}
+					{@const isActive = activeField === field.key}
 					<button
-						class="hex-copy"
-						on:click={() => activeField && copyHex(val, activeField)}
-						title="Copy hex"
+						class="pal-item"
+						class:active={isActive}
+						on:click={() => handleFieldClick(field.key)}
+						title="{field.label}{value ? ': ' + value : ''}"
+						aria-label="Select {field.label}"
 					>
-						<span class="hex-val">{val}</span>
-						{#if copyFeedbackField === activeField}
+						<span
+							class="pal-swatch"
+							class:empty={!value}
+							style="background: {value || 'transparent'}"
+						>
+							{#if !value}
+								<svg
+									width="10"
+									height="10"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="3"
+									stroke-linecap="round"
+								>
+									<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+								</svg>
+							{/if}
+						</span>
+						<span class="pal-label">{PALETTE_LABELS[field.key] || ''}</span>
+					</button>
+				{/each}
+				{#if visibleFields.length < MAX_BRAND_COLORS}
+					<button
+						class="pal-item pal-item--add"
+						on:click={() => {
+							extraColorCount = Math.min(
+								extraColorCount + 1,
+								MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length
+							);
+						}}
+						title="Add brand color"
+						aria-label="Add brand color"
+					>
+						<span class="pal-swatch empty">
 							<svg
-								width="14"
-								height="14"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="var(--color-success)"
-								stroke-width="2.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg
-							>
-						{:else}
-							<svg
-								width="14"
-								height="14"
+								width="10"
+								height="10"
 								viewBox="0 0 24 24"
 								fill="none"
 								stroke="currentColor"
-								stroke-width="2"
+								stroke-width="3"
 								stroke-linecap="round"
-								stroke-linejoin="round"
-								><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path
-									d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-								/></svg
 							>
-						{/if}
+								<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+							</svg>
+						</span>
+						<span class="pal-label">+</span>
 					</button>
 				{/if}
 			</div>
-		{/if}
 
-		<!-- HSL Fine-tune Sliders -->
-		{#if activeField}
-			{@const thumbColor =
-				localColors[activeField] && isValidHex(localColors[activeField])
-					? localColors[activeField]
-					: '#888'}
-			<div class="hsl-sliders">
-				<div class="slider-header">
-					<h4 class="slider-heading">FINE-TUNE</h4>
-					<span class="slider-mode-label">HSL</span>
+			<!-- ─── MAIN PICKER AREA ─── -->
+			<div class="picker-section">
+				<!-- SV gradient + hue strip -->
+				<div class="picker-container">
+					<div class="sv-wrap">
+						<canvas
+							bind:this={svCanvas}
+							width={svWidth}
+							height={svHeight}
+							class="sv-picker"
+							class:disabled={!activeField}
+							on:mousedown={handleSvPointerDown}
+							on:touchstart|preventDefault={handleSvPointerDown}
+							aria-label="Color brightness and saturation picker"
+						></canvas>
+						{#if !activeField}
+							<div class="sv-overlay">
+								<span>Select a color field to start</span>
+							</div>
+						{/if}
+					</div>
+					<div class="hue-wrap">
+						<canvas
+							bind:this={hueCanvas}
+							width={hueStripWidth}
+							height={svHeight}
+							class="hue-strip"
+							class:disabled={!activeField}
+							on:mousedown={handleHuePointerDown}
+							on:touchstart|preventDefault={handleHuePointerDown}
+							aria-label="Hue selector"
+						></canvas>
+					</div>
 				</div>
-				<div class="slider-row">
-					<label class="slider-label" for="hsl-hue">H</label>
-					<input
-						id="hsl-hue"
-						type="range"
-						min="0"
-						max="360"
-						bind:value={activeHue}
-						on:input={handleHueSliderChange}
-						class="hsl-range hue-range"
-						style="--thumb-color: hsl({activeHue}, 100%, 50%)"
-					/>
-					<input
-						type="number"
-						min="0"
-						max="360"
-						bind:value={activeHue}
-						on:change={handleHueSliderChange}
-						class="hsl-number"
-						aria-label="Hue value"
-					/>
-					<span class="slider-unit">°</span>
-				</div>
-				<div class="slider-row">
-					<label class="slider-label" for="hsl-sat">S</label>
-					<input
-						id="hsl-sat"
-						type="range"
-						min="0"
-						max="100"
-						bind:value={activeSatHsl}
-						on:input={handleHslChange}
-						class="hsl-range sat-range"
-						style="--track-from: hsl({activeHue}, 0%, {activeLightHsl}%); --track-to: hsl({activeHue}, 100%, {activeLightHsl}%); --thumb-color: {thumbColor}"
-					/>
-					<input
-						type="number"
-						min="0"
-						max="100"
-						bind:value={activeSatHsl}
-						on:change={handleHslChange}
-						class="hsl-number"
-						aria-label="Saturation value"
-					/>
-					<span class="slider-unit">%</span>
-				</div>
-				<div class="slider-row">
-					<label class="slider-label" for="hsl-light">L</label>
-					<input
-						id="hsl-light"
-						type="range"
-						min="0"
-						max="100"
-						bind:value={activeLightHsl}
-						on:input={handleHslChange}
-						class="hsl-range light-range"
-						style="--track-from: hsl({activeHue}, {activeSatHsl}%, 0%); --track-mid: hsl({activeHue}, {activeSatHsl}%, 50%); --track-to: hsl({activeHue}, {activeSatHsl}%, 100%); --thumb-color: {thumbColor}"
-					/>
-					<input
-						type="number"
-						min="0"
-						max="100"
-						bind:value={activeLightHsl}
-						on:change={handleHslChange}
-						class="hsl-number"
-						aria-label="Lightness value"
-					/>
-					<span class="slider-unit">%</span>
-				</div>
-			</div>
-		{/if}
-	</div>
 
-	<!-- ─── COLOR HARMONY ─── -->
-	<div class="harmony-panel" class:open={showHarmony}>
-		<button
-			class="section-toggle"
-			on:click={() => (showHarmony = !showHarmony)}
-			aria-expanded={showHarmony}
-		>
-			<span class="section-toggle-title">
-				<svg
-					width="16"
-					height="16"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<circle cx="12" cy="12" r="10" />
-					<circle cx="12" cy="12" r="4" />
-					<line x1="12" y1="2" x2="12" y2="6" />
-					<line x1="12" y1="18" x2="12" y2="22" />
-					<line x1="2" y1="12" x2="6" y2="12" />
-					<line x1="18" y1="12" x2="22" y2="12" />
-				</svg>
-				Color Harmony
-			</span>
-			<svg
-				width="12"
-				height="12"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2.5"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				class="chevron"
-				class:rotate={showHarmony}
-			>
-				<polyline points="6 9 12 15 18 9" />
-			</svg>
-		</button>
-		{#if showHarmony}
-			<div class="harmony-body">
-				<ColorHarmonyWheel
-					primaryColor={localColors['primaryColor'] || '#3b82f6'}
-					{harmonyType}
-					on:harmonyapply={handleHarmonyApply}
-					on:harmonypreview={handleHarmonyPreview}
-					on:harmonychange={(e) => {
-						const { primary, secondary, accent } = e.detail;
-						localColors['primaryColor'] = normalizeHex(primary) || primary;
-						localColors['secondaryColor'] = normalizeHex(secondary) || secondary;
-						localColors['accentColor'] = normalizeHex(accent) || accent;
-						localColors = localColors;
-					}}
-				/>
-			</div>
-		{/if}
-	</div>
-
-	<!-- ─── BRAND COLOR FIELDS ─── -->
-	<div class="color-fields-section">
-		<div class="brand-fields-header">
-			<span class="section-label">BRAND COLORS</span>
-			<span class="filled-badge">{filledCount}/{visibleFields.length}</span>
-		</div>
-
-		<!-- Color field list -->
-		<div class="tab-content" role="list">
-			{#each visibleFields as field}
-				{@const value = localColors[field.key] || ''}
-				{@const isActive = activeField === field.key}
-				<div class="color-row" class:active={isActive}>
-					<button
-						class="color-row-main"
-						on:click={() => handleFieldClick(field.key)}
-						aria-label="Edit {field.label} color"
-					>
-						<label class="swatch-wrap" aria-label="Pick {field.label} with color chooser">
-							<span class="swatch" style="background:{value || 'transparent'}" class:empty={!value}
+				<!-- Active field info + hex copy -->
+				{#if activeField}
+					{@const val = localColors[activeField] || ''}
+					{@const fieldDef = [...CORE_BRAND_FIELDS, ...EXTRA_BRAND_FIELDS].find(
+						(f) => f.key === activeField
+					)}
+					<div class="active-bar">
+						<label class="active-swatch-wrap">
+							<span
+								class="active-swatch"
+								style="background: {val || 'transparent'}"
+								class:empty={!val}
 							></span>
 							<input
 								type="color"
-								value={value || '#000000'}
-								on:input={(e) => handleNativeColorPick(field.key, e)}
+								value={val || '#000000'}
+								on:input={(e) => activeField && handleNativeColorPick(activeField, e)}
 								class="native-picker"
 								tabindex="-1"
-								aria-label="Pick {field.label} with color chooser"
+								aria-label="Open system color picker"
 							/>
 						</label>
-						<div class="field-text">
-							<span class="field-label">{field.label}</span>
-							<span class="field-desc">{field.desc}</span>
+						<div class="active-info">
+							<span class="active-label">{fieldDef?.label || activeField}</span>
+							{#if val && isValidHex(val)}
+								<span class="active-color-name">{getColorName(val)}</span>
+							{:else}
+								<span class="active-no-color">Pick from gradient or enter hex</span>
+							{/if}
 						</div>
-					</button>
-					<div class="field-controls">
-						<input
-							type="text"
-							{value}
-							on:input={(e) => handleHexInput(field.key, e.currentTarget.value)}
-							on:focus={() => handleFieldClick(field.key)}
-							class="hex-input"
-							placeholder="#000000"
-							maxlength="7"
-							spellcheck="false"
-							aria-label="{field.label} hex value"
-						/>
-						{#if value}
+						{#if val && isValidHex(val)}
 							<button
-								class="clear-btn"
-								on:click|stopPropagation={() => clearColor(field.key)}
-								aria-label="Clear {field.label}"
-								title="Clear"
+								class="hex-copy"
+								on:click={() => activeField && copyHex(val, activeField)}
+								title="Copy hex"
 							>
-								<svg
-									width="12"
-									height="12"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2.5"
-									><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg
-								>
-							</button>
-						{/if}
-						{#if field.removable}
-							<button
-								class="remove-color-btn"
-								on:click|stopPropagation={() => {
-									clearColor(field.key);
-									extraColorCount = Math.max(0, extraColorCount - 1);
-								}}
-								aria-label="Remove {field.label}"
-								title="Remove color"
-							>
-								<svg
-									width="12"
-									height="12"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2.5"
-									stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg
-								>
+								<span class="hex-val">{val}</span>
+								{#if copyFeedbackField === activeField}
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="var(--color-success)"
+										stroke-width="2.5"
+										stroke-linecap="round"
+										stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg
+									>
+								{:else}
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path
+											d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+										/></svg
+									>
+								{/if}
 							</button>
 						{/if}
 					</div>
-				</div>
-			{/each}
+				{/if}
 
-			<!-- Add color button -->
-			{#if visibleFields.length < MAX_BRAND_COLORS}
+				<!-- HSL Fine-tune Sliders -->
+				{#if activeField}
+					{@const thumbColor =
+						localColors[activeField] && isValidHex(localColors[activeField])
+							? localColors[activeField]
+							: '#888'}
+					<div class="hsl-sliders">
+						<div class="slider-header">
+							<h4 class="slider-heading">FINE-TUNE</h4>
+							<span class="slider-mode-label">HSL</span>
+						</div>
+						<div class="slider-row">
+							<label class="slider-label" for="hsl-hue">H</label>
+							<input
+								id="hsl-hue"
+								type="range"
+								min="0"
+								max="360"
+								bind:value={activeHue}
+								on:input={handleHueSliderChange}
+								class="hsl-range hue-range"
+								style="--thumb-color: hsl({activeHue}, 100%, 50%)"
+							/>
+							<input
+								type="number"
+								min="0"
+								max="360"
+								bind:value={activeHue}
+								on:change={handleHueSliderChange}
+								class="hsl-number"
+								aria-label="Hue value"
+							/>
+							<span class="slider-unit">°</span>
+						</div>
+						<div class="slider-row">
+							<label class="slider-label" for="hsl-sat">S</label>
+							<input
+								id="hsl-sat"
+								type="range"
+								min="0"
+								max="100"
+								bind:value={activeSatHsl}
+								on:input={handleHslChange}
+								class="hsl-range sat-range"
+								style="--track-from: hsl({activeHue}, 0%, {activeLightHsl}%); --track-to: hsl({activeHue}, 100%, {activeLightHsl}%); --thumb-color: {thumbColor}"
+							/>
+							<input
+								type="number"
+								min="0"
+								max="100"
+								bind:value={activeSatHsl}
+								on:change={handleHslChange}
+								class="hsl-number"
+								aria-label="Saturation value"
+							/>
+							<span class="slider-unit">%</span>
+						</div>
+						<div class="slider-row">
+							<label class="slider-label" for="hsl-light">L</label>
+							<input
+								id="hsl-light"
+								type="range"
+								min="0"
+								max="100"
+								bind:value={activeLightHsl}
+								on:input={handleHslChange}
+								class="hsl-range light-range"
+								style="--track-from: hsl({activeHue}, {activeSatHsl}%, 0%); --track-mid: hsl({activeHue}, {activeSatHsl}%, 50%); --track-to: hsl({activeHue}, {activeSatHsl}%, 100%); --thumb-color: {thumbColor}"
+							/>
+							<input
+								type="number"
+								min="0"
+								max="100"
+								bind:value={activeLightHsl}
+								on:change={handleHslChange}
+								class="hsl-number"
+								aria-label="Lightness value"
+							/>
+							<span class="slider-unit">%</span>
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			<!-- ─── COLOR HARMONY ─── -->
+			<div class="harmony-panel" class:open={showHarmony}>
 				<button
-					class="add-color-row"
-					on:click={() => {
-						extraColorCount = Math.min(
-							extraColorCount + 1,
-							MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length
-						);
-					}}
+					class="section-toggle"
+					on:click={() => (showHarmony = !showHarmony)}
+					aria-expanded={showHarmony}
 				>
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2.5"
-						stroke-linecap="round"
-					>
-						<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-					</svg>
-					Add Brand Color
-				</button>
-			{/if}
-
-			<!-- Auto-generate buttons (shown when primary is set) -->
-			{#if localColors['primaryColor'] && isValidHex(localColors['primaryColor'])}
-				<div class="generate-row">
-					<button
-						class="gen-btn"
-						on:click={generateFromPrimary}
-						title="Fill empty fields automatically"
-					>
+					<span class="section-toggle-title">
 						<svg
-							width="14"
-							height="14"
+							width="16"
+							height="16"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
@@ -1664,173 +1505,15 @@
 							stroke-linecap="round"
 							stroke-linejoin="round"
 						>
-							<path
-								d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
-							/>
+							<circle cx="12" cy="12" r="10" />
+							<circle cx="12" cy="12" r="4" />
+							<line x1="12" y1="2" x2="12" y2="6" />
+							<line x1="12" y1="18" x2="12" y2="22" />
+							<line x1="2" y1="12" x2="6" y2="12" />
+							<line x1="18" y1="12" x2="22" y2="12" />
 						</svg>
-						Auto-fill empty colors from Primary
-					</button>
-					<button
-						class="gen-btn gen-btn--secondary"
-						on:click={generateAll}
-						title="Regenerate all non-primary colors"
-					>
-						Regenerate All
-					</button>
-				</div>
-			{/if}
-		</div>
-	</div>
-
-	<!-- ─── LIVE PREVIEW ─── -->
-	{#if hasAnyColor}
-		<div class="preview-section">
-			<h3 class="section-label">LIVE PREVIEW</h3>
-			<div
-				class="live-preview"
-				style="
-					background: {mergedTheme.backgroundColor || '#0a0a0a'};
-					color: {mergedTheme.textColor || '#f8f9fa'};
-					border-color: {mergedTheme.borderColor || '#333'};
-					{localBodyFont ? `font-family: '${localBodyFont}', sans-serif;` : ''}
-				"
-			>
-				<!-- Mini nav -->
-				<div
-					class="preview-nav"
-					style="background: {mergedTheme.surfaceColor ||
-						'#1a1a1a'}; border-bottom: 1px solid {mergedTheme.borderColor || '#333'};"
-				>
-					<span
-						class="preview-brand"
-						style="color: {localColors.primaryColor || '#3b82f6'}; {localLogoFont
-							? `font-family: '${localLogoFont}', sans-serif`
-							: localHeadingFont
-								? `font-family: '${localHeadingFont}', sans-serif`
-								: ''}">⬡ Brand</span
-					>
-					<div class="preview-links">
-						<span style="color: {mergedTheme.textColor || '#f8f9fa'}">Home</span>
-						<span style="color: {mergedTheme.textSecondaryColor || '#888'}">About</span>
-						<span style="color: {localColors.accentColor || '#06b6d4'}">Contact</span>
-					</div>
-				</div>
-
-				<!-- Hero section -->
-				<div
-					class="preview-hero"
-					style="border-bottom: 1px solid {mergedTheme.borderColor || '#333'};"
-				>
-					<h4
-						class="preview-hero-title"
-						style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont
-							? `font-family: '${localHeadingFont}', sans-serif`
-							: ''}"
-					>
-						Your Brand,<br />Realized
-					</h4>
-					<p class="preview-hero-sub" style="color: {mergedTheme.textSecondaryColor || '#888'}">
-						See how your colors work together in context.
-					</p>
-					<div class="preview-buttons">
-						<span
-							class="preview-btn"
-							style="background: {localColors.primaryColor ||
-								'#3b82f6'}; color: {localColors.primaryColor &&
-							shouldUseDarkText(localColors.primaryColor)
-								? '#000'
-								: '#fff'}">Get Started</span
-						>
-						<span
-							class="preview-btn preview-btn--outline"
-							style="border-color: {localColors.secondaryColor ||
-								'#8b5cf6'}; color: {localColors.secondaryColor || '#8b5cf6'}">Learn More</span
-						>
-					</div>
-				</div>
-
-				<!-- Content card -->
-				<div
-					class="preview-card"
-					style="background: {mergedTheme.surfaceColor ||
-						'#1a1a1a'}; border: 1px solid {mergedTheme.borderColor || '#333'};"
-				>
-					<h5
-						class="preview-title"
-						style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont
-							? `font-family: '${localHeadingFont}', sans-serif`
-							: ''}"
-					>
-						Feature Card
-					</h5>
-					<p class="preview-subtitle" style="color: {mergedTheme.textSecondaryColor || '#888'}">
-						Components with your theme palette applied.
-					</p>
-					<div
-						class="preview-input"
-						style="background: {mergedTheme.backgroundColor ||
-							'#0a0a0a'}; border: 1px solid {mergedTheme.borderColor ||
-							'#333'}; color: {mergedTheme.textSecondaryColor || '#888'};"
-					>
-						Search or type a command...
-					</div>
-					<div class="preview-status">
-						<span class="preview-badge" style="background: {mergedTheme.successColor || '#22c55e'}"
-							>Success</span
-						>
-						<span class="preview-badge" style="background: {mergedTheme.warningColor || '#f59e0b'}"
-							>Warning</span
-						>
-						<span class="preview-badge" style="background: {mergedTheme.errorColor || '#ef4444'}"
-							>Error</span
-						>
-					</div>
-					<div class="preview-accent-bar">
-						<span
-							class="preview-accent-dot"
-							style="background: {localColors.accentColor || '#06b6d4'}"
-						></span>
-						<span
-							style="color: {localColors.accentColor ||
-								'#06b6d4'}; font-size: 0.65rem; font-weight: 600;">Accent highlight</span
-						>
-					</div>
-				</div>
-			</div>
-		</div>
-	{/if}
-
-	<!-- ─── CONTRAST MATRIX ─── -->
-	{#if hasAnyColor}
-		<div class="contrast-section">
-			<button
-				class="section-toggle"
-				on:click={() => (showContrastMatrix = !showContrastMatrix)}
-				aria-expanded={showContrastMatrix}
-			>
-				<span class="section-toggle-title">
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<circle cx="12" cy="12" r="10" />
-						<path d="M12 2a10 10 0 0 1 0 20" fill="currentColor" opacity="0.3" />
-					</svg>
-					Contrast Check
-				</span>
-				<div class="contrast-toggle-right">
-					{#if contrastPairs.length > 0}
-						{@const passing = contrastPairs.filter((p) => p.passesAA).length}
-						<span class="contrast-summary" class:all-pass={passing === contrastPairs.length}>
-							{passing}/{contrastPairs.length} AA
-						</span>
-					{/if}
+						Color Harmony
+					</span>
 					<svg
 						width="12"
 						height="12"
@@ -1841,33 +1524,385 @@
 						stroke-linecap="round"
 						stroke-linejoin="round"
 						class="chevron"
-						class:rotate={showContrastMatrix}
+						class:rotate={showHarmony}
 					>
 						<polyline points="6 9 12 15 18 9" />
 					</svg>
+				</button>
+				{#if showHarmony}
+					<div class="harmony-body">
+						<ColorHarmonyWheel
+							primaryColor={localColors['primaryColor'] || '#3b82f6'}
+							{harmonyType}
+							on:harmonyapply={handleHarmonyApply}
+							on:harmonypreview={handleHarmonyPreview}
+							on:harmonychange={(e) => {
+								const { primary, secondary, accent } = e.detail;
+								localColors['primaryColor'] = normalizeHex(primary) || primary;
+								localColors['secondaryColor'] = normalizeHex(secondary) || secondary;
+								localColors['accentColor'] = normalizeHex(accent) || accent;
+								localColors = localColors;
+							}}
+						/>
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<div class="workbench-targets">
+			<!-- ─── BRAND COLOR FIELDS ─── -->
+			<div class="color-fields-section">
+				<div class="brand-fields-header">
+					<span class="section-label">BRAND COLORS</span>
+					<span class="filled-badge">{filledCount}/{visibleFields.length}</span>
 				</div>
-			</button>
-			{#if showContrastMatrix && contrastPairs.length > 0}
-				<div class="contrast-grid">
-					{#each contrastPairs as pair}
-						{@const rating = contrastRatingClass(pair.ratio)}
-						<div class="contrast-pair" class:pass={pair.passesAA} class:fail={!pair.passesAA}>
-							<div class="contrast-sample" style="background:{pair.bg}; color:{pair.fg}">Aa</div>
-							<div class="contrast-detail">
-								<span class="contrast-names">{pair.fgLabel} / {pair.bgLabel}</span>
-								<span class="contrast-ratio">{pair.ratio.toFixed(1)}:1</span>
+
+				<!-- Color field list -->
+				<div class="tab-content" role="list">
+					{#each visibleFields as field}
+						{@const value = localColors[field.key] || ''}
+						{@const isActive = activeField === field.key}
+						<div class="color-row" class:active={isActive}>
+							<button
+								class="color-row-main"
+								on:click={() => handleFieldClick(field.key)}
+								aria-label="Edit {field.label} color"
+							>
+								<label class="swatch-wrap" aria-label="Pick {field.label} with color chooser">
+									<span
+										class="swatch"
+										style="background:{value || 'transparent'}"
+										class:empty={!value}
+									></span>
+									<input
+										type="color"
+										value={value || '#000000'}
+										on:input={(e) => handleNativeColorPick(field.key, e)}
+										class="native-picker"
+										tabindex="-1"
+										aria-label="Pick {field.label} with color chooser"
+									/>
+								</label>
+								<div class="field-text">
+									<span class="field-label">{field.label}</span>
+									<span class="field-desc">{field.desc}</span>
+								</div>
+							</button>
+							<div class="field-controls">
+								<input
+									type="text"
+									{value}
+									on:input={(e) => handleHexInput(field.key, e.currentTarget.value)}
+									on:focus={() => handleFieldClick(field.key)}
+									class="hex-input"
+									placeholder="#000000"
+									maxlength="7"
+									spellcheck="false"
+									aria-label="{field.label} hex value"
+								/>
+								{#if value}
+									<button
+										class="clear-btn"
+										on:click|stopPropagation={() => clearColor(field.key)}
+										aria-label="Clear {field.label}"
+										title="Clear"
+									>
+										<svg
+											width="12"
+											height="12"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2.5"
+											><line x1="18" y1="6" x2="6" y2="18" /><line
+												x1="6"
+												y1="6"
+												x2="18"
+												y2="18"
+											/></svg
+										>
+									</button>
+								{/if}
+								{#if field.removable}
+									<button
+										class="remove-color-btn"
+										on:click|stopPropagation={() => {
+											clearColor(field.key);
+											extraColorCount = Math.max(0, extraColorCount - 1);
+										}}
+										aria-label="Remove {field.label}"
+										title="Remove color"
+									>
+										<svg
+											width="12"
+											height="12"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2.5"
+											stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg
+										>
+									</button>
+								{/if}
 							</div>
-							<span class="contrast-badge contrast-badge--{rating}">
-								{pair.passesAAA ? 'AAA' : pair.passesAA ? 'AA' : 'Fail'}
-							</span>
 						</div>
 					{/each}
+
+					<!-- Add color button -->
+					{#if visibleFields.length < MAX_BRAND_COLORS}
+						<button
+							class="add-color-row"
+							on:click={() => {
+								extraColorCount = Math.min(
+									extraColorCount + 1,
+									MAX_BRAND_COLORS - CORE_BRAND_FIELDS.length
+								);
+							}}
+						>
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+							>
+								<line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+							</svg>
+							Add Brand Color
+						</button>
+					{/if}
+
+					<!-- Auto-generate buttons (shown when primary is set) -->
+					{#if localColors['primaryColor'] && isValidHex(localColors['primaryColor'])}
+						<div class="generate-row">
+							<button
+								class="gen-btn"
+								on:click={generateFromPrimary}
+								title="Fill empty fields automatically"
+							>
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								>
+									<path
+										d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+									/>
+								</svg>
+								Auto-fill empty colors from Primary
+							</button>
+							<button
+								class="gen-btn gen-btn--secondary"
+								on:click={generateAll}
+								title="Regenerate all non-primary colors"
+							>
+								Regenerate All
+							</button>
+						</div>
+					{/if}
 				</div>
-			{:else if showContrastMatrix}
-				<p class="contrast-empty">Set text and background colors to check contrast</p>
+			</div>
+
+			<!-- ─── LIVE PREVIEW ─── -->
+			{#if hasAnyColor}
+				<div class="preview-section">
+					<h3 class="section-label">LIVE PREVIEW</h3>
+					<div
+						class="live-preview"
+						style="
+					background: {mergedTheme.backgroundColor || '#0a0a0a'};
+					color: {mergedTheme.textColor || '#f8f9fa'};
+					border-color: {mergedTheme.borderColor || '#333'};
+					{localBodyFont ? `font-family: '${localBodyFont}', sans-serif;` : ''}
+				"
+					>
+						<!-- Mini nav -->
+						<div
+							class="preview-nav"
+							style="background: {mergedTheme.surfaceColor ||
+								'#1a1a1a'}; border-bottom: 1px solid {mergedTheme.borderColor || '#333'};"
+						>
+							<span
+								class="preview-brand"
+								style="color: {localColors.primaryColor || '#3b82f6'}; {localLogoFont
+									? `font-family: '${localLogoFont}', sans-serif`
+									: localHeadingFont
+										? `font-family: '${localHeadingFont}', sans-serif`
+										: ''}">⬡ Brand</span
+							>
+							<div class="preview-links">
+								<span style="color: {mergedTheme.textColor || '#f8f9fa'}">Home</span>
+								<span style="color: {mergedTheme.textSecondaryColor || '#888'}">About</span>
+								<span style="color: {localColors.accentColor || '#06b6d4'}">Contact</span>
+							</div>
+						</div>
+
+						<!-- Hero section -->
+						<div
+							class="preview-hero"
+							style="border-bottom: 1px solid {mergedTheme.borderColor || '#333'};"
+						>
+							<h4
+								class="preview-hero-title"
+								style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont
+									? `font-family: '${localHeadingFont}', sans-serif`
+									: ''}"
+							>
+								Your Brand,<br />Realized
+							</h4>
+							<p class="preview-hero-sub" style="color: {mergedTheme.textSecondaryColor || '#888'}">
+								See how your colors work together in context.
+							</p>
+							<div class="preview-buttons">
+								<span
+									class="preview-btn"
+									style="background: {localColors.primaryColor ||
+										'#3b82f6'}; color: {localColors.primaryColor &&
+									shouldUseDarkText(localColors.primaryColor)
+										? '#000'
+										: '#fff'}">Get Started</span
+								>
+								<span
+									class="preview-btn preview-btn--outline"
+									style="border-color: {localColors.secondaryColor ||
+										'#8b5cf6'}; color: {localColors.secondaryColor || '#8b5cf6'}">Learn More</span
+								>
+							</div>
+						</div>
+
+						<!-- Content card -->
+						<div
+							class="preview-card"
+							style="background: {mergedTheme.surfaceColor ||
+								'#1a1a1a'}; border: 1px solid {mergedTheme.borderColor || '#333'};"
+						>
+							<h5
+								class="preview-title"
+								style="color: {mergedTheme.textColor || '#f8f9fa'}; {localHeadingFont
+									? `font-family: '${localHeadingFont}', sans-serif`
+									: ''}"
+							>
+								Feature Card
+							</h5>
+							<p class="preview-subtitle" style="color: {mergedTheme.textSecondaryColor || '#888'}">
+								Components with your theme palette applied.
+							</p>
+							<div
+								class="preview-input"
+								style="background: {mergedTheme.backgroundColor ||
+									'#0a0a0a'}; border: 1px solid {mergedTheme.borderColor ||
+									'#333'}; color: {mergedTheme.textSecondaryColor || '#888'};"
+							>
+								Search or type a command...
+							</div>
+							<div class="preview-status">
+								<span
+									class="preview-badge"
+									style="background: {mergedTheme.successColor || '#22c55e'}">Success</span
+								>
+								<span
+									class="preview-badge"
+									style="background: {mergedTheme.warningColor || '#f59e0b'}">Warning</span
+								>
+								<span
+									class="preview-badge"
+									style="background: {mergedTheme.errorColor || '#ef4444'}">Error</span
+								>
+							</div>
+							<div class="preview-accent-bar">
+								<span
+									class="preview-accent-dot"
+									style="background: {localColors.accentColor || '#06b6d4'}"
+								></span>
+								<span
+									style="color: {localColors.accentColor ||
+										'#06b6d4'}; font-size: 0.65rem; font-weight: 600;">Accent highlight</span
+								>
+							</div>
+						</div>
+					</div>
+				</div>
+			{/if}
+
+			<!-- ─── CONTRAST MATRIX ─── -->
+			{#if hasAnyColor}
+				<div class="contrast-section">
+					<button
+						class="section-toggle"
+						on:click={() => (showContrastMatrix = !showContrastMatrix)}
+						aria-expanded={showContrastMatrix}
+					>
+						<span class="section-toggle-title">
+							<svg
+								width="16"
+								height="16"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<circle cx="12" cy="12" r="10" />
+								<path d="M12 2a10 10 0 0 1 0 20" fill="currentColor" opacity="0.3" />
+							</svg>
+							Contrast Check
+						</span>
+						<div class="contrast-toggle-right">
+							{#if contrastPairs.length > 0}
+								{@const passing = contrastPairs.filter((p) => p.passesAA).length}
+								<span class="contrast-summary" class:all-pass={passing === contrastPairs.length}>
+									{passing}/{contrastPairs.length} AA
+								</span>
+							{/if}
+							<svg
+								width="12"
+								height="12"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="chevron"
+								class:rotate={showContrastMatrix}
+							>
+								<polyline points="6 9 12 15 18 9" />
+							</svg>
+						</div>
+					</button>
+					{#if showContrastMatrix && contrastPairs.length > 0}
+						<div class="contrast-grid">
+							{#each contrastPairs as pair}
+								{@const rating = contrastRatingClass(pair.ratio)}
+								<div class="contrast-pair" class:pass={pair.passesAA} class:fail={!pair.passesAA}>
+									<div class="contrast-sample" style="background:{pair.bg}; color:{pair.fg}">
+										Aa
+									</div>
+									<div class="contrast-detail">
+										<span class="contrast-names">{pair.fgLabel} / {pair.bgLabel}</span>
+										<span class="contrast-ratio">{pair.ratio.toFixed(1)}:1</span>
+									</div>
+									<span class="contrast-badge contrast-badge--{rating}">
+										{pair.passesAAA ? 'AAA' : pair.passesAA ? 'AA' : 'Fail'}
+									</span>
+								</div>
+							{/each}
+						</div>
+					{:else if showContrastMatrix}
+						<p class="contrast-empty">Set text and background colors to check contrast</p>
+					{/if}
+				</div>
 			{/if}
 		</div>
-	{/if}
+	</div>
 
 	<!-- ─── TYPOGRAPHY ─── -->
 	<div class="editor-section">
@@ -2336,6 +2371,59 @@
 	   SV PICKER + HUE STRIP
 	   ═══════════════════════════════════════════════════ */
 
+	/* ═══════════════════════════════════════════════════
+	   WORKBENCH — tool beside targets, once there is room
+	   ═══════════════════════════════════════════════════ */
+
+	/* `display: contents` on a phone: the wrappers disappear and every child lays out
+	   in `.color-editor` exactly as it did before this split existed. */
+	.workbench,
+	.workbench-tool,
+	.workbench-targets {
+		display: contents;
+	}
+
+	/*
+		A container query, not a media query, and in px.
+
+		Two reasons. The editor sits inside the workspace's content column, so what
+		decides whether two panes fit is *its* width, not the window's — on a 1024px
+		laptop the rail leaves it about 540px, and splitting that gave a 21px column of
+		colour fields. And `rem` in a media query resolves against 16px regardless of
+		the app's 22px root, so `60rem` fired at 960px rather than the 1320 it reads as.
+		px says what it means in both places.
+	*/
+	.color-editor {
+		container-type: inline-size;
+		container-name: coloreditor;
+	}
+
+	@container coloreditor (min-width: 900px) {
+		.workbench {
+			display: grid;
+			/* The tool is a fixed instrument; the targets take whatever is left.
+			   `minmax(0, …)` so the contrast matrix scrolls inside its own box instead of
+			   widening the grid. */
+			grid-template-columns: 340px minmax(0, 1fr);
+			gap: var(--spacing-lg);
+			align-items: start;
+		}
+
+		.workbench-tool,
+		.workbench-targets {
+			display: flex;
+			flex-direction: column;
+			gap: var(--spacing-md);
+			min-width: 0;
+		}
+
+		/* Deliberately not sticky. With the harmony wheel open the tool column runs about
+		   1400px, taller than the viewport it would stick inside — which makes a sticky
+		   element scroll like a static one until its bottom lands, so the rule would
+		   promise behaviour it cannot deliver. Two columns already removed the scrolling
+		   this was meant to fix. */
+	}
+
 	.picker-section {
 		display: flex;
 		flex-direction: column;
@@ -2356,6 +2444,14 @@
 		line-height: 0;
 		flex: 1;
 		max-width: 320px;
+	}
+
+	/* In its own column the gradient fills the width it has — 320px was a cap for a
+	   picker sharing a narrow page, and it left the square marooned in white space. */
+	@container coloreditor (min-width: 900px) {
+		.sv-wrap {
+			max-width: none;
+		}
 	}
 
 	.sv-picker {

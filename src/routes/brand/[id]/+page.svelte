@@ -1625,7 +1625,11 @@
 	   1600px window, which is where "it doesn't use the full page" came from. */
 	.brand-page {
 		width: 100%;
-		max-width: 1800px;
+		/* 2200, not 1800: on a 2560 monitor the old cap left ~380px of dead margin each
+		   side. This is a workspace of tools and cards, not running prose, so measure is
+		   handled per-component — the field grid adds columns, the workbench widens its
+		   targets — rather than by starving the whole page of width. */
+		max-width: 2200px;
 		margin: 0 auto;
 		padding: var(--spacing-lg) var(--spacing-md);
 		min-height: calc(100vh - 60px);

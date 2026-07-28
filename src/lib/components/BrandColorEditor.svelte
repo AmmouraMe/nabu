@@ -2223,7 +2223,7 @@
 
 	.presets-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
 		gap: var(--spacing-sm);
 	}
 
@@ -2284,8 +2284,8 @@
 	.palette-bar {
 		display: flex;
 		align-items: center;
-		gap: 3px;
-		padding: var(--spacing-xs);
+		gap: 2px;
+		padding: 2px;
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
@@ -2322,8 +2322,8 @@
 	}
 
 	.pal-swatch {
-		width: 26px;
-		height: 26px;
+		width: 22px;
+		height: 22px;
 		border-radius: 6px;
 		border: 1px solid var(--color-border);
 		transition: all var(--transition-fast);
@@ -2346,6 +2346,7 @@
 	}
 
 	.pal-label {
+		display: none;
 		font-size: 0.5rem;
 		font-weight: 700;
 		color: var(--color-text-secondary);
@@ -2430,8 +2431,12 @@
 		gap: var(--spacing-sm);
 	}
 
+	/* Stacked by default: on a phone the gradient wants the full width and the hue
+	   strip lies under it. Side by side is the enhancement, not the starting point. */
 	.picker-container {
 		display: flex;
+		flex-direction: column;
+		align-items: stretch;
 		gap: 10px;
 		justify-content: center;
 	}
@@ -2443,7 +2448,7 @@
 		border: 1px solid var(--color-border);
 		line-height: 0;
 		flex: 1;
-		max-width: 320px;
+		max-width: 100%;
 	}
 
 	/* In its own column the gradient fills the width it has — 320px was a cap for a
@@ -2482,6 +2487,8 @@
 	}
 
 	.hue-wrap {
+		display: flex;
+		justify-content: stretch;
 		border-radius: var(--radius-md);
 		overflow: hidden;
 		border: 1px solid var(--color-border);
@@ -2489,10 +2496,12 @@
 		flex-shrink: 0;
 	}
 
+	/* `!important` beats the canvas's own width/height attributes, which the picker
+	   sets for its drawing buffer rather than its display size. */
 	.hue-strip {
 		display: block;
-		width: 28px;
-		height: auto;
+		width: 100% !important;
+		height: 28px !important;
 		cursor: pointer;
 		touch-action: none;
 	}
@@ -2509,7 +2518,8 @@
 	.active-bar {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-sm);
+		flex-wrap: wrap;
+		gap: var(--spacing-xs);
 		padding: var(--spacing-xs) var(--spacing-sm);
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
@@ -2525,8 +2535,8 @@
 
 	.active-swatch {
 		display: block;
-		width: 40px;
-		height: 40px;
+		width: 32px;
+		height: 32px;
 		border-radius: 10px;
 		border: 2px solid var(--color-border);
 		transition: border-color var(--transition-fast);
@@ -2568,6 +2578,7 @@
 
 	.hex-copy {
 		display: inline-flex;
+		margin-left: auto;
 		align-items: center;
 		gap: 6px;
 		padding: 5px 10px;
@@ -2835,9 +2846,10 @@
 
 	.harmony-swatch {
 		flex: 1;
-		min-width: 56px;
+		/* 44px is the floor for a touch target; wider screens get the roomier size. */
+		min-width: 44px;
 		max-width: 80px;
-		height: 56px;
+		height: 44px;
 		border-radius: var(--radius-md);
 		border: 2px solid var(--color-border);
 		cursor: pointer;
@@ -2982,7 +2994,9 @@
 
 	.color-row {
 		display: flex;
-		align-items: center;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--spacing-xs);
 		justify-content: space-between;
 		padding: 6px var(--spacing-xs);
 		border: 1px solid transparent;
@@ -3020,8 +3034,8 @@
 
 	.swatch {
 		display: block;
-		width: 32px;
-		height: 32px;
+		width: 28px;
+		height: 28px;
 		border-radius: 8px;
 		border: 2px solid var(--color-border);
 		transition: border-color var(--transition-fast);
@@ -3066,10 +3080,13 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
-		margin-left: auto;
+		margin-left: 0;
+		width: 100%;
+		justify-content: space-between;
 	}
 
 	.hex-input {
+		flex: 1;
 		width: 84px;
 		padding: 5px 8px;
 		font-size: 0.78rem;
@@ -3118,6 +3135,7 @@
 
 	.generate-row {
 		display: flex;
+		flex-direction: column;
 		gap: var(--spacing-sm);
 		flex-wrap: wrap;
 		padding: var(--spacing-xs) 0 0;
@@ -3126,6 +3144,7 @@
 	.gen-btn {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		gap: var(--spacing-xs);
 		padding: 7px var(--spacing-md);
 		font-size: 0.75rem;
@@ -3182,8 +3201,10 @@
 		font-size: 0.78rem;
 	}
 
+	/* Hidden on a phone: decorative nav inside a preview mock, and the first thing
+	   worth dropping when that mock is only a few hundred pixels wide. */
 	.preview-links {
-		display: flex;
+		display: none;
 		gap: 12px;
 		font-size: 0.62rem;
 	}
@@ -3315,7 +3336,8 @@
 	.contrast-pair {
 		display: flex;
 		align-items: center;
-		gap: var(--spacing-sm);
+		flex-wrap: wrap;
+		gap: 4px;
 		padding: 5px 0;
 	}
 
@@ -3334,6 +3356,7 @@
 
 	.contrast-detail {
 		display: flex;
+		flex-wrap: wrap;
 		gap: var(--spacing-sm);
 		flex: 1;
 		align-items: center;
@@ -3434,6 +3457,8 @@
 
 	.actions-row {
 		display: flex;
+		flex-direction: column;
+		align-items: center;
 		gap: var(--spacing-md);
 		justify-content: center;
 	}
@@ -3545,6 +3570,7 @@
 
 	.extracted-swatches {
 		display: flex;
+		justify-content: center;
 		gap: 6px;
 		flex-wrap: wrap;
 	}
@@ -3571,6 +3597,7 @@
 
 	.extracted-actions {
 		display: flex;
+		justify-content: center;
 		gap: var(--spacing-xs);
 		flex-wrap: wrap;
 	}
@@ -3643,126 +3670,134 @@
 	   MOBILE-FIRST RESPONSIVE
 	   ═══════════════════════════════════════════════════ */
 
-	@media (max-width: 480px) {
-		.picker-container {
-			flex-direction: column;
-			align-items: stretch;
-		}
+	/*
+	   ─── Small screens are the base; width adds capability ───────────────────
 
-		.sv-wrap {
-			max-width: 100%;
-		}
+	   These were two `max-width` blocks walking down from a desktop assumption, so
+	   the phone case was a list of corrections to something it never wanted. The
+	   narrow layout now lives in the base rules above and these queries hand back
+	   what only fits once there is room — the authoring order the rest of the app
+	   uses.
 
-		.hue-wrap {
-			display: flex;
-			justify-content: stretch;
-		}
+	   px rather than rem on purpose: `rem` in a media query resolves against 16px
+	   regardless of this app's 22px root, so a rem figure here would not mean what
+	   it reads as.
+	*/
 
-		.hue-strip {
-			width: 100% !important;
-			height: 28px !important;
-		}
-
-		.active-bar {
-			flex-wrap: wrap;
-			gap: var(--spacing-xs);
-		}
-
-		.hex-copy {
-			margin-left: auto;
-		}
-
-		.color-row {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--spacing-xs);
-		}
-
-		.field-controls {
-			margin-left: 0;
-			width: 100%;
-			justify-content: space-between;
-		}
-
-		.hex-input {
-			flex: 1;
-		}
-
-		.harmony-results {
-			gap: var(--spacing-xs);
-		}
-
-		.harmony-swatch {
-			min-width: 44px;
-			height: 44px;
-		}
-
-		.presets-grid {
-			grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-		}
-
-		.contrast-pair {
-			flex-wrap: wrap;
-			gap: 4px;
-		}
-
-		.contrast-detail {
-			flex-wrap: wrap;
-		}
-
-		.generate-row {
-			flex-direction: column;
-		}
-
-		.gen-btn {
-			justify-content: center;
-		}
-
-		.preview-links {
-			display: none;
-		}
-
-		.extracted-swatches {
-			justify-content: center;
-		}
-
-		.extracted-actions {
-			justify-content: center;
-		}
-
-		.actions-row {
-			flex-direction: column;
-			align-items: center;
-		}
-
-		.starter-btn {
-			gap: var(--spacing-sm);
-		}
-	}
-
-	@media (max-width: 360px) {
+	/* Above a very small phone: swatches and labels at full size. */
+	@media (min-width: 361px) {
 		.palette-bar {
-			gap: 2px;
-			padding: 2px;
+			gap: 3px;
+			padding: var(--spacing-xs);
 		}
 
 		.pal-swatch {
-			width: 22px;
-			height: 22px;
+			width: 26px;
+			height: 26px;
 		}
 
 		.pal-label {
-			display: none;
+			display: block;
 		}
 
 		.active-swatch {
-			width: 32px;
-			height: 32px;
+			width: 40px;
+			height: 40px;
 		}
 
 		.swatch {
-			width: 28px;
-			height: 28px;
+			width: 32px;
+			height: 32px;
+		}
+	}
+
+	/* Past a large phone: rows can sit side by side, and the hue strip stands up
+	   beside the gradient rather than lying under it. */
+	@media (min-width: 481px) {
+		.picker-container {
+			flex-direction: row;
+		}
+
+		.sv-wrap {
+			max-width: 320px;
+		}
+
+		.hue-wrap {
+			display: block;
+		}
+
+		.hue-strip {
+			width: 28px !important;
+			height: auto !important;
+		}
+
+		.active-bar {
+			flex-wrap: nowrap;
+			gap: var(--spacing-sm);
+		}
+
+		.hex-copy {
+			margin-left: 0;
+		}
+
+		.color-row {
+			flex-direction: row;
+			align-items: center;
+			gap: 0;
+		}
+
+		.field-controls {
+			margin-left: auto;
+			width: auto;
+			justify-content: flex-start;
+		}
+
+		.hex-input {
+			flex: 0 1 auto;
+		}
+
+		.harmony-swatch {
+			min-width: 56px;
+			height: 56px;
+		}
+
+		.presets-grid {
+			grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+		}
+
+		.contrast-pair {
+			flex-wrap: nowrap;
+			gap: var(--spacing-sm);
+		}
+
+		.contrast-detail {
+			flex-wrap: nowrap;
+		}
+
+		.generate-row {
+			flex-direction: row;
+		}
+
+		.gen-btn {
+			justify-content: flex-start;
+		}
+
+		.preview-links {
+			display: flex;
+		}
+
+		.extracted-swatches,
+		.extracted-actions {
+			justify-content: flex-start;
+		}
+
+		.actions-row {
+			flex-direction: row;
+			align-items: stretch;
+		}
+
+		.starter-btn {
+			gap: var(--spacing-md);
 		}
 	}
 
@@ -3804,6 +3839,19 @@
 		.extract-apply-btn,
 		.extract-focal-btn {
 			padding: 10px var(--spacing-md);
+		}
+
+		/* The thumb was already sized for a finger; the track it rides was 12px, so the
+		   miss zone around it was most of the control. */
+		.hsl-range {
+			height: 32px;
+		}
+
+		/* Underlined text buttons with no padding — a 15px-tall target sitting inches
+		   from "Clear all colors", which is the one thing here you cannot undo. */
+		.action-link {
+			min-height: 44px;
+			padding: 0 var(--spacing-xs);
 		}
 	}
 </style>

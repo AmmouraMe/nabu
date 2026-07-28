@@ -48,10 +48,10 @@
 	const DISC_SATURATION = 85; // fixed saturation for the color disc
 
 	// Lightness ↔ radial mapping
-	const MIN_MARKER_R = 22;          // closest to center a marker can sit
+	const MIN_MARKER_R = 22; // closest to center a marker can sit
 	const MAX_MARKER_R = OUTER_RADIUS - 2; // at the outer edge
-	const LIGHT_AT_CENTER = 15;       // very dark when at center
-	const LIGHT_AT_EDGE = 85;         // very bright at outer edge
+	const LIGHT_AT_CENTER = 15; // very dark when at center
+	const LIGHT_AT_EDGE = 85; // very bright at outer edge
 
 	// ─── Helpers ─────────────────────────────────────
 
@@ -80,9 +80,9 @@
 
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D | null = null;
-	let draggingMarker: number | null = null;  // 0=P, 1=S, 2=A
+	let draggingMarker: number | null = null; // 0=P, 1=S, 2=A
 	let dragMode: 'marker' | 'rotate' | null = null;
-	let suppressReactiveReinit = false;         // prevents snap-back after drag ends
+	let suppressReactiveReinit = false; // prevents snap-back after drag ends
 	let cachedDiscCanvas: HTMLCanvasElement | null = null; // off-screen color disc cache
 
 	const HARMONY_OPTIONS: { type: HarmonyType; label: string; icon: string }[] = [
@@ -210,18 +210,29 @@
 		const ch = (1 - Math.abs(2 * l - 1)) * s;
 		const x = ch * (1 - Math.abs(((h / 60) % 2) - 1));
 		const m = l - ch / 2;
-		let r = 0, g = 0, b = 0;
-		if (h < 60)       { r = ch; g = x; }
-		else if (h < 120) { r = x;  g = ch; }
-		else if (h < 180) { g = ch; b = x; }
-		else if (h < 240) { g = x;  b = ch; }
-		else if (h < 300) { r = x;  b = ch; }
-		else              { r = ch; b = x; }
-		return [
-			Math.round((r + m) * 255),
-			Math.round((g + m) * 255),
-			Math.round((b + m) * 255)
-		];
+		let r = 0,
+			g = 0,
+			b = 0;
+		if (h < 60) {
+			r = ch;
+			g = x;
+		} else if (h < 120) {
+			r = x;
+			g = ch;
+		} else if (h < 180) {
+			g = ch;
+			b = x;
+		} else if (h < 240) {
+			g = x;
+			b = ch;
+		} else if (h < 300) {
+			r = x;
+			b = ch;
+		} else {
+			r = ch;
+			b = x;
+		}
+		return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
 	}
 
 	// ─── Cache the full-disc color image ─────────────
@@ -263,7 +274,7 @@
 
 					const [cr, cg, cb] = hslToRgbRaw(hue, sat, lightness);
 					const idx = (py * SIZE + px) * 4;
-					data[idx]     = cr;
+					data[idx] = cr;
 					data[idx + 1] = cg;
 					data[idx + 2] = cb;
 					data[idx + 3] = 255;
@@ -632,17 +643,10 @@
 
 	<!-- Color preview swatches -->
 	<div class="wheel-preview">
-		{#each [
-			{ color: triple.primary, label: 'Primary', key: 'P' },
-			{ color: triple.secondary, label: 'Secondary', key: 'S' },
-			{ color: triple.accent, label: 'Accent', key: 'A' }
-		] as swatch}
+		{#each [{ color: triple.primary, label: 'Primary', key: 'P' }, { color: triple.secondary, label: 'Secondary', key: 'S' }, { color: triple.accent, label: 'Accent', key: 'A' }] as swatch}
 			{@const isDark = !shouldUseDarkText(swatch.color)}
 			<div class="wheel-swatch-card">
-				<div
-					class="wheel-swatch"
-					style="background-color: {swatch.color}"
-				>
+				<div class="wheel-swatch" style="background-color: {swatch.color}">
 					<span class="wheel-swatch-key" class:light={isDark}>{swatch.key}</span>
 				</div>
 				<div class="wheel-swatch-info">
@@ -655,8 +659,21 @@
 	</div>
 
 	<!-- Apply button -->
-	<button class="wheel-apply-btn" on:click={handleApply} aria-label="Apply harmony colors to palette">
-		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<button
+		class="wheel-apply-btn"
+		on:click={handleApply}
+		aria-label="Apply harmony colors to palette"
+	>
+		<svg
+			width="16"
+			height="16"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		>
 			<polyline points="20 6 9 17 4 12" />
 		</svg>
 		Apply to Palette
@@ -836,5 +853,14 @@
 
 	.wheel-apply-btn:active {
 		transform: translateY(0);
+	}
+
+	/* The harmony chips are a row of six sitting side by side, so a 24px-tall target
+	   is not only small but easy to mis-hit into its neighbour. */
+	@media (pointer: coarse) {
+		.wheel-chip {
+			min-height: 44px;
+			padding: 8px 14px;
+		}
 	}
 </style>

@@ -1623,13 +1623,13 @@
 	   layout's column, and auto side margins on a flex item's cross axis switch off
 	   stretch — so the page sized itself to its content and sat at 1051px inside a
 	   1600px window, which is where "it doesn't use the full page" came from. */
+	/* No max-width at all. Every cap here was a guess that went stale on a bigger
+	   monitor — 1400 became 1800 became 2200, each leaving a band of dead margin. This
+	   is a workspace of tools and cards rather than running prose, so measure belongs
+	   to the components that hold text: the field grid adds columns, the workbench
+	   widens its targets, and the page simply follows the window. */
 	.brand-page {
 		width: 100%;
-		/* 2200, not 1800: on a 2560 monitor the old cap left ~380px of dead margin each
-		   side. This is a workspace of tools and cards, not running prose, so measure is
-		   handled per-component — the field grid adds columns, the workbench widens its
-		   targets — rather than by starving the whole page of width. */
-		max-width: 2200px;
 		margin: 0 auto;
 		padding: var(--spacing-lg) var(--spacing-md);
 		min-height: calc(100vh - 60px);
@@ -1686,7 +1686,14 @@
 		color: var(--color-text-secondary);
 	}
 
+	/* The way out of this page, and on a phone it was a 17px-tall line of text.
+	   `align-self: flex-start` so the tap area covers the words rather than the whole
+	   width of the rail. */
 	.back-link {
+		display: inline-flex;
+		align-items: center;
+		align-self: flex-start;
+		min-height: 44px;
 		color: var(--color-primary);
 		text-decoration: none;
 		font-size: 0.85rem;

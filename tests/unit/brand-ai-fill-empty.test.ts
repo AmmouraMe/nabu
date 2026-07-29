@@ -104,6 +104,12 @@ import { getFirstEnabledAIKey, chatCompletionWithKey } from '$lib/services/opena
 import { getEmptyTextFields, AI_FILLABLE_FIELDS } from '$lib/services/brand-ai-fill';
 import { syncFieldToTextAsset } from '$lib/services/brand-assets';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
+
 describe('Brand AI Fill Empty Fields', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

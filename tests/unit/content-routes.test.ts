@@ -5,6 +5,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
+
 vi.mock('$lib/services/content-generator', () => ({
 	generateDevToPost: vi.fn().mockResolvedValue({ title: 'DT', body: 'db' }),
 	generateLinkedInUpdate: vi.fn().mockResolvedValue({ text: 'li' }),

@@ -1,53 +1,15 @@
 import { redirect } from '@sveltejs/kit';
+import { resolvePlan, usageSnapshot } from '$lib/server/entitlements';
+// Third copy of this helper in the codebase before it was shared; see
+// $lib/server/oauth-config for why login, signup and profile now ask one function.
+import { configuredProviders } from '$lib/server/oauth-config';
+import { getTier } from '$lib/utils/pricing';
 import type { PageServerLoad } from './$types';
 
 interface OAuthAccount {
 	provider: string;
 	provider_account_id: string;
 	created_at: string;
-}
-
-// Helper to check if an OAuth provider is configured
-async function isProviderConfigured(
-	platform: App.Platform | undefined,
-	provider: 'github' | 'discord'
-): Promise<boolean> {
-	if (provider === 'github') {
-		// Check env vars first
-		if (platform?.env?.GITHUB_CLIENT_ID && platform?.env?.GITHUB_CLIENT_SECRET) {
-			return true;
-		}
-		// Check KV storage
-		if (platform?.env?.KV) {
-			try {
-				const stored = await platform.env.KV.get('auth_config:github');
-				if (stored) {
-					const config = JSON.parse(stored);
-					return !!(config.clientId && config.clientSecret);
-				}
-			} catch {
-				// Ignore errors
-			}
-		}
-	} else if (provider === 'discord') {
-		// Check env vars first
-		if (platform?.env?.DISCORD_CLIENT_ID && platform?.env?.DISCORD_CLIENT_SECRET) {
-			return true;
-		}
-		// Check KV storage
-		if (platform?.env?.KV) {
-			try {
-				const stored = await platform.env.KV.get('auth_config:discord');
-				if (stored) {
-					const config = JSON.parse(stored);
-					return !!(config.clientId && config.clientSecret);
-				}
-			} catch {
-				// Ignore errors
-			}
-		}
-	}
-	return false;
 }
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
@@ -127,18 +89,29 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 
 	console.log('[Profile] Returning connectedAccounts:', JSON.stringify(connectedAccounts));
 
-	// Check which OAuth providers are configured
-	const [githubConfigured, discordConfigured] = await Promise.all([
-		isProviderConfigured(platform, 'github'),
-		isProviderConfigured(platform, 'discord')
-	]);
+	// Plan and consumption, so the account page can show where someone stands before
+	// a limit stops them mid-task. Rendered server-side rather than fetched from
+	// /api/account/usage so the panel is there on first paint — this is the page
+	// people open *because* something was refused.
+	let usage: Awaited<ReturnType<typeof usageSnapshot>> | null = null;
+	let planName: string | null = null;
+
+	if (platform?.env?.DB) {
+		try {
+			const plan = await resolvePlan(platform.env.DB, locals.user.id);
+			usage = await usageSnapshot(platform.env.DB, locals.user.id, plan);
+			planName = getTier(plan).name;
+		} catch (err) {
+			// The rest of the page is still worth rendering without it.
+			console.error('[Profile] Failed to load plan usage:', err);
+		}
+	}
 
 	return {
 		user: locals.user,
 		connectedAccounts,
-		configuredProviders: {
-			github: githubConfigured,
-			discord: discordConfigured
-		}
+		configuredProviders: await configuredProviders(platform),
+		usage,
+		planName
 	};
 };

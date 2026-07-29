@@ -82,6 +82,12 @@ import {
 import { getMatchingProfileField, getProfileFieldValue } from '$lib/services/brand';
 import { withBrandAccess } from '../fixtures/brand-access';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
+
 beforeEach(() => {
 	vi.clearAllMocks();
 });

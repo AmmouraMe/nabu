@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
+
 /**
  * Tests for Video Generation CRUD API routes
  * Covers: GET /api/video, GET /api/video/[id], POST /api/video/generate,

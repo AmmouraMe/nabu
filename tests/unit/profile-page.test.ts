@@ -63,14 +63,18 @@ describe('Profile Page', () => {
 			const { load } = await import('../../src/routes/profile/+page.server');
 			const result = await load(mockEvent as any);
 
-			// Connected accounts only come from DB - empty when DB not available
+			// Connected accounts only come from DB - empty when DB not available.
+			// Plan usage is the same: no DB, no snapshot, and the page renders without
+			// the panel rather than failing to load.
 			expect(result).toEqual({
 				user: mockUser,
 				connectedAccounts: [],
 				configuredProviders: {
 					github: false,
 					discord: false
-				}
+				},
+				usage: null,
+				planName: null
 			});
 		});
 
@@ -117,8 +121,10 @@ describe('Profile Page', () => {
 					isAdmin: false
 				},
 				hasAIProviders: false,
+				usage: null,
+				planName: null,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container, getByText } = render(ProfilePage.default, {
@@ -147,8 +153,10 @@ describe('Profile Page', () => {
 					isOwner: false
 				},
 				hasAIProviders: false,
+				usage: null,
+				planName: null,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container } = render(ProfilePage.default, {
@@ -172,8 +180,10 @@ describe('Profile Page', () => {
 					isOwner: false
 				},
 				hasAIProviders: false,
+				usage: null,
+				planName: null,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container } = render(ProfilePage.default, {
@@ -199,8 +209,10 @@ describe('Profile Page', () => {
 					isAdmin: true
 				},
 				hasAIProviders: false,
+				usage: null,
+				planName: null,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { getByText } = render(ProfilePage.default, {
@@ -223,8 +235,10 @@ describe('Profile Page', () => {
 					isOwner: true
 				},
 				hasAIProviders: false,
+				usage: null,
+				planName: null,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { getByText } = render(ProfilePage.default, {
@@ -246,8 +260,10 @@ describe('Profile Page', () => {
 					isOwner: false
 				},
 				hasAIProviders: false,
+				usage: null,
+				planName: null,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container } = render(ProfilePage.default, {
@@ -259,5 +275,3 @@ describe('Profile Page', () => {
 		});
 	});
 });
-
-

@@ -5,6 +5,12 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
+
 /**
  * Helper to read a streaming Response body in happy-dom.
  * happy-dom's Response wraps the body but doesn't support .text() or .getReader() on it.

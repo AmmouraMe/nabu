@@ -5,6 +5,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { withBrandAccess } from '../fixtures/brand-access';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
+
 vi.mock('@sveltejs/kit', () => ({
 	error: (status: number, msg: string) => {
 		const e: any = new Error(msg);

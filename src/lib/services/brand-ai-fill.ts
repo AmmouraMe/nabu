@@ -115,10 +115,9 @@ export const AI_FILLABLE_FIELDS: AIFillableField[] = [
  * A field is considered empty if its value is null, undefined, or an empty string.
  */
 export function getEmptyTextFields(profile: BrandProfile): string[] {
-  const profileRecord = profile as unknown as Record<string, unknown>;
   return AI_FILLABLE_FIELDS
     .filter((f) => {
-      const val = profileRecord[f.fieldKey];
+      const val = profile[f.fieldKey as keyof BrandProfile];
       return val == null || val === '';
     })
     .map((f) => f.fieldKey);

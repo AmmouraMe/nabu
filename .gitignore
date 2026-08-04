@@ -30,3 +30,7 @@ playwright/.cache/
 
 # Temporary files
 tmp/
+
+# Alternative package managers (npm + package-lock.json is canonical)
+bun.lock
+bun.lockb

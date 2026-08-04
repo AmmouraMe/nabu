@@ -493,6 +493,31 @@ export async function updateBrandFieldWithVersion(
     changeSource: params.changeSource,
     changeReason: params.changeReason
   });
+
+  // Best-effort sync to corresponding text asset (non-fatal).
+  // Centralizes the invariant that field writes are mirrored to the Text tab
+  // (same behavior as manual edits via /api/brand/update-field).
+  // The field update and version are always the source of truth.
+  try {
+    const { syncFieldToTextAsset } = await import('$lib/services/brand-assets');
+    let syncValue: string | null = null;
+    if (params.newValue != null) {
+      if (Array.isArray(params.newValue)) {
+        syncValue = params.newValue.join(', ');
+      } else if (typeof params.newValue === 'object') {
+        syncValue = JSON.stringify(params.newValue);
+      } else {
+        syncValue = String(params.newValue);
+      }
+    }
+    await syncFieldToTextAsset(db, {
+      brandProfileId: params.profileId,
+      fieldName: params.fieldName,
+      value: syncValue
+    });
+  } catch {
+    // Non-fatal — text asset is a derived convenience.
+  }
 }
 
 /**

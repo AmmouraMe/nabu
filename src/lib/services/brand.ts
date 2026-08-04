@@ -500,23 +500,19 @@ export async function updateBrandFieldWithVersion(
   // The field update and version are always the source of truth.
   try {
     const { syncFieldToTextAsset } = await import('$lib/services/brand-assets');
-    let syncValue: string | null = null;
-    if (params.newValue != null) {
-      if (Array.isArray(params.newValue)) {
-        syncValue = params.newValue.join(', ');
-      } else if (typeof params.newValue === 'object') {
-        syncValue = JSON.stringify(params.newValue);
-      } else {
-        syncValue = String(params.newValue);
-      }
-    }
+    // Mirror exactly what the profile column stores (dbValue) so the Text tab
+    // and the DB never diverge — e.g. JSON-array fields previously stored
+    // JSON in the column but a comma-joined string in the text asset.
     await syncFieldToTextAsset(db, {
       brandProfileId: params.profileId,
       fieldName: params.fieldName,
-      value: syncValue
+      value: dbValue
     });
-  } catch {
-    // Non-fatal — text asset is a derived convenience.
+  } catch (error) {
+    // Non-fatal — text asset is a derived convenience — but never silent:
+    // this catch also guards the dynamic import, and a swallowed module
+    // failure would permanently disable mirroring at every call site.
+    console.error('syncFieldToTextAsset failed:', error);
   }
 }
 

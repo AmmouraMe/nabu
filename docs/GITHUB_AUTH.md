@@ -14,8 +14,8 @@ NebulaKit now supports GitHub OAuth authentication. Once configured, users can s
 2. Click **"New OAuth App"**
 3. Fill in the application details:
    - **Application name**: NebulaKit (or your preferred name)
-   - **Homepage URL**: `http://localhost:4277` (for development)
-   - **Authorization callback URL**: `http://localhost:4277/api/auth/github/callback`
+   - **Homepage URL**: `http://localhost:4239` (for development)
+   - **Authorization callback URL**: `http://localhost:4239/api/auth/github/callback`
 4. Click **"Register application"**
 5. You'll see your **Client ID** on the next page
 6. Click **"Generate a new client secret"** to get your **Client Secret**
@@ -180,4 +180,3 @@ The implementation follows TDD principles with 100% test coverage for auth logic
 3. **Token Encryption**: Encrypt sensitive data before storage
 4. **HTTPS**: Always use HTTPS in production for secure cookies
 5. **Error Handling**: Implement proper error logging and user feedback
-

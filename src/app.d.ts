@@ -28,6 +28,8 @@ declare global {
 					): Promise<{ response?: string; [k: string]: unknown }>;
 				};
 				TURNSTILE_SECRET_KEY: string;
+				TURNSTILE_SITE_KEY?: string;
+				SETUP_SECRET?: string;
 				// HMAC key for signing the session cookie (see src/lib/server/session.ts).
 				// REQUIRED in production: without it the app refuses to issue sessions and
 				// verifies none, so nobody can log in. Set with:

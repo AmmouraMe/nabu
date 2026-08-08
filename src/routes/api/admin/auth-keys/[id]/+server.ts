@@ -1,11 +1,10 @@
 import { error, json } from '@sveltejs/kit';
+import { requireOwner } from '$lib/server/auth-guards';
 import type { RequestHandler } from './$types';
 
 // PUT - Update auth key
 export const PUT: RequestHandler = async ({ params, request, platform, locals }) => {
-	if (!locals.user?.isOwner && !locals.user?.isAdmin) {
-		throw error(403, 'Admin access required');
-	}
+	requireOwner(locals);
 
 	try {
 		const { id } = params;
@@ -83,9 +82,7 @@ export const PUT: RequestHandler = async ({ params, request, platform, locals })
 
 // DELETE - Delete auth key
 export const DELETE: RequestHandler = async ({ params, platform, locals }) => {
-	if (!locals.user?.isOwner && !locals.user?.isAdmin) {
-		throw error(403, 'Admin access required');
-	}
+	requireOwner(locals);
 
 	try {
 		const { id } = params;

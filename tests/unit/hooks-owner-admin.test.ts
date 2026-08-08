@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { signSession } from '../../src/lib/server/session';
 
-// The hook seeds a user row before re-reading it; that part is not under test here.
-vi.mock('$lib/utils/db', () => ({
-	ensureSessionUserRecord: vi.fn().mockResolvedValue(undefined)
-}));
-
 // `sequence()` needs SvelteKit's per-request AsyncLocalStorage, which does not exist
 // outside a real request ("Could not get the request store"). Only one handler is
 // composed here, so collapsing it to that handler tests the same code path.
@@ -28,8 +23,35 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 		vi.resetModules();
 	});
 
-	function buildEvent(cookie: string | undefined, dbIsAdmin: number | null) {
+	function buildEvent(
+		cookie: string | undefined,
+		userId: string,
+		dbIsAdmin: number | null,
+		ownerId?: string
+	) {
 		const deleted: string[] = [];
+		const prepare = vi.fn((query: string) => ({
+			bind: () => ({
+				first: async () => {
+					if (query.startsWith('SELECT * FROM sessions')) {
+						return dbIsAdmin === null ? null : { id: 'digest', user_id: userId };
+					}
+					if (query.includes('FROM users WHERE id = ?')) {
+						return dbIsAdmin === null
+							? null
+							: {
+								id: userId,
+								email: `${userId}@example.com`,
+								name: null,
+								github_login: null,
+								github_avatar_url: null,
+								is_admin: dbIsAdmin
+							};
+					}
+					return null;
+				}
+			})
+		}));
 		return {
 			deleted,
 			event: {
@@ -41,13 +63,8 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 				platform: {
 					env: {
 						SESSION_SECRET: SECRET,
-						DB: {
-							prepare: () => ({
-								bind: () => ({
-									first: async () => (dbIsAdmin === null ? null : { is_admin: dbIsAdmin })
-								})
-							})
-						}
+						GITHUB_OWNER_ID: ownerId,
+						DB: { prepare }
 					}
 				}
 			}
@@ -57,11 +74,9 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 	const resolve = vi.fn().mockResolvedValue(new Response('ok'));
 
 	it('keeps the owner admin even when the row says is_admin = 0', async () => {
-		const cookie = await signSession(
-			{ id: 'discord_293484886726279168', login: 'davis9001', isOwner: true, isAdmin: true },
-			SECRET
-		);
-		const { event } = buildEvent(cookie, 0);
+		const userId = '293484886726279168';
+		const cookie = await signSession({ token: 'owner-session-token' }, SECRET);
+		const { event } = buildEvent(cookie, userId, 0, userId);
 		const { handle } = await import('../../src/hooks.server');
 
 		await handle({ event, resolve } as any);
@@ -71,11 +86,9 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 	});
 
 	it('still demotes a non-owner whose row says is_admin = 0', async () => {
-		const cookie = await signSession(
-			{ id: 'discord_999', login: 'someone', isOwner: false, isAdmin: true },
-			SECRET
-		);
-		const { event } = buildEvent(cookie, 0);
+		const userId = 'discord_999';
+		const cookie = await signSession({ token: 'member-session-token' }, SECRET);
+		const { event } = buildEvent(cookie, userId, 0);
 		const { handle } = await import('../../src/hooks.server');
 
 		await handle({ event, resolve } as any);
@@ -86,11 +99,9 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 	});
 
 	it('promotes a non-owner whose row says is_admin = 1', async () => {
-		const cookie = await signSession(
-			{ id: 'discord_888', login: 'staff', isOwner: false, isAdmin: false },
-			SECRET
-		);
-		const { event } = buildEvent(cookie, 1);
+		const userId = 'discord_888';
+		const cookie = await signSession({ token: 'staff-session-token' }, SECRET);
+		const { event } = buildEvent(cookie, userId, 1);
 		const { handle } = await import('../../src/hooks.server');
 
 		await handle({ event, resolve } as any);
@@ -104,7 +115,7 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 			.replace(/\+/g, '-')
 			.replace(/\//g, '_')
 			.replace(/=+$/, '');
-		const { event, deleted } = buildEvent(forged, 1);
+		const { event, deleted } = buildEvent(forged, 'x', 1);
 		const { handle } = await import('../../src/hooks.server');
 
 		await handle({ event, resolve } as any);

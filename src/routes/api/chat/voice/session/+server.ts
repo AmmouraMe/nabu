@@ -25,13 +25,11 @@ export async function POST({ request, platform, locals }: RequestEvent) {
 		}
 
 		// Use configured voice model or default
-		const voiceModel = aiKey.voiceModel || 'gpt-4o-realtime-preview-2024-12-17';
-		console.log('Creating realtime session with model:', voiceModel);
+		const voiceModel =
+			aiKey.voiceModels?.[0] || aiKey.voiceModel || 'gpt-4o-realtime-preview-2024-12-17';
 
 		// Create realtime session
 		const session = await createRealtimeSession(aiKey.apiKey, voiceModel);
-		console.log('Realtime session created, token length:', session.token?.length);
-		console.log('Token prefix:', session.token?.substring(0, 30) + '...');
 
 		return json({
 			token: session.token,

@@ -1,35 +1,40 @@
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import { externalOrigin } from '$lib/server/origin';
+import { getAuthProviderCredentials } from '$lib/server/auth-provider-config';
+import {
+	createOAuthTransaction,
+	oauthStateCookieName,
+	oauthStateCookieOptions
+} from '$lib/server/oauth-state';
+import { decodeDatabaseSessionCookie } from '$lib/server/session';
 import type { RequestHandler } from './$types';
 
 // GET - Redirect to Discord OAuth
-export const GET: RequestHandler = async ({ platform, url }) => {
-	let clientId = platform?.env?.DISCORD_CLIENT_ID;
-	const mode = url.searchParams.get('mode') === 'link' ? 'link' : 'login';
-
-	// Try to fetch from KV if environment variable not set
-	if (!clientId && platform?.env?.KV) {
-		try {
-			const stored = await platform.env.KV.get('auth_config:discord');
-			if (stored) {
-				const config = JSON.parse(stored);
-				clientId = config.clientId;
-			}
-		} catch (err) {
-			console.error('Failed to fetch from KV:', err);
-		}
-	}
+export const GET: RequestHandler = async ({ platform, url, cookies, locals }) => {
+	const { clientId } = await getAuthProviderCredentials(platform, 'discord');
 
 	// Check if Discord OAuth is configured
 	if (!clientId) {
 		throw redirect(302, '/setup?error=oauth_not_configured');
 	}
 
-	// Generate state for CSRF protection
-	const state = `${mode}:${crypto.randomUUID()}`;
-
-	// Store state in cookie for validation in callback
-	// In production, store in session/KV with expiry
+	const linking = url.searchParams.get('mode') === 'link';
+	if (linking && !locals.user) throw redirect(302, '/auth/login?error=authentication_required');
+	const db = platform?.env?.DB;
+	if (!db) throw error(503, 'OAuth state storage is unavailable');
+	const token = linking
+		? await decodeDatabaseSessionCookie(cookies.get('session'), platform?.env?.SESSION_SECRET)
+		: undefined;
+	if (linking && !token) throw redirect(302, '/auth/login?error=authentication_required');
+	const { state, cookie } = await createOAuthTransaction(
+		db,
+		'discord',
+		linking ? 'link' : 'login',
+		linking ? locals.user?.id : undefined,
+		token || undefined,
+		platform?.env?.SESSION_SECRET
+	);
+	cookies.set(oauthStateCookieName('discord'), cookie, oauthStateCookieOptions('discord', url));
 
 	const params = new URLSearchParams({
 		client_id: clientId,

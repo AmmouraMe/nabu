@@ -13,6 +13,7 @@ import {
 } from '$lib/services/cms';
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { sanitizeContentFields } from '$lib/cms/sanitize';
 
 export const load: PageServerLoad = async ({ params, platform }) => {
 	const typeSlug = params.contentType;
@@ -36,6 +37,7 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 	if (!contentType) {
 		throw error(404, 'Content type not found');
 	}
+	if (contentType.settings.isPublic === false) throw error(404, 'Content type not found');
 
 	const item = await getContentItemBySlug(db, contentType.id, itemSlug);
 	if (!item) {
@@ -55,7 +57,7 @@ export const load: PageServerLoad = async ({ params, platform }) => {
 
 	return {
 		contentType,
-		item,
+		item: { ...item, fields: sanitizeContentFields(item.fields, contentType.fields) },
 		tags
 	};
 };

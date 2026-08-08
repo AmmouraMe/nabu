@@ -14,7 +14,7 @@
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
 		"test:ui": "vitest --ui",
-		"test:e2e": "playwright test",
+		"test:e2e": "npm run db:migrate:local && playwright test",
 		"test:e2e:ui": "playwright test --ui",
 		"test:e2e:headed": "playwright test --headed",
 		"test:all": "npm run test && npm run test:e2e",
@@ -46,8 +46,7 @@
 		"wrangler": "^3.78.0"
 	},
 	"dependencies": {
-		"@auth/core": "^0.35.0",
-		"@auth/sveltekit": "^1.5.0"
+		"xss": "^1.0.15"
 	},
 	"type": "module"
 }

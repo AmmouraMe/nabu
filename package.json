@@ -46,7 +46,7 @@
 		"wrangler": "^3.78.0"
 	},
 	"dependencies": {
-		"@auth/core": "^0.35.0",
+		"@auth/core": "^0.41.3",
 		"@auth/sveltekit": "^1.5.0"
 	},
 	"type": "module"

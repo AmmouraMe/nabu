@@ -330,6 +330,7 @@ describe('Brand Assets Texts API - Extended coverage', () => {
 
   vi.mock('$lib/services/brand-assets', () => ({
     createBrandText: vi.fn().mockResolvedValue({ id: 't1' }),
+    findBrandTextByKey: vi.fn().mockResolvedValue(null),
     getBrandTexts: vi.fn().mockResolvedValue([]),
     getBrandTextsByCategory: vi.fn().mockResolvedValue([]),
     updateBrandText: vi.fn().mockResolvedValue(undefined),

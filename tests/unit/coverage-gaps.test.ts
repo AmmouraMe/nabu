@@ -720,6 +720,7 @@ describe('Brand Assets Texts - setAsProfileField branch', () => {
 				label: 'Tagline',
 				value: 'Test'
 			}),
+			findBrandTextByKey: vi.fn().mockResolvedValue(null),
 			updateBrandText: vi.fn().mockResolvedValue(undefined),
 			deleteBrandText: vi.fn().mockResolvedValue(undefined),
 			syncFieldToTextAsset: vi.fn().mockResolvedValue(undefined),

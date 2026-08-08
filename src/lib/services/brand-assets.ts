@@ -141,20 +141,65 @@ export async function getBrandTextById(
 
 /**
  * Find a text asset by brand profile, category, and key.
+ * Pass `language` to match the table's
+ * UNIQUE(brand_profile_id, category, key, language) identity exactly —
+ * omit it to search across languages.
  * Returns null if not found.
  */
 export async function findBrandTextByKey(
   db: D1Database,
   brandProfileId: string,
   category: string,
-  key: string
+  key: string,
+  language?: string
 ): Promise<BrandText | null> {
+  const sql = language
+    ? `SELECT * FROM brand_texts
+       WHERE brand_profile_id = ? AND category = ? AND key = ? AND language = ?`
+    : `SELECT * FROM brand_texts
+       WHERE brand_profile_id = ? AND category = ? AND key = ?`;
+  const binds = language
+    ? [brandProfileId, category, key, language]
+    : [brandProfileId, category, key];
+
+  const row = await db
+    .prepare(sql)
+    .bind(...binds)
+    .first<Record<string, unknown>>();
+
+  if (!row) return null;
+  return mapRowToText(row);
+}
+
+/**
+ * Find the text asset a profile field is mirrored to, considering every key
+ * that field is known by. Earlier keys win, so the canonical key is preferred
+ * when rows exist under more than one alias.
+ *
+ * Needed because the Text tab's preset keys and FIELD_TO_TEXT_MAPPING's
+ * canonical key diverge for some fields (e.g. 'mission_statement' vs
+ * 'mission'); matching only the canonical key would shadow an existing row
+ * with a second, duplicate one.
+ */
+export async function findBrandTextByAnyKey(
+  db: D1Database,
+  brandProfileId: string,
+  category: string,
+  keys: string[]
+): Promise<BrandText | null> {
+  if (keys.length === 0) return null;
+
+  const placeholders = keys.map(() => '?').join(', ');
+  const preference = keys.map((_, index) => `WHEN ? THEN ${index}`).join(' ');
+
   const row = await db
     .prepare(
       `SELECT * FROM brand_texts
-       WHERE brand_profile_id = ? AND category = ? AND key = ?`
+       WHERE brand_profile_id = ? AND category = ? AND key IN (${placeholders})
+       ORDER BY CASE key ${preference} ELSE ${keys.length} END
+       LIMIT 1`
     )
-    .bind(brandProfileId, category, key)
+    .bind(brandProfileId, category, ...keys, ...keys)
     .first<Record<string, unknown>>();
 
   if (!row) return null;
@@ -165,7 +210,9 @@ export async function findBrandTextByKey(
  * Sync a brand profile field value to a corresponding text asset.
  * Uses FIELD_TO_TEXT_MAPPING to determine the text category and key.
  * Creates the text if it doesn't exist, or updates it if it does.
- * No-ops for fields without a mapping, or null/empty values.
+ * Clearing the field blanks the mirrored text asset rather than leaving the
+ * previous value stranded on the Text tab.
+ * No-ops for fields without a mapping.
  */
 export async function syncFieldToTextAsset(
   db: D1Database,
@@ -175,9 +222,6 @@ export async function syncFieldToTextAsset(
     value: string | null;
   }
 ): Promise<void> {
-  // Skip if value is empty or null
-  if (!params.value) return;
-
   // Import inline to avoid circular dependency at module level
   const { FIELD_TO_TEXT_MAPPING, BRAND_FIELD_LABELS } = await import('$lib/services/brand');
 
@@ -188,8 +232,20 @@ export async function syncFieldToTextAsset(
   const key = mapping.keys[0]; // Use first key as the canonical key
   const label = BRAND_FIELD_LABELS[params.fieldName] || params.fieldName;
 
-  // Check if a text asset already exists for this field
-  const existing = await findBrandTextByKey(db, params.brandProfileId, category, key);
+  // Check if a text asset already exists for this field, under any of the
+  // keys it may have been stored under
+  const existing = await findBrandTextByAnyKey(db, params.brandProfileId, category, mapping.keys);
+
+  if (!params.value) {
+    // The field was cleared. Blank the mirrored asset so the Text tab stops
+    // showing the old content; the row and its revision history are kept so
+    // the value stays recoverable. Never create an asset for an empty value —
+    // that would invent Text-tab entries for fields the user never filled in.
+    if (existing) {
+      await updateBrandText(db, existing.id, { value: '' });
+    }
+    return;
+  }
 
   if (existing) {
     // Update the existing text asset

@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import {
 	createBrandText,
+	findBrandTextByKey,
 	getBrandTexts,
 	getBrandTextsByCategory,
 	updateBrandText,
@@ -34,7 +35,11 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 /**
  * POST /api/brand/assets/texts
- * Create a text asset.
+ * Create a text asset, or update the one already holding this
+ * (brandProfileId, category, key, language) — that tuple is UNIQUE in the
+ * schema, so a blind insert would fail the constraint rather than replace the
+ * value the caller meant to replace.
+ * Responds 201 when a row was created, 200 when an existing one was updated.
  * If setAsProfileField=true and profileFieldName is provided,
  * also updates the corresponding brand_profiles field with version tracking.
  */
@@ -62,16 +67,39 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	// this can optionally overwrite.
 	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
 
-	const text = await createBrandText(platform.env.DB, {
+	const resolvedLanguage = language || 'en';
+
+	const existing = await findBrandTextByKey(
+		platform.env.DB,
 		brandProfileId,
 		category,
 		key,
-		label,
-		value,
-		language,
-		userId: locals.user.id,
-		changeSource: 'manual'
-	});
+		resolvedLanguage
+	);
+
+	let text;
+	if (existing) {
+		await updateBrandText(platform.env.DB, existing.id, {
+			value,
+			label,
+			userId: locals.user.id,
+			changeSource: 'manual'
+		});
+		// updated_at is written by the DB (datetime('now')); don't invent a
+		// client-side timestamp in a different format than a later GET returns.
+		text = { ...existing, label, value };
+	} else {
+		text = await createBrandText(platform.env.DB, {
+			brandProfileId,
+			category,
+			key,
+			label,
+			value,
+			language: resolvedLanguage,
+			userId: locals.user.id,
+			changeSource: 'manual'
+		});
+	}
 
 	// Optionally set the profile field to this value
 	let profileFieldUpdated = false;
@@ -91,7 +119,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		}
 	}
 
-	return json({ text, profileFieldUpdated }, { status: 201 });
+	const created = !existing;
+	return json({ text, profileFieldUpdated, created }, { status: created ? 201 : 200 });
 };
 
 /**

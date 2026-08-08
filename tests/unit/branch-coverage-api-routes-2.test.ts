@@ -28,6 +28,7 @@ vi.mock('$lib/services/brand-assets', () => ({
 	getLogoAssets: vi.fn(),
 	getBrandAssetSummary: vi.fn(),
 	createBrandText: vi.fn(),
+	findBrandTextByKey: vi.fn(),
 	getBrandTexts: vi.fn(),
 	getBrandTextsByCategory: vi.fn(),
 	updateBrandText: vi.fn(),

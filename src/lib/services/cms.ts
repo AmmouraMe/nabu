@@ -22,6 +22,7 @@ import type {
 	UpdateContentTypeInput
 } from '$lib/cms/types';
 import { generateSlug, parseContentItem, parseContentTag, parseContentType } from '$lib/cms/utils';
+import { sanitizeContentFields } from '$lib/cms/sanitize';
 import type { D1Database } from '@cloudflare/workers-types';
 
 /**
@@ -137,7 +138,8 @@ export async function createContentItem(
 	const id = crypto.randomUUID();
 	const slug = input.slug || generateSlug(input.title);
 	const status = input.status || 'draft';
-	const fieldsJson = JSON.stringify(input.fields);
+	const definitions = JSON.parse(contentType.fields) as ContentTypeParsed['fields'];
+	const fieldsJson = JSON.stringify(sanitizeContentFields(input.fields, definitions));
 	const publishedAt = status === 'published' ? new Date().toISOString() : null;
 
 	// Check slug uniqueness within this content type
@@ -330,7 +332,16 @@ export async function updateContentItem(
 	const title = input.title ?? existing.title;
 	const slug = input.slug ?? existing.slug;
 	const status = input.status ?? existing.status;
-	const fields = input.fields ? JSON.stringify(input.fields) : existing.fields;
+	let fields = existing.fields;
+	if (input.fields) {
+		const contentType = await db
+			.prepare('SELECT * FROM content_types WHERE id = ?')
+			.bind(existing.content_type_id)
+			.first<ContentType>();
+		if (!contentType) return null;
+		const definitions = JSON.parse(contentType.fields) as ContentTypeParsed['fields'];
+		fields = JSON.stringify(sanitizeContentFields(input.fields, definitions));
+	}
 	const seoTitle = input.seoTitle !== undefined ? input.seoTitle : existing.seo_title;
 	const seoDescription =
 		input.seoDescription !== undefined ? input.seoDescription : existing.seo_description;

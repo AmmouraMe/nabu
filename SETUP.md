@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Node.js 18+ installed
-- npm or pnpm
+- npm
 - Cloudflare account (for deployment)
 - Wrangler CLI installed: `npm install -g wrangler`
 
@@ -57,7 +57,7 @@ Start the development server:
 npm run dev
 ```
 
-The app will be available at `http://localhost:4277`
+The app will be available at `http://localhost:4239`
 
 ## Building
 
@@ -133,14 +133,17 @@ Configure background job processing. Messages are automatically processed by the
 ### Turnstile
 
 1. Create a Turnstile site at https://dash.cloudflare.com/
-2. Add the site key to your frontend
-3. Add the secret key to `wrangler.toml` or environment variables
+2. Configure both the site key and secret key, or leave both absent
+3. Partial configuration fails closed
 
 ## Environment Variables
 
 Create a `.env` file for local development:
 
 ```
+SESSION_SECRET=generate-a-random-session-secret
+SETUP_SECRET=generate-a-different-bootstrap-secret
+TURNSTILE_SITE_KEY=your-site-key
 TURNSTILE_SECRET_KEY=your-secret-key
 ```
 
@@ -149,7 +152,7 @@ For production, set these in Cloudflare Pages settings.
 ## Project Structure
 
 ```
-NebulaKit/
+Nabu/
 ├── src/
 │   ├── lib/
 │   │   ├── components/     # Reusable UI components

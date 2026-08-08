@@ -17,7 +17,7 @@ Thank you for your interest in contributing to NebulaKit! This guide will help y
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm 9+
 - Git
 
@@ -35,12 +35,13 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:4277` to verify everything works.
+Visit `http://localhost:4239` to verify everything works.
 
 ## 🧪 Testing Requirements
 
 ### Coverage Requirements
-- **Minimum 90% code coverage** across all modules
+
+- **Minimum 95% code coverage** for lines, branches, functions, and statements
 - **100% coverage** on critical paths (auth, payments, data mutations)
 - All tests must pass before submitting a PR
 
@@ -53,7 +54,7 @@ npm run test
 # Run tests in watch mode
 npm run test:watch
 
-# Check coverage (must be ≥90%)
+# Check coverage (must be ≥95%)
 npm run test:coverage
 
 # Run tests with UI
@@ -83,25 +84,27 @@ tests/
 ### Writing Tests
 
 #### Unit Tests
+
 ```typescript
 // src/lib/utils/format.test.ts
 import { describe, it, expect } from 'vitest';
 import { formatDate } from './format';
 
 describe('formatDate', () => {
-  it('should format ISO date to readable string', () => {
-    const result = formatDate('2024-01-15');
-    expect(result).toBe('January 15, 2024');
-  });
+	it('should format ISO date to readable string', () => {
+		const result = formatDate('2024-01-15');
+		expect(result).toBe('January 15, 2024');
+	});
 
-  it('should handle invalid dates gracefully', () => {
-    const result = formatDate('invalid');
-    expect(result).toBe('Invalid Date');
-  });
+	it('should handle invalid dates gracefully', () => {
+		const result = formatDate('invalid');
+		expect(result).toBe('Invalid Date');
+	});
 });
 ```
 
 #### Component Tests
+
 ```typescript
 // src/lib/components/Button.test.ts
 import { describe, it, expect } from 'vitest';
@@ -109,54 +112,60 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import Button from './Button.svelte';
 
 describe('Button', () => {
-  it('should render with text', () => {
-    render(Button, { props: { label: 'Click me' } });
-    expect(screen.getByText('Click me')).toBeInTheDocument();
-  });
+	it('should render with text', () => {
+		render(Button, { props: { label: 'Click me' } });
+		expect(screen.getByText('Click me')).toBeInTheDocument();
+	});
 
-  it('should call onClick when clicked', async () => {
-    let clicked = false;
-    render(Button, { 
-      props: { 
-        label: 'Click me',
-        onClick: () => { clicked = true; }
-      }
-    });
-    
-    await fireEvent.click(screen.getByText('Click me'));
-    expect(clicked).toBe(true);
-  });
+	it('should call onClick when clicked', async () => {
+		let clicked = false;
+		render(Button, {
+			props: {
+				label: 'Click me',
+				onClick: () => {
+					clicked = true;
+				}
+			}
+		});
+
+		await fireEvent.click(screen.getByText('Click me'));
+		expect(clicked).toBe(true);
+	});
 });
 ```
 
 #### E2E Tests
+
 ```typescript
 // tests/e2e/feature.test.ts
 import { test, expect } from '@playwright/test';
 
 test.describe('Feature Name', () => {
-  test('should complete user workflow', async ({ page }) => {
-    await page.goto('/');
-    await page.click('button[aria-label="Start"]');
-    await expect(page.locator('h1')).toContainText('Success');
-  });
+	test('should complete user workflow', async ({ page }) => {
+		await page.goto('/');
+		await page.click('button[aria-label="Start"]');
+		await expect(page.locator('h1')).toContainText('Success');
+	});
 });
 ```
 
 ## 📝 Code Style
 
 ### TypeScript
+
 - Use explicit types (avoid `any`)
 - Prefer interfaces over types for objects
 - Document public APIs with JSDoc
 
 ### Naming Conventions
+
 - **Components**: PascalCase (`UserProfile.svelte`)
 - **Files**: kebab-case (`user-service.ts`)
 - **Variables/Functions**: camelCase (`getUserData`)
 - **Constants**: UPPER_SNAKE_CASE (`MAX_RETRY_COUNT`)
 
 ### File Structure
+
 ```
 src/lib/components/
 ├── Button.svelte
@@ -167,31 +176,32 @@ src/lib/components/
 ## 🏗️ Architecture Guidelines
 
 ### Cloudflare-First
+
 - Use Cloudflare services (D1, KV, R2, Queues, Turnstile)
 - Optimize for edge runtime
 - Consider cold start performance
 - No Node.js-specific APIs
 
 ### Minimal Dependencies
+
 - **Build, don't buy** - Implement in-house when feasible
 - Avoid external packages for: WYSIWYG editors, user management, SSO, UI components
 - Only add dependencies for: complex functionality (crypto), Cloudflare integrations, core framework needs
 
 ### Database Operations
+
 ```typescript
 // ✅ Good - Parameterized queries
-await platform.env.DB.prepare('SELECT * FROM users WHERE id = ?')
-  .bind(userId)
-  .first();
+await platform.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first();
 
 // ❌ Bad - String concatenation (SQL injection risk)
-await platform.env.DB.prepare(`SELECT * FROM users WHERE id = ${userId}`)
-  .first();
+await platform.env.DB.prepare(`SELECT * FROM users WHERE id = ${userId}`).first();
 ```
 
 ## 🔄 Git Workflow
 
 ### Branch Naming
+
 - `feature/short-description` - New features
 - `fix/bug-description` - Bug fixes
 - `test/what-testing` - Test improvements
@@ -199,6 +209,7 @@ await platform.env.DB.prepare(`SELECT * FROM users WHERE id = ${userId}`)
 - `docs/what-documenting` - Documentation
 
 ### Commit Messages
+
 ```
 type(scope): short description
 
@@ -211,6 +222,7 @@ Longer explanation if needed
 **Types**: `feat`, `fix`, `test`, `refactor`, `docs`, `style`, `chore`
 
 **Examples**:
+
 ```
 feat(auth): add email verification flow
 fix(chat): resolve message ordering issue
@@ -238,9 +250,10 @@ npm run dev
 ## 📋 Pull Request Process
 
 ### PR Checklist
+
 - [ ] Tests written **before** implementation (TDD)
 - [ ] All tests passing (`npm run test:all`)
-- [ ] Coverage ≥ 90% (`npm run test:coverage`)
+- [ ] Coverage ≥ 95% (`npm run test:coverage`)
 - [ ] TypeScript checks pass (`npm run check`)
 - [ ] Dev environment works (`npm run dev`)
 - [ ] No new external dependencies (or justified in PR description)
@@ -249,32 +262,39 @@ npm run dev
 - [ ] Commit messages follow convention
 
 ### PR Title
+
 Follow the same format as commit messages:
+
 ```
 feat(scope): add new feature
 fix(scope): resolve bug
 ```
 
 ### PR Description Template
+
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Motivation
+
 Why is this change needed?
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] E2E tests added/updated
 - [ ] All tests passing
-- [ ] Coverage ≥ 90%
+- [ ] Coverage ≥ 95%
 
 ## Screenshots (if applicable)
 
@@ -289,11 +309,12 @@ Why is this change needed?
 4. ❌ **Not testing locally** - Always verify dev environment works
 5. ❌ **Hardcoding values** - Use environment variables
 6. ❌ **Using Node.js APIs** - Use Web APIs for Cloudflare Workers
-7. ❌ **Committing without coverage check** - Must maintain 90%+
+7. ❌ **Committing without coverage check** - Must maintain 95%+
 
 ## 🎨 UI/UX Standards
 
 ### Accessibility
+
 - Include proper ARIA labels
 - Ensure keyboard navigation
 - Test with screen readers
@@ -301,12 +322,14 @@ Why is this change needed?
 - Meet WCAG AA contrast ratios
 
 ### Responsive Design
+
 - Mobile-first approach
 - Test on mobile, tablet, desktop
 - Use relative units (rem, em, %)
 - Touch targets ≥ 44x44px
 
 ### Theme System
+
 - Use CSS custom properties from `app.css`
 - Support light/dark modes
 - Never hardcode colors
@@ -341,4 +364,3 @@ By contributing, you agree that your contributions will be licensed under the sa
 ---
 
 **Remember**: Quality over speed. Write tests first. Build instead of importing. Optimize for Cloudflare. 🚀
-

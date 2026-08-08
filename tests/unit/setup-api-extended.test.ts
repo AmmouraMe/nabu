@@ -12,15 +12,9 @@ describe('Setup API', () => {
 	});
 
 	describe('GET /api/setup', () => {
-		it('should return hasConfig=false when KV not available', async () => {
+		it('should fail when KV is not available', async () => {
 			const { GET } = await import('../../src/routes/api/setup/+server');
-			const response = await GET({
-				platform: {}
-			} as any);
-
-			const result = await response.json();
-			expect(result.hasConfig).toBe(false);
-			expect(result.hasAdmin).toBe(false);
+			await expect(GET({ platform: {} } as any)).rejects.toMatchObject({ status: 500 });
 		});
 
 		it('should return hasConfig=true when auth config exists', async () => {
@@ -69,7 +63,7 @@ describe('Setup API', () => {
 			expect(result.setupLocked).toBe(true);
 		});
 
-		it('should handle KV errors gracefully', async () => {
+		it('should fail closed on KV errors', async () => {
 			const mockPlatform = {
 				env: {
 					KV: {
@@ -79,14 +73,7 @@ describe('Setup API', () => {
 			};
 
 			const { GET } = await import('../../src/routes/api/setup/+server');
-			const response = await GET({
-				platform: mockPlatform
-			} as any);
-
-			const result = await response.json();
-			expect(result.hasConfig).toBe(false);
-			expect(result.hasAdmin).toBe(false);
-			expect(result.setupLocked).toBe(false);
+			await expect(GET({ platform: mockPlatform } as any)).rejects.toMatchObject({ status: 500 });
 		});
 	});
 
@@ -94,6 +81,7 @@ describe('Setup API', () => {
 		it('should return 403 when setup is locked', async () => {
 			const mockPlatform = {
 				env: {
+					SETUP_SECRET: 'test-setup-secret',
 					KV: {
 						get: vi.fn().mockResolvedValue('true') // setup locked
 					}
@@ -194,6 +182,7 @@ describe('Setup API', () => {
 			const mockPut = vi.fn().mockResolvedValue(undefined);
 			const mockPlatform = {
 				env: {
+					SETUP_SECRET: 'test-setup-secret',
 					KV: {
 						get: vi.fn().mockResolvedValue(null),
 						put: mockPut
@@ -215,6 +204,7 @@ describe('Setup API', () => {
 			const { POST } = await import('../../src/routes/api/setup/+server');
 			const response = await POST({
 				request: {
+					headers: { get: vi.fn().mockReturnValue('Bearer test-setup-secret') },
 					json: vi.fn().mockResolvedValue({
 						clientId: 'test-client',
 						clientSecret: 'test-secret',
@@ -261,7 +251,7 @@ describe('Setup API', () => {
 			).rejects.toThrow();
 		});
 
-		it('should work without KV (development mode)', async () => {
+		it('should reject setup without KV', async () => {
 			globalThis.fetch = vi.fn().mockResolvedValue({
 				ok: true,
 				json: vi.fn().mockResolvedValue({
@@ -271,23 +261,22 @@ describe('Setup API', () => {
 			});
 
 			const { POST } = await import('../../src/routes/api/setup/+server');
-			const response = await POST({
-				request: {
-					json: vi.fn().mockResolvedValue({
-						clientId: 'test-client',
-						clientSecret: 'test-secret',
-						adminGithubUsername: 'testuser'
-					})
-				},
-				platform: {}
-			} as any);
-
-			const result = await response.json();
-			expect(result.success).toBe(true);
-			expect(result.message).toContain('KV');
+			await expect(
+				POST({
+					request: {
+						headers: { get: vi.fn().mockReturnValue('Bearer test-setup-secret') },
+						json: vi.fn().mockResolvedValue({
+							clientId: 'test-client',
+							clientSecret: 'test-secret',
+							adminGithubUsername: 'testuser'
+						})
+					},
+					platform: {}
+				} as any)
+			).rejects.toMatchObject({ status: 500 });
 		});
 
-		it('should allow updating admin without credentials when config exists', async () => {
+		it('should reject unauthenticated reconfiguration when config exists', async () => {
 			const existingConfig = {
 				id: 'existing-id',
 				clientId: 'existing-client',
@@ -317,19 +306,16 @@ describe('Setup API', () => {
 			});
 
 			const { POST } = await import('../../src/routes/api/setup/+server');
-			const response = await POST({
-				request: {
-					json: vi.fn().mockResolvedValue({
-						adminGithubUsername: 'newadmin'
-						// No clientId/clientSecret - using existing
-					})
-				},
-				platform: mockPlatform
-			} as any);
-
-			const result = await response.json();
-			expect(result.success).toBe(true);
-			expect(result.adminUsername).toBe('newadmin');
+			await expect(
+				POST({
+					request: {
+						headers: { get: vi.fn().mockReturnValue('Bearer test-setup-secret') },
+						json: vi.fn().mockResolvedValue({ adminGithubUsername: 'newadmin' })
+					},
+					platform: mockPlatform,
+					locals: {}
+				} as any)
+			).rejects.toMatchObject({ status: 401 });
 		});
 	});
 });

@@ -601,7 +601,6 @@
 			// Connect to OpenAI Realtime API via WebSocket
 			const wsModel = model || 'gpt-4o-realtime-preview-2024-12-17';
 			console.log('Connecting to OpenAI Realtime API with model:', wsModel);
-			console.log('Token length:', token?.length, 'Token prefix:', token?.substring(0, 20) + '...');
 
 			realtimeWs = new WebSocket(`wss://api.openai.com/v1/realtime?model=${wsModel}`, [
 				'realtime',

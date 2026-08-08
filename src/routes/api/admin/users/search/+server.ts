@@ -1,15 +1,9 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { requireOwner } from '$lib/server/auth-guards';
 
 export const GET: RequestHandler = async ({ url, locals, fetch }) => {
-	// Check if user is authenticated and is admin
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-
-	if (!locals.user.isOwner && !locals.user.isAdmin) {
-		throw error(403, 'Forbidden');
-	}
+	requireOwner(locals);
 
 	const query = url.searchParams.get('q');
 	if (!query || query.length < 2) {

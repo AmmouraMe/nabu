@@ -101,6 +101,12 @@ describe('generateDevToPost', () => {
     expect(result.title).toBe('My Topic');
   });
 
+  it('normalizes non-array tags to an empty list', async () => {
+    const ai = makeAi({ title: 'T', body: 'B', tags: 'javascript' });
+    const result = await generateDevToPost(ai, mockBrand, 'topic');
+    expect(result.tags).toEqual([]);
+  });
+
   it('handles fenced JSON in AI response', async () => {
     const ai: AiBinding = {
       run: vi.fn().mockResolvedValue({
@@ -125,6 +131,12 @@ describe('generateLinkedInUpdate', () => {
     const ai = makeAi({ text: 'Great post about engineering!' });
     const result = await generateLinkedInUpdate(ai, mockBrand, 'engineering culture');
     expect(result.text).toBe('Great post about engineering!');
+  });
+
+  it('defaults missing text to an empty string', async () => {
+    const ai = makeAi({});
+    const result = await generateLinkedInUpdate(ai, mockBrand, 'engineering culture');
+    expect(result.text).toBe('');
   });
 
   it('truncates text to 3000 chars', async () => {
@@ -176,6 +188,12 @@ describe('generateContentCalendar', () => {
     const ai = makeAi([{ week: 1, topic: 'Something' }]);
     const result = await generateContentCalendar(ai, mockBrand, 1);
     expect(result[0].platforms).toEqual(['linkedin']);
+  });
+
+  it('normalizes missing calendar entry fields', async () => {
+    const ai = makeAi([{}]);
+    const result = await generateContentCalendar(ai, mockBrand, 1);
+    expect(result[0]).toEqual({ week: 1, topic: '', platforms: ['linkedin'] });
   });
 
   it('returns empty array when AI returns non-array', async () => {

@@ -10,6 +10,9 @@ const config: PlaywrightTestConfig = {
 	testMatch: /(.+\.)?(test|spec)\.[jt]s/,
 	use: {
 		baseURL: 'http://localhost:4239',
+		launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+			? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+			: undefined,
 		trace: 'retain-on-failure',
 		screenshot: 'only-on-failure'
 	},

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The admin auth-keys routes gate on isOwner/isAdmin.
-const adminLocals = { user: { id: 'admin-1', isAdmin: true } };
+// OAuth credentials are restricted to the site owner.
+const adminLocals = { user: { id: 'owner-1', isAdmin: true, isOwner: true } };
 
 /**
  * Tests for Auth Keys API Endpoints
@@ -67,7 +67,7 @@ describe('Auth Keys API', () => {
 			expect(result.keys[0].isSetupKey).toBe(true);
 		});
 
-		it('should handle KV parse errors gracefully', async () => {
+		it('should fail closed when stored auth config is malformed', async () => {
 			const mockPlatform = {
 				env: {
 					KV: {
@@ -77,13 +77,9 @@ describe('Auth Keys API', () => {
 			};
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
-			const response = await GET({
-				platform: mockPlatform,
-				locals: adminLocals
-			} as any);
-
-			const result = await response.json();
-			expect(result.keys).toEqual([]);
+			await expect(
+				GET({ platform: mockPlatform, locals: adminLocals } as any)
+			).rejects.toMatchObject({ status: 500 });
 		});
 
 		it('should return empty array when KV is not available', async () => {
@@ -127,8 +123,8 @@ describe('Auth Keys API', () => {
 			const result = await response.json();
 			expect(result.keys).toHaveLength(1);
 			expect(result.keys[0].id).toBe('discord-123');
-			expect(result.keys[0].name).toBe('Discord OAuth (Setup)');
-			expect(result.keys[0].isSetupKey).toBe(true);
+			expect(result.keys[0].name).toBe('Discord OAuth');
+			expect(result.keys[0].isSetupKey).toBe(false);
 		});
 
 		it('should return both GitHub and Discord OAuth keys from KV', async () => {
@@ -174,7 +170,7 @@ describe('Auth Keys API', () => {
 			expect(result.keys[1].provider).toBe('discord');
 		});
 
-		it('should handle Discord KV parse errors gracefully', async () => {
+		it('should fail closed on malformed Discord config', async () => {
 			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 			const mockPlatform = {
@@ -191,19 +187,15 @@ describe('Auth Keys API', () => {
 			};
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
-			const response = await GET({
-				platform: mockPlatform,
-				locals: adminLocals
-			} as any);
-
-			const result = await response.json();
-			expect(result.keys).toEqual([]);
+			await expect(
+				GET({ platform: mockPlatform, locals: adminLocals } as any)
+			).rejects.toMatchObject({ status: 500 });
 			expect(consoleSpy).toHaveBeenCalled();
 
 			consoleSpy.mockRestore();
 		});
 
-		it('should handle KV.get errors gracefully and return empty keys', async () => {
+		it('should fail closed when KV cannot be read', async () => {
 			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
 			const mockPlatform = {
@@ -216,14 +208,9 @@ describe('Auth Keys API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 
-			// The GET function catches KV errors internally and returns empty keys
-			const response = await GET({
-				platform: mockPlatform,
-				locals: adminLocals
-			} as any);
-
-			const result = await response.json();
-			expect(result.keys).toEqual([]);
+			await expect(
+				GET({ platform: mockPlatform, locals: adminLocals } as any)
+			).rejects.toMatchObject({ status: 500 });
 			expect(consoleSpy).toHaveBeenCalled();
 
 			consoleSpy.mockRestore();

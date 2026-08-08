@@ -4,7 +4,7 @@
 
 ```bash
 # Development
-npm run dev              # Start dev server (port 4277)
+npm run dev              # Start dev server (port 4239)
 npm run build            # Build for production
 npm run preview          # Preview production build
 npm run check            # TypeScript type checking
@@ -12,7 +12,7 @@ npm run check            # TypeScript type checking
 # Testing (REQUIRED before commits)
 npm run test             # Run unit & integration tests
 npm run test:watch       # Watch mode for TDD
-npm run test:coverage    # Coverage report (must be ≥90%)
+npm run test:coverage    # Coverage report (must be ≥95%)
 npm run test:e2e         # End-to-end tests
 npm run test:all         # Run all tests
 
@@ -37,7 +37,7 @@ deployed dev/staging Worker can opt in with `ALLOW_DEV_LOGIN=true` (never set in
 
 - [ ] Tests written FIRST (TDD)
 - [ ] `npm run test` passes
-- [ ] `npm run test:coverage` shows ≥90%
+- [ ] `npm run test:coverage` shows ≥95%
 - [ ] `npm run check` passes (no TS errors)
 - [ ] `npm run dev` works locally
 - [ ] No new external dependencies (or justified)
@@ -215,7 +215,7 @@ npm install package-name --save-dev
 
 ## 📊 Coverage Goals
 
-- **Minimum**: 90% across all metrics
+- **Minimum**: 95% across all metrics
 - **Critical paths**: 100% (auth, payments, mutations)
 - **New code**: Must maintain or improve coverage
 
@@ -251,7 +251,7 @@ npm run test:e2e:ui
 **Golden Rules**:
 
 1. ✅ Tests first, always
-2. ✅ 90%+ coverage, no exceptions
+2. ✅ 95%+ coverage, no exceptions
 3. ✅ Build over buy
 4. ✅ Cloudflare first
 5. ✅ Type safety everywhere

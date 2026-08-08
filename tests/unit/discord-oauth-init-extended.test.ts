@@ -7,13 +7,12 @@ describe('Discord OAuth Init - Extended Branch Coverage', () => {
 	});
 
 	describe('GET /api/auth/discord', () => {
-		it('should fallback to KV when env var not set and handle KV errors', async () => {
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
+		it('should fail closed when KV cannot be read', async () => {
 			const mockEvent = {
 				platform: {
 					env: {
 						DISCORD_CLIENT_ID: undefined,
+						SESSION_SECRET: 'test-session-secret',
 						KV: {
 							get: vi.fn().mockRejectedValue(new Error('KV Error'))
 						}
@@ -33,8 +32,6 @@ describe('Discord OAuth Init - Extended Branch Coverage', () => {
 				expect(err.location).toContain('/setup');
 			}
 
-			expect(consoleSpy).toHaveBeenCalledWith('Failed to fetch from KV:', expect.any(Error));
-			consoleSpy.mockRestore();
 		});
 
 		it('should use KV clientId when env var not set', async () => {
@@ -42,6 +39,12 @@ describe('Discord OAuth Init - Extended Branch Coverage', () => {
 				platform: {
 					env: {
 						DISCORD_CLIENT_ID: undefined,
+						SESSION_SECRET: 'test-session-secret',
+						DB: {
+							prepare: vi.fn().mockReturnValue({
+								bind: vi.fn().mockReturnValue({ run: vi.fn().mockResolvedValue(undefined) })
+							})
+						},
 						KV: {
 							get: vi.fn().mockResolvedValue(
 								JSON.stringify({
@@ -54,8 +57,10 @@ describe('Discord OAuth Init - Extended Branch Coverage', () => {
 				},
 				url: new URL('http://localhost:4277/api/auth/discord'),
 				cookies: {
+					get: vi.fn(),
 					set: vi.fn()
-				}
+				},
+				locals: {}
 			};
 
 			const { GET } = await import('../../src/routes/api/auth/discord/+server');

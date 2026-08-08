@@ -25,7 +25,7 @@ When using the Copilot Coding Agent (remote):
 
 - Never start a feature or bug fix without writing tests first
 - Write failing tests, then implement code to make them pass
-- Maintain 90%+ code coverage across all modules
+- Maintain 95%+ coverage for lines, branches, functions, and statements
 - Tests are not optional—they are part of the definition of "done"
 
 ## 🏗️ Architecture Principles
@@ -49,7 +49,7 @@ When using the Copilot Coding Agent (remote):
 - Avoid external packages for:
   - WYSIWYG editors (build custom)
   - User management (use built-in auth)
-  - SSO integrations (implement directly with Auth.js/SvelteKit)
+  - SSO integrations (implement directly with SvelteKit server routes)
   - UI components (extend internal component library)
   - Form validation (custom implementations)
   - State management (use Svelte stores)
@@ -86,7 +86,7 @@ describe('Feature Name', () => {
 
 ### Coverage Requirements
 
-- **Minimum 90% coverage** on all modules
+- **Minimum 95% coverage** for lines, branches, functions, and statements
 - 100% coverage on critical paths (auth, payments, data mutations)
 - Every new feature must include:
   - Unit tests for business logic
@@ -513,7 +513,7 @@ Types: `feat`, `fix`, `test`, `refactor`, `docs`, `style`, `chore`
 
 - [ ] Tests written first (TDD)
 - [ ] All tests passing
-- [ ] Coverage ≥ 90%
+- [ ] Coverage ≥ 95%
 - [ ] TypeScript checks pass
 - [ ] Local dev environment works
 - [ ] Code reviewed

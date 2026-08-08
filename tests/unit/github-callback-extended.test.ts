@@ -1,308 +1,158 @@
-/**
- * Extended tests for GitHub OAuth callback endpoint
- */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createOAuthDb } from '../fixtures/oauth';
 
-// Mock modules
-vi.mock('@sveltejs/kit', async () => {
-	const actual = await vi.importActual('@sveltejs/kit');
-	return {
-		...actual,
-		redirect: vi.fn((status: number, location: string) => {
-			const error = new Error(`Redirect to ${location}`) as Error & {
-				status: number;
-				location: string;
-			};
-			error.status = status;
-			error.location = location;
-			throw error;
-		}),
-		isRedirect: vi.fn((err: unknown) => {
-			return err && typeof err === 'object' && 'location' in err;
-		})
-	};
-});
+const mergeAccounts = vi.fn();
+vi.mock('$lib/services/account-merge', () => ({ mergeAccounts }));
 
-import { GET } from '../../src/routes/api/auth/github/callback/+server';
-
-// NOTE: These tests are skipped due to complex mock interaction issues with the OAuth flow.
-// The existing github-oauth-flow.test.ts provides coverage for the callback endpoint.
-describe('GitHub OAuth Callback - Extended Coverage', () => {
-	let mockFetch: ReturnType<typeof vi.fn>;
-	let mockKVGet: ReturnType<typeof vi.fn>;
-	let mockKVPut: ReturnType<typeof vi.fn>;
-	let mockDBPrepare: ReturnType<typeof vi.fn>;
-	let mockCookiesSet: ReturnType<typeof vi.fn>;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let consoleSpy: any;
-
+describe('canonical OAuth account reconciliation', () => {
 	beforeEach(() => {
-		mockFetch = vi.fn();
-		mockKVGet = vi.fn();
-		mockKVPut = vi.fn();
-		mockDBPrepare = vi.fn();
-		mockCookiesSet = vi.fn();
-		consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-		vi.stubGlobal('fetch', mockFetch);
-	});
-
-	afterEach(() => {
-		vi.unstubAllGlobals();
-		consoleSpy.mockRestore();
 		vi.clearAllMocks();
+		vi.stubGlobal('crypto', { randomUUID: () => 'oauth-link-id' });
 	});
 
-	const createMockEvent = (
-		overrides: {
-			code?: string | null;
-			kvGet?: ReturnType<typeof vi.fn>;
-			kvPut?: ReturnType<typeof vi.fn>;
-			dbPrepare?: ReturnType<typeof vi.fn>;
-			platform?: object | null;
-		} = {}
-	) => {
-		const url = new URL('http://localhost/api/auth/github/callback');
-		if (overrides.code !== null) {
-			url.searchParams.set('code', overrides.code || 'test-code');
-		}
+	it('uses an existing linked canonical user', async () => {
+		const db = createOAuthDb((query) => ({
+			first: query.includes('provider_account_id')
+				? { user_id: 'canonical-user' }
+				: query.includes('FROM users WHERE id')
+					? { id: 'canonical-user' }
+					: null
+		}));
+		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
+		const result = await reconcileOAuthAccount({
+			db: db as any,
+			provider: 'github',
+			providerAccountId: 'github-1',
+			legacyUserId: 'github-1',
+			createUser: vi.fn(),
+			updateUser: vi.fn()
+		});
+		expect(result).toEqual({ userId: 'canonical-user' });
+	});
 
-		return {
-			url,
-			platform:
-				overrides.platform !== null
-					? {
-							env: {
-								KV: {
-									get: overrides.kvGet || mockKVGet,
-									put: overrides.kvPut || mockKVPut
-								},
-								DB: {
-									prepare: overrides.dbPrepare || mockDBPrepare
-								}
-							}
-						}
-					: overrides.platform,
-			cookies: {
-				set: mockCookiesSet
-			}
-		};
-	};
-
-	it('should redirect with error when code is missing', async () => {
+	it('creates a canonical user and token-free provider link', async () => {
+		const db = createOAuthDb();
+		const createUser = vi.fn().mockResolvedValue(undefined);
+		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
 		await expect(
-			GET(createMockEvent({ code: null }) as unknown as Parameters<typeof GET>[0])
-		).rejects.toThrow('Redirect to /auth/login?error=no_code');
-	});
-
-	it('should redirect with error when auth config is not found', async () => {
-		mockKVGet.mockResolvedValue(null);
-
-		await expect(GET(createMockEvent() as unknown as Parameters<typeof GET>[0])).rejects.toThrow(
-			'Redirect to /auth/login?error=not_configured'
-		);
-	});
-
-	it('should redirect with error when token exchange fails', async () => {
-		mockKVGet.mockResolvedValue(
-			JSON.stringify({
-				clientId: 'test-client',
-				clientSecret: 'test-secret'
+			reconcileOAuthAccount({
+				db: db as any,
+				provider: 'github',
+				providerAccountId: 'github-1',
+				legacyUserId: 'github-1',
+				email: 'new@example.com',
+				createUser,
+				updateUser: vi.fn()
 			})
-		);
-		mockFetch.mockResolvedValueOnce({
-			ok: false,
-			text: async () => 'error'
+		).resolves.toEqual({ userId: 'github-1' });
+		expect(createUser).toHaveBeenCalledWith('github-1');
+		const insert = db.calls.find((call) => call.query.includes('INSERT INTO oauth_accounts'));
+		expect(insert?.bindings).toEqual(['oauth-link-id', 'github-1', 'github', 'github-1']);
+		expect(insert?.query).not.toMatch(/access_token|refresh_token/);
+	});
+
+	it('reuses an email-matched user and updates provider profile fields', async () => {
+		const updateUser = vi.fn().mockResolvedValue(undefined);
+		const db = createOAuthDb((query) => ({
+			first: query.includes('lower(email)') ? { id: 'email-user' } : null
+		}));
+		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
+		await expect(
+			reconcileOAuthAccount({
+				db: db as any,
+				provider: 'github',
+				providerAccountId: 'github-1',
+				legacyUserId: 'github-1',
+				email: ' User@Example.com ',
+				createUser: vi.fn(),
+				updateUser
+			})
+		).resolves.toEqual({ userId: 'email-user' });
+		expect(updateUser).toHaveBeenCalledWith('email-user', 'email');
+	});
+
+	it('links to the authenticated user and merges a conflicting account', async () => {
+		const updateUser = vi.fn().mockResolvedValue(undefined);
+		const db = createOAuthDb((query) => ({
+			first: query.includes('provider_account_id') ? { user_id: 'old-user' } : null
+		}));
+		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
+		await expect(
+			reconcileOAuthAccount({
+				db: db as any,
+				provider: 'github',
+				providerAccountId: 'github-1',
+				legacyUserId: 'github-1',
+				linkingUserId: 'current-user',
+				createUser: vi.fn(),
+				updateUser
+			})
+		).resolves.toEqual({ userId: 'current-user', linkedProvider: 'github' });
+		expect(mergeAccounts).toHaveBeenCalledWith(db, 'old-user', 'current-user');
+		expect(updateUser).toHaveBeenCalledWith('current-user', 'link');
+	});
+
+	it('creates a missing provider link for the authenticated user without merging', async () => {
+		const updateUser = vi.fn().mockResolvedValue(undefined);
+		const db = createOAuthDb();
+		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
+		await expect(
+			reconcileOAuthAccount({
+				db: db as any,
+				provider: 'discord',
+				providerAccountId: 'discord-1',
+				legacyUserId: 'discord_discord-1',
+				linkingUserId: 'current-user',
+				createUser: vi.fn(),
+				updateUser
+			})
+		).resolves.toEqual({ userId: 'current-user', linkedProvider: 'discord' });
+		expect(mergeAccounts).not.toHaveBeenCalled();
+		expect(db.calls.some((call) => call.query.includes('INSERT INTO oauth_accounts'))).toBe(true);
+	});
+
+	it('updates an existing legacy user and avoids duplicating its provider link', async () => {
+		const updateUser = vi.fn().mockResolvedValue(undefined);
+		const db = createOAuthDb((query) => ({
+			first: query.includes('SELECT id FROM users WHERE id')
+				? { id: 'legacy-user' }
+				: query.includes('WHERE user_id = ? AND provider = ?')
+					? { id: 'existing-link' }
+					: null
+		}));
+		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
+		await expect(
+			reconcileOAuthAccount({
+				db: db as any,
+				provider: 'github',
+				providerAccountId: 'legacy-user',
+				legacyUserId: 'legacy-user',
+				createUser: vi.fn(),
+				updateUser
+			})
+		).resolves.toEqual({ userId: 'legacy-user' });
+		expect(updateUser).toHaveBeenCalledWith('legacy-user', 'legacy');
+		expect(db.calls.some((call) => call.query.includes('INSERT INTO oauth_accounts'))).toBe(false);
+	});
+
+	it('merges a distinct legacy account into an email-matched canonical user', async () => {
+		const db = createOAuthDb((query) => ({
+			first: query.includes('lower(email)')
+				? { id: 'email-user' }
+				: query.includes('SELECT id FROM users WHERE id')
+					? { id: 'legacy-user' }
+					: null
+		}));
+		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
+		await reconcileOAuthAccount({
+			db: db as any,
+			provider: 'github',
+			providerAccountId: 'github-1',
+			legacyUserId: 'legacy-user',
+			email: 'same@example.com',
+			createUser: vi.fn(),
+			updateUser: vi.fn()
 		});
-
-		await expect(GET(createMockEvent() as unknown as Parameters<typeof GET>[0])).rejects.toThrow(
-			'Redirect to /auth/login?error=token_exchange_failed'
-		);
-	});
-
-	it('should redirect with error when access token is missing in response', async () => {
-		mockKVGet.mockResolvedValue(
-			JSON.stringify({
-				clientId: 'test-client',
-				clientSecret: 'test-secret'
-			})
-		);
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => ({})
-		});
-
-		await expect(GET(createMockEvent() as unknown as Parameters<typeof GET>[0])).rejects.toThrow(
-			'Redirect to /auth/login?error=no_access_token'
-		);
-	});
-
-	it('should redirect with error when user info fetch fails', async () => {
-		mockKVGet.mockResolvedValue(
-			JSON.stringify({
-				clientId: 'test-client',
-				clientSecret: 'test-secret'
-			})
-		);
-		mockFetch
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({ access_token: 'test-token' })
-			})
-			.mockResolvedValueOnce({
-				ok: false,
-				text: async () => 'user fetch failed'
-			});
-
-		await expect(GET(createMockEvent() as unknown as Parameters<typeof GET>[0])).rejects.toThrow(
-			'Redirect to /auth/login?error=user_fetch_failed'
-		);
-	});
-
-	it('should recognize owner by GitHub ID', async () => {
-		mockKVGet
-			.mockResolvedValueOnce(
-				JSON.stringify({
-					clientId: 'test-client',
-					clientSecret: 'test-secret'
-				})
-			)
-			.mockResolvedValueOnce('12345'); // owner ID matches
-
-		mockFetch
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({ access_token: 'test-token' })
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					id: 12345,
-					login: 'owner',
-					name: 'Owner User',
-					email: 'owner@test.com',
-					avatar_url: 'https://avatar.url'
-				})
-			});
-
-		mockKVGet.mockResolvedValueOnce(null); // First login check
-		mockKVPut.mockResolvedValue(undefined);
-
-		const response = await GET(createMockEvent() as unknown as Parameters<typeof GET>[0]);
-
-		// Successful auth now returns a Response with redirect
-		expect(response.status).toBe(302);
-		expect(response.headers.get('Location')).toContain('/admin');
-		expect(response.headers.get('Set-Cookie')).toContain('session=');
-
-		expect(mockKVPut).toHaveBeenCalledWith('admin_first_login_completed', 'true');
-	});
-
-	it('should redirect non-owner to home', async () => {
-		mockKVGet
-			.mockResolvedValueOnce(
-				JSON.stringify({
-					clientId: 'test-client',
-					clientSecret: 'test-secret'
-				})
-			)
-			.mockResolvedValueOnce('99999'); // Different owner ID
-
-		mockFetch
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({ access_token: 'test-token' })
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					id: 12345,
-					login: 'notowner',
-					name: 'Not Owner',
-					email: 'not@owner.com',
-					avatar_url: 'https://avatar.url'
-				})
-			});
-
-		const response = await GET(createMockEvent() as unknown as Parameters<typeof GET>[0]);
-
-		// Successful auth now returns a Response with redirect
-		expect(response.status).toBe(302);
-		expect(response.headers.get('Location')).toMatch(/\/$/); // Ends with /
-	});
-
-	it('should handle database errors gracefully', async () => {
-		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-		mockKVGet
-			.mockResolvedValueOnce(
-				JSON.stringify({
-					clientId: 'test-client',
-					clientSecret: 'test-secret'
-				})
-			)
-			.mockResolvedValueOnce('12345');
-
-		mockFetch
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({ access_token: 'test-token' })
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					id: 12345,
-					login: 'owner',
-					name: 'Owner User',
-					email: 'owner@test.com',
-					avatar_url: 'https://avatar.url'
-				})
-			});
-
-		mockDBPrepare.mockImplementation(() => {
-			throw new Error('Database connection failed');
-		});
-
-		// Should still complete login even if DB fails
-		const response = await GET(createMockEvent() as unknown as Parameters<typeof GET>[0]);
-
-		expect(response.status).toBe(302);
-		expect(response.headers.get('Location')).toContain('/admin');
-
-		warnSpy.mockRestore();
-	});
-
-	it('should set session cookie correctly', async () => {
-		mockKVGet
-			.mockResolvedValueOnce(
-				JSON.stringify({
-					clientId: 'test-client',
-					clientSecret: 'test-secret'
-				})
-			)
-			.mockResolvedValueOnce('12345');
-
-		mockFetch
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({ access_token: 'test-token' })
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				json: async () => ({
-					id: 12345,
-					login: 'owner',
-					name: 'Owner',
-					email: 'owner@test.com',
-					avatar_url: 'https://avatar.url'
-				})
-			});
-
-		const response = await GET(createMockEvent() as unknown as Parameters<typeof GET>[0]);
-
-		// Cookie is now set in the Response header
-		const setCookie = response.headers.get('Set-Cookie');
-		expect(setCookie).toContain('session=');
-		expect(setCookie).toContain('Path=/');
-		expect(setCookie).toContain('HttpOnly');
+		expect(mergeAccounts).toHaveBeenCalledWith(db, 'legacy-user', 'email-user');
 	});
 });

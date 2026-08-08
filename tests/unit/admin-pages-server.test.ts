@@ -4,10 +4,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock types for PageServerLoad
-interface MockLoadEvent {
-	fetch: ReturnType<typeof vi.fn>;
-}
+const ownerLocals = { user: { id: 'owner-1', isAdmin: true, isOwner: true } };
 
 describe('Admin AI Keys Page Server', () => {
 	let mockFetch: ReturnType<typeof vi.fn>;
@@ -34,7 +31,7 @@ describe('Admin AI Keys Page Server', () => {
 			json: async () => ({ keys: mockKeys })
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual(mockKeys);
 		expect(mockFetch).toHaveBeenCalledWith('/api/admin/ai-keys');
@@ -45,7 +42,7 @@ describe('Admin AI Keys Page Server', () => {
 			ok: false
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual([]);
 	});
@@ -54,7 +51,7 @@ describe('Admin AI Keys Page Server', () => {
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		mockFetch.mockRejectedValue(new Error('Network error'));
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual([]);
 		expect(consoleSpy).toHaveBeenCalledWith('Failed to load AI keys:', expect.any(Error));
@@ -67,7 +64,7 @@ describe('Admin AI Keys Page Server', () => {
 			json: async () => ({})
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual([]);
 	});
@@ -97,7 +94,7 @@ describe('Admin Auth Keys Page Server', () => {
 			json: async () => ({ keys: mockKeys })
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual(mockKeys);
 		expect(mockFetch).toHaveBeenCalledWith('/api/admin/auth-keys');
@@ -108,7 +105,7 @@ describe('Admin Auth Keys Page Server', () => {
 			ok: false
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual([]);
 	});
@@ -117,7 +114,7 @@ describe('Admin Auth Keys Page Server', () => {
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		mockFetch.mockRejectedValue(new Error('Network error'));
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual([]);
 		expect(consoleSpy).toHaveBeenCalledWith('Failed to load auth keys:', expect.any(Error));
@@ -130,7 +127,7 @@ describe('Admin Auth Keys Page Server', () => {
 			json: async () => ({})
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.keys).toEqual([]);
 	});
@@ -160,7 +157,7 @@ describe('Admin Users Page Server', () => {
 			json: async () => ({ users: mockUsers })
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.users).toEqual(mockUsers);
 		expect(mockFetch).toHaveBeenCalledWith('/api/admin/users');
@@ -171,7 +168,7 @@ describe('Admin Users Page Server', () => {
 			ok: false
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.users).toEqual([]);
 	});
@@ -180,7 +177,7 @@ describe('Admin Users Page Server', () => {
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		mockFetch.mockRejectedValue(new Error('Network error'));
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.users).toEqual([]);
 		expect(consoleSpy).toHaveBeenCalledWith('Failed to load users:', expect.any(Error));
@@ -193,7 +190,7 @@ describe('Admin Users Page Server', () => {
 			json: async () => ({})
 		});
 
-		const result = await load({ fetch: mockFetch });
+		const result = await load({ fetch: mockFetch, locals: ownerLocals });
 
 		expect(result.users).toEqual([]);
 	});

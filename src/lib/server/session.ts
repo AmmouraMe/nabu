@@ -153,3 +153,29 @@ export async function verifySession<T = Record<string, unknown>>(
 		return null;
 	}
 }
+
+export async function decodeDatabaseSessionCookie(
+	cookie: string | undefined | null,
+	secret: string | undefined | null
+): Promise<string | null> {
+	const value = await verifySession<{ token?: unknown }>(cookie, secret);
+	return value && typeof value.token === 'string' && value.token ? value.token : null;
+}
+
+export async function buildDatabaseSessionCookieHeader(
+	token: string,
+	url: URL,
+	secret: string | undefined | null
+): Promise<string> {
+	if (!token) throw new Error('Refusing to issue an empty database session token');
+	const value = await signSession({ token }, secret);
+	const parts = [
+		`session=${value}`,
+		'Path=/',
+		'HttpOnly',
+		'SameSite=Lax',
+		`Max-Age=${60 * 60 * 24 * 7}`
+	];
+	if (url.protocol === 'https:') parts.push('Secure');
+	return parts.join('; ');
+}

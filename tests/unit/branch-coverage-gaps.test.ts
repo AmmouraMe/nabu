@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The admin auth-keys routes gate on isOwner/isAdmin.
-const adminLocals = { user: { id: 'admin-1', isAdmin: true } };
+const adminLocals = { user: { id: 'owner-1', isAdmin: true, isOwner: true } };
 
 // ─── Admin CMS [type] Page - sortBy/sortDirection branches ───────────────────
 describe('Admin CMS [type] Page - sortBy and sortDirection query params', () => {
@@ -214,7 +214,7 @@ describe('Admin Auth Keys API - uncovered catch branches', () => {
 		vi.clearAllMocks();
 	});
 
-	it('should handle Discord config parse error in GET', async () => {
+	it('should fail closed on Discord config parse error in GET', async () => {
 		vi.doMock('@sveltejs/kit', () => ({
 			error: (status: number, message: string) => {
 				const err = new Error(message) as any;
@@ -222,6 +222,7 @@ describe('Admin Auth Keys API - uncovered catch branches', () => {
 				err.body = { message };
 				throw err;
 			},
+			isHttpError: (value: any) => typeof value?.status === 'number',
 			json: (data: any) => new Response(JSON.stringify(data))
 		}));
 
@@ -236,14 +237,9 @@ describe('Admin Auth Keys API - uncovered catch branches', () => {
 			)
 			.mockResolvedValueOnce('invalid json for discord');
 
-		const result = await GET({
-			platform: { env: { KV: { get: mockKVGet } } },
-			locals: adminLocals
-		} as any);
-
-		const data = await result.json();
-		expect(data.keys).toHaveLength(1);
-		expect(data.keys[0].provider).toBe('github');
+		await expect(
+			GET({ platform: { env: { KV: { get: mockKVGet } } }, locals: adminLocals } as any)
+		).rejects.toMatchObject({ status: 500 });
 		consoleSpy.mockRestore();
 	});
 
@@ -255,6 +251,7 @@ describe('Admin Auth Keys API - uncovered catch branches', () => {
 				err.body = { message };
 				throw err;
 			},
+			isHttpError: (value: any) => typeof value?.status === 'number',
 			json: (data: any) => new Response(JSON.stringify(data))
 		}));
 
@@ -327,6 +324,7 @@ describe('Admin Auth Keys [id] - DELETE KV cleanup and catch blocks', () => {
 				err.body = { message };
 				throw err;
 			},
+			isHttpError: (value: any) => typeof value?.status === 'number',
 			json: (data: any) => new Response(JSON.stringify(data))
 		}));
 
@@ -420,6 +418,7 @@ describe('Admin Auth Keys [id] - DELETE KV cleanup and catch blocks', () => {
 			await PUT({
 				params: { id: 'key1' },
 				request: {
+					headers: { get: () => 'Bearer test-secret' },
 					json: () => {
 						throw new TypeError('Bad JSON');
 					}
@@ -846,6 +845,7 @@ describe('Setup API - error re-throw branches', () => {
 				err.body = { message };
 				throw err;
 			},
+			isHttpError: (value: any) => typeof value?.status === 'number',
 			json: (data: any) => new Response(JSON.stringify(data))
 		}));
 
@@ -878,6 +878,7 @@ describe('Setup API - error re-throw branches', () => {
 				err.body = { message };
 				throw err;
 			},
+			isHttpError: (value: any) => typeof value?.status === 'number',
 			json: (data: any) => new Response(JSON.stringify(data))
 		}));
 
@@ -890,11 +891,17 @@ describe('Setup API - error re-throw branches', () => {
 		try {
 			await POST({
 				request: {
+					headers: { get: () => 'Bearer test-secret' },
 					json: () => {
 						throw new TypeError('Invalid JSON body');
 					}
 				},
-				platform: { env: { KV: { get: vi.fn().mockResolvedValue(null), put: vi.fn() } } },
+				platform: {
+					env: {
+						SETUP_SECRET: 'test-secret',
+						KV: { get: vi.fn().mockResolvedValue(null), put: vi.fn() }
+					}
+				},
 				locals: adminLocals
 			} as any);
 		} catch (err: any) {
@@ -913,6 +920,7 @@ describe('Setup API - error re-throw branches', () => {
 				err.body = { message };
 				throw err;
 			},
+			isHttpError: (value: any) => typeof value?.status === 'number',
 			json: (data: any) => new Response(JSON.stringify(data))
 		}));
 
@@ -934,19 +942,23 @@ describe('Setup API - error re-throw branches', () => {
 		try {
 			await POST({
 				request: {
+					headers: { get: () => 'Bearer test-secret' },
 					json: async () => ({
 						clientId: 'test-client',
 						clientSecret: 'test-secret',
 						adminGithubUsername: 'testuser'
 					})
 				},
-				platform: { env: { KV: { get: mockKVGet, put: vi.fn() } } },
+				platform: {
+					env: {
+						SETUP_SECRET: 'test-secret',
+						KV: { get: mockKVGet, put: vi.fn() }
+					}
+				},
 				locals: adminLocals
 			} as any);
 		} catch (err: any) {
-			// Should throw error(500, 'Failed to fetch GitHub user information')
-			// or error(500, 'Failed to verify GitHub username')
-			expect(err.status).toBe(500);
+			expect(err.status).toBe(502);
 		}
 
 		globalThis.fetch = originalFetch;

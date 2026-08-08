@@ -48,6 +48,9 @@ jobs:
       - name: Validate theme contrast (WCAG AA)
         run: npm run validate:contrast
 
+      - name: Build production bundle
+        run: npm run build
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
         with:

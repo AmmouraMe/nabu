@@ -350,14 +350,23 @@
 <!-- Preview Modal -->
 {#if previewItem}
 	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-	<div class="modal-overlay" role="presentation" on:click={() => (previewItem = null)}>
-		<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-		<div class="modal" role="dialog" aria-modal="true" on:click|stopPropagation>
+	<div
+		class="modal-overlay"
+		role="presentation"
+		on:click={(event) => {
+			if (event.target === event.currentTarget) previewItem = null;
+		}}
+	>
+		<div class="modal" role="dialog" aria-modal="true">
 			<div class="modal-header">
 				<span class="modal-platform">
 					{platformIcons[previewItem.platform] ?? ''} {platformLabels[previewItem.platform] ?? previewItem.platform}
 				</span>
-				<button class="modal-close" on:click={() => (previewItem = null)}>×</button>
+				<button
+					class="modal-close"
+					aria-label="Close preview"
+					on:click={() => (previewItem = null)}>×</button
+				>
 			</div>
 			{#if previewItem.title}
 				<h2 class="modal-title">{previewItem.title}</h2>

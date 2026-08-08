@@ -29,6 +29,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # First because it is the cheapest signal, and because the absence of any
+      # such step is why 229 of 499 source files drifted off `.prettierrc`
+      # despite the config being present the whole time. Fix locally with
+      # `npm run format`.
+      - name: Check formatting
+        run: npm run format:check
+
       - name: Type check
         run: npm run check
 

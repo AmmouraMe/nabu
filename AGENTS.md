@@ -8,6 +8,8 @@ SvelteKit 2 marketing automation platform on Cloudflare Workers/Pages. Built on
 | Command                     | What it does                                                 |
 | --------------------------- | ------------------------------------------------------------ |
 | `npm run dev`               | Dev server on **port 4239** (not 4277 as some docs say)      |
+| `npm run format`            | Prettier `--write` over the tree (fixes formatting)          |
+| `npm run format:check`      | Prettier `--check` — fails on drift; runs in CI              |
 | `npm run check`             | `svelte-kit sync && svelte-check`                            |
 | `npm run test`              | Vitest (happy-dom, `pool: 'forks'`, single-thread)           |
 | `npm run test:e2e`          | Playwright on `localhost:4239`                               |
@@ -17,9 +19,16 @@ SvelteKit 2 marketing automation platform on Cloudflare Workers/Pages. Built on
 
 ## Pre-commit order
 
-`npm run check` → `npm run test:coverage` → `npm run validate:contrast`
+`npm run format:check` → `npm run check` → `npm run test:coverage` → `npm run validate:contrast`
 
-CI runs check + coverage + contrast in one job, then e2e separately.
+CI runs format:check + check + coverage + contrast in one job, then e2e separately.
+
+`format:check` is first because it is the cheapest and because nothing enforced
+it until now: `.prettierrc` had existed all along with no `format` script and no
+gate step, so 229 of 499 source files had drifted off it. `npm run format` fixes
+drift in place. Note `validate:all` still does **not** include coverage — CI and
+the pre-commit order above gate on `test:coverage`, which is what enforces the
+95% threshold.
 
 ## Local testing & package manager notes
 

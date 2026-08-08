@@ -106,12 +106,10 @@ describe('streamAnthropicChatCompletion', () => {
 
 describe('anthropicChatCompletion', () => {
 	it('returns the first text block', async () => {
-		globalThis.fetch = vi
-			.fn()
-			.mockResolvedValue({
-				ok: true,
-				json: async () => ({ content: [{ type: 'text', text: 'answer' }] })
-			}) as any;
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ content: [{ type: 'text', text: 'answer' }] })
+		}) as any;
 		expect(await anthropicChatCompletion('k', [{ role: 'user', content: 'q' }])).toBe('answer');
 	});
 
@@ -121,12 +119,10 @@ describe('anthropicChatCompletion', () => {
 	});
 
 	it('promotes a system-only conversation to a user message and appends the JSON nudge', async () => {
-		globalThis.fetch = vi
-			.fn()
-			.mockResolvedValue({
-				ok: true,
-				json: async () => ({ content: [{ type: 'text', text: '{}' }] })
-			}) as any;
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ content: [{ type: 'text', text: '{}' }] })
+		}) as any;
 		await anthropicChatCompletion('k', [{ role: 'system', content: 'Extract' }], {
 			jsonMode: true
 		});
@@ -222,12 +218,10 @@ describe('chatCompletionWithKey model resolution', () => {
 		expect(binding.run.mock.calls[0][0]).toContain('llama');
 
 		// key.model is used when models is empty
-		globalThis.fetch = vi
-			.fn()
-			.mockResolvedValue({
-				ok: true,
-				json: async () => ({ content: [{ type: 'text', text: 'a' }] })
-			}) as any;
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ content: [{ type: 'text', text: 'a' }] })
+		}) as any;
 		await chatCompletionWithKey(
 			{ ...base, provider: 'anthropic', apiKey: 'k', model: 'claude-3-5-sonnet-latest' } as any,
 			[{ role: 'user', content: 'q' }]
@@ -237,12 +231,10 @@ describe('chatCompletionWithKey model resolution', () => {
 		).toBeTruthy();
 
 		// no models at all → provider default
-		globalThis.fetch = vi
-			.fn()
-			.mockResolvedValue({
-				ok: true,
-				json: async () => ({ content: [{ type: 'text', text: 'a' }] })
-			}) as any;
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ content: [{ type: 'text', text: 'a' }] })
+		}) as any;
 		await chatCompletionWithKey({ ...base, provider: 'anthropic', apiKey: 'k' } as any, [
 			{ role: 'user', content: 'q' }
 		]);
@@ -252,12 +244,10 @@ describe('chatCompletionWithKey model resolution', () => {
 	});
 
 	it('falls through to the OpenAI path by default', async () => {
-		globalThis.fetch = vi
-			.fn()
-			.mockResolvedValue({
-				ok: true,
-				json: async () => ({ choices: [{ message: { content: 'hi' } }] })
-			}) as any;
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: async () => ({ choices: [{ message: { content: 'hi' } }] })
+		}) as any;
 		const out = await chatCompletionWithKey({ ...base, provider: 'openai', apiKey: 'sk' } as any, [
 			{ role: 'user', content: 'q' }
 		]);

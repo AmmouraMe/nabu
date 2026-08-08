@@ -41,7 +41,12 @@
 		return matchesSearch && matchesCategory;
 	});
 
-	$: title = field === 'typographyLogo' ? 'Choose Logo Font' : field === 'typographyHeading' ? 'Choose Heading Font' : 'Choose Body Font';
+	$: title =
+		field === 'typographyLogo'
+			? 'Choose Logo Font'
+			: field === 'typographyHeading'
+				? 'Choose Heading Font'
+				: 'Choose Body Font';
 
 	async function loadFonts() {
 		try {
@@ -82,7 +87,7 @@
 	}
 </script>
 
-<div class="font-picker" role="dialog" aria-label="{title}">
+<div class="font-picker" role="dialog" aria-label={title}>
 	<div class="picker-header">
 		<h3 class="picker-title">{title}</h3>
 		<button class="close-btn" on:click={handleClose} aria-label="Close font picker">✕</button>

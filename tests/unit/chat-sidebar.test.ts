@@ -12,9 +12,21 @@ describe('ChatSidebar', () => {
 			if (typeof url === 'string' && url.includes('/api/chat/conversations')) {
 				let title = 'New conversation';
 				if (options?.body) {
-					try { title = JSON.parse(options.body as string).title || title; } catch { }
+					try {
+						title = JSON.parse(options.body as string).title || title;
+					} catch {}
 				}
-				return new Response(JSON.stringify({ id: crypto.randomUUID(), title, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), conversations: [], success: true }), { status: 200 });
+				return new Response(
+					JSON.stringify({
+						id: crypto.randomUUID(),
+						title,
+						createdAt: new Date().toISOString(),
+						updatedAt: new Date().toISOString(),
+						conversations: [],
+						success: true
+					}),
+					{ status: 200 }
+				);
 			}
 			return new Response('Not found', { status: 404 });
 		}) as typeof globalThis.fetch;

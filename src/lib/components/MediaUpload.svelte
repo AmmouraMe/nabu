@@ -16,11 +16,8 @@
 	let selectedFile: File | null = null;
 	let previewUrl: string | null = null;
 
-	$: acceptTypes = mediaType === 'image'
-		? 'image/*'
-		: mediaType === 'audio'
-			? 'audio/*'
-			: 'video/*';
+	$: acceptTypes =
+		mediaType === 'image' ? 'image/*' : mediaType === 'audio' ? 'audio/*' : 'video/*';
 
 	$: if (categories.length > 0 && !selectedCategory) {
 		selectedCategory = categories[0];
@@ -120,9 +117,19 @@
 			</div>
 		{:else}
 			<div class="dropzone-content">
-				<svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+				<svg
+					class="upload-icon"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+				>
 					<path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round" />
-					<path d="M20 16.7V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.3" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M20 16.7V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.3"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 				<p class="dropzone-text">
 					Drop your {mediaType} here, or <span class="browse-link">browse</span>
@@ -152,12 +159,7 @@
 		<div class="upload-options">
 			<div class="field">
 				<label for="asset-name">Name</label>
-				<input
-					id="asset-name"
-					type="text"
-					bind:value={assetName}
-					placeholder="Asset name"
-				/>
+				<input id="asset-name" type="text" bind:value={assetName} placeholder="Asset name" />
 			</div>
 
 			<div class="field">
@@ -171,7 +173,11 @@
 
 			<div class="upload-actions">
 				<button class="btn-secondary" on:click={reset}>Cancel</button>
-				<button class="btn-primary" on:click={handleUpload} disabled={!selectedFile || !selectedCategory}>
+				<button
+					class="btn-primary"
+					on:click={handleUpload}
+					disabled={!selectedFile || !selectedCategory}
+				>
 					Upload
 				</button>
 			</div>
@@ -197,7 +203,9 @@
 		padding: var(--spacing-xl);
 		text-align: center;
 		cursor: pointer;
-		transition: border-color var(--transition-fast), background-color var(--transition-fast);
+		transition:
+			border-color var(--transition-fast),
+			background-color var(--transition-fast);
 		min-height: 160px;
 		display: flex;
 		align-items: center;

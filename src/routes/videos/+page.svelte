@@ -178,25 +178,36 @@
 
 	function getStatusLabel(status: string): string {
 		switch (status) {
-			case 'complete': return 'Completed';
-			case 'error': return 'Failed';
-			case 'generating': return 'Generating';
-			case 'processing': return 'Processing';
-			case 'queued': return 'Queued';
-			case 'pending': return 'Pending';
-			default: return status;
+			case 'complete':
+				return 'Completed';
+			case 'error':
+				return 'Failed';
+			case 'generating':
+				return 'Generating';
+			case 'processing':
+				return 'Processing';
+			case 'queued':
+				return 'Queued';
+			case 'pending':
+				return 'Pending';
+			default:
+				return status;
 		}
 	}
 
 	function getStatusClass(status: string): string {
 		switch (status) {
-			case 'complete': return 'status-complete';
-			case 'error': return 'status-error';
+			case 'complete':
+				return 'status-complete';
+			case 'error':
+				return 'status-error';
 			case 'generating':
 			case 'processing':
 			case 'queued':
-			case 'pending': return 'status-processing';
-			default: return '';
+			case 'pending':
+				return 'status-processing';
+			default:
+				return '';
 		}
 	}
 
@@ -299,7 +310,14 @@
 	}
 
 	async function handleGenerate(
-		e: CustomEvent<{ prompt: string; aspectRatio: string; duration: number; model: string; provider: string; resolution: string }>
+		e: CustomEvent<{
+			prompt: string;
+			aspectRatio: string;
+			duration: number;
+			model: string;
+			provider: string;
+			resolution: string;
+		}>
 	) {
 		const { prompt, aspectRatio, duration, model, provider, resolution } = e.detail;
 		try {
@@ -480,11 +498,7 @@
 		</div>
 	{:else if activeTab === 'create'}
 		<div class="tab-content" transition:fade={{ duration: 150 }}>
-			<VideoCreateForm
-				bind:this={createFormRef}
-				{models}
-				on:generate={handleGenerate}
-			/>
+			<VideoCreateForm bind:this={createFormRef} {models} on:generate={handleGenerate} />
 		</div>
 	{:else if activeTab === 'schedules'}
 		<div class="tab-content" transition:fade={{ duration: 150 }}>
@@ -534,7 +548,14 @@
 
 			{#if videos.length === 0}
 				<div class="empty-gallery">
-					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+					<svg
+						width="48"
+						height="48"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1"
+					>
 						<rect x="2" y="4" width="20" height="16" rx="2" />
 						<polygon points="10,9 16,12 10,15" />
 					</svg>
@@ -573,7 +594,10 @@
 										<div class="gen-spinner"></div>
 										{#if progressMap[video.id] !== undefined}
 											<div class="tile-progress-bar">
-												<div class="tile-progress-fill" style="width: {progressMap[video.id]}%"></div>
+												<div
+													class="tile-progress-fill"
+													style="width: {progressMap[video.id]}%"
+												></div>
 											</div>
 											<span class="tile-progress-text">{progressMap[video.id]}%</span>
 										{:else}
@@ -585,7 +609,14 @@
 									</div>
 								{:else if video.status === 'error'}
 									<div class="tile-error">
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<svg
+											width="24"
+											height="24"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
 											<circle cx="12" cy="12" r="10" />
 											<line x1="15" y1="9" x2="9" y2="15" />
 											<line x1="9" y1="9" x2="15" y2="15" />
@@ -609,7 +640,12 @@
 									{/if}
 									{#if video.aspectRatio}
 										<span class="tile-ratio">
-											<span class="ratio-icon" class:landscape={video.aspectRatio === '16:9'} class:portrait={video.aspectRatio === '9:16'} class:square={video.aspectRatio === '1:1'}></span>
+											<span
+												class="ratio-icon"
+												class:landscape={video.aspectRatio === '16:9'}
+												class:portrait={video.aspectRatio === '9:16'}
+												class:square={video.aspectRatio === '1:1'}
+											></span>
 											{video.aspectRatio}
 										</span>
 									{/if}
@@ -624,7 +660,14 @@
 										aria-label="Download video"
 										on:click|stopPropagation
 									>
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+										<svg
+											width="14"
+											height="14"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+										>
 											<path d="M21,15v4a2,2 0 0,1-2,2H5a2,2 0 0,1-2-2v-4" />
 											<polyline points="7,10 12,15 17,10" />
 											<line x1="12" y1="15" x2="12" y2="3" />
@@ -636,9 +679,18 @@
 									on:click|stopPropagation={() => handleDeleteVideo(video.id)}
 									aria-label="Delete video"
 								>
-									<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+									>
 										<polyline points="3,6 5,6 21,6" />
-										<path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2" />
+										<path
+											d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"
+										/>
 									</svg>
 								</button>
 							</div>
@@ -675,7 +727,14 @@
 			<div class="modal-header">
 				<h2>Video Details</h2>
 				<button class="modal-close" on:click={closeVideoDetail} aria-label="Close">
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg
+						width="20"
+						height="20"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
 						<line x1="18" y1="6" x2="6" y2="18" />
 						<line x1="6" y1="6" x2="18" y2="18" />
 					</svg>
@@ -687,10 +746,23 @@
 				<div class="detail-preview">
 					{#if selectedVideo.status === 'complete' && (selectedVideo.videoUrl || selectedVideo.r2Key)}
 						<!-- svelte-ignore a11y-media-has-caption -->
-						<video src={getVideoSrc(selectedVideo)} controls class="detail-video" style="aspect-ratio: {aspectRatioToCSS(selectedVideo.aspectRatio)}" preload="metadata"></video>
+						<video
+							src={getVideoSrc(selectedVideo)}
+							controls
+							class="detail-video"
+							style="aspect-ratio: {aspectRatioToCSS(selectedVideo.aspectRatio)}"
+							preload="metadata"
+						></video>
 					{:else if selectedVideo.status === 'error'}
 						<div class="detail-error-preview">
-							<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+							<svg
+								width="40"
+								height="40"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+							>
 								<circle cx="12" cy="12" r="10" />
 								<line x1="15" y1="9" x2="9" y2="15" />
 								<line x1="9" y1="9" x2="15" y2="15" />
@@ -704,13 +776,19 @@
 							{#if progressMap[selectedVideo.id] !== undefined}
 								<div class="detail-progress-container">
 									<div class="detail-progress-bar">
-										<div class="detail-progress-fill" style="width: {progressMap[selectedVideo.id]}%"></div>
+										<div
+											class="detail-progress-fill"
+											style="width: {progressMap[selectedVideo.id]}%"
+										></div>
 									</div>
-									<span class="detail-progress-text">{progressMap[selectedVideo.id]}% complete</span>
+									<span class="detail-progress-text">{progressMap[selectedVideo.id]}% complete</span
+									>
 								</div>
 							{/if}
 							{#if elapsedMap[selectedVideo.id]}
-								<span class="detail-elapsed">Elapsed: {formatElapsed(elapsedMap[selectedVideo.id])}</span>
+								<span class="detail-elapsed"
+									>Elapsed: {formatElapsed(elapsedMap[selectedVideo.id])}</span
+								>
 							{/if}
 						</div>
 					{/if}
@@ -800,14 +878,19 @@
 						</div>
 						<div class="detail-field">
 							<span class="detail-field-label">Render Time</span>
-							<span class="detail-field-value">{computeDurationBetween(selectedVideo.createdAt, selectedVideo.completedAt)}</span>
+							<span class="detail-field-value"
+								>{computeDurationBetween(selectedVideo.createdAt, selectedVideo.completedAt)}</span
+							>
 						</div>
 					{/if}
 
 					{#if selectedVideo.conversationId}
 						<div class="detail-field">
 							<span class="detail-field-label">Conversation</span>
-							<a href="/chat?id={selectedVideo.conversationId}" class="detail-field-value detail-link mono">{selectedVideo.conversationId}</a>
+							<a
+								href="/chat?id={selectedVideo.conversationId}"
+								class="detail-field-value detail-link mono">{selectedVideo.conversationId}</a
+							>
 						</div>
 					{/if}
 
@@ -830,7 +913,14 @@
 			<div class="modal-footer">
 				{#if selectedVideo.status === 'complete' && (selectedVideo.videoUrl || selectedVideo.r2Key)}
 					<a href={getVideoSrc(selectedVideo)} target="_blank" class="modal-btn primary" download>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
 							<path d="M21,15v4a2,2 0 0,1-2,2H5a2,2 0 0,1-2-2v-4" />
 							<polyline points="7,10 12,15 17,10" />
 							<line x1="12" y1="15" x2="12" y2="3" />
@@ -840,11 +930,25 @@
 				{/if}
 				<button
 					class="modal-btn danger"
-					on:click={() => { if (selectedVideo) { handleDeleteVideo(selectedVideo.id); closeVideoDetail(); } }}
+					on:click={() => {
+						if (selectedVideo) {
+							handleDeleteVideo(selectedVideo.id);
+							closeVideoDetail();
+						}
+					}}
 				>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg
+						width="14"
+						height="14"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
 						<polyline points="3,6 5,6 21,6" />
-						<path d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2" />
+						<path
+							d="M19,6v14a2,2 0 0,1-2,2H7a2,2 0 0,1-2-2V6m3,0V4a2,2 0 0,1,2-2h4a2,2 0 0,1,2,2v2"
+						/>
 					</svg>
 					Delete
 				</button>

@@ -56,7 +56,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 
 		expect(screen.getByText('User One')).toBeTruthy();
 		expect(screen.getByText('User Two')).toBeTruthy();
@@ -74,7 +76,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		expect(screen.getByText(/Registered Users \(1\)/i)).toBeTruthy();
 	});
 
@@ -289,7 +293,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		expect(screen.getByText('Admin')).toBeTruthy();
 	});
 
@@ -305,7 +311,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const userBadges = screen.getAllByText('User');
 		expect(userBadges.length).toBeGreaterThan(0);
 	});
@@ -322,7 +330,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const githubLink = screen.getByText('@githubuser');
 		expect(githubLink).toBeTruthy();
 		expect(githubLink.closest('a')?.href).toContain('github.com/githubuser');
@@ -340,7 +350,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const promoteButton = screen.getByLabelText(/Promote to admin/i);
 		expect(promoteButton).toBeTruthy();
 	});
@@ -357,7 +369,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const demoteButton = screen.getByLabelText(/Demote from admin/i);
 		expect(demoteButton).toBeTruthy();
 	});
@@ -374,7 +388,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const deleteButton = screen.getByLabelText(/Delete user/i);
 		expect(deleteButton).toBeTruthy();
 	});
@@ -391,7 +407,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const promoteButton = screen.getByLabelText(/Demote from admin/i);
 		expect(promoteButton).toBeTruthy();
 		expect(promoteButton.hasAttribute('disabled')).toBe(true);
@@ -410,7 +428,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const deleteButton = screen.getByLabelText(/Delete user/i);
 		expect(deleteButton).toBeTruthy();
 		expect(deleteButton.hasAttribute('disabled')).toBe(true);
@@ -429,7 +449,9 @@ describe('Admin Users Page', () => {
 			}
 		];
 
-		render(UsersPage, { props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } } });
+		render(UsersPage, {
+			props: { data: { user: mockUser, hasAIProviders: false, users: mockUsers } }
+		});
 		const promoteButton = screen.getByLabelText(/Promote to admin/i);
 		const deleteButton = screen.getByLabelText(/Delete user/i);
 
@@ -437,4 +459,3 @@ describe('Admin Users Page', () => {
 		expect(deleteButton.hasAttribute('disabled')).toBe(false);
 	});
 });
-

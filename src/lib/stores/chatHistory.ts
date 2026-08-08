@@ -64,7 +64,9 @@ export interface ChatHistoryState {
 const MAX_TITLE_LENGTH = 50;
 
 function generateId(): string {
-	return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+	return crypto.randomUUID
+		? crypto.randomUUID()
+		: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
 function truncateTitle(text: string): string {
@@ -106,18 +108,16 @@ function createChatHistoryStore() {
 				const response = await fetch('/api/chat/conversations');
 				if (response.ok) {
 					const data = await response.json();
-					const conversations: Conversation[] = (data.conversations || []).map(
-						(conv: any) => ({
-							id: conv.id,
-							title: conv.title,
-							messages: [],
-							createdAt: parseTimestamp(conv.createdAt),
-							updatedAt: parseTimestamp(conv.updatedAt),
-							messageCount: conv.messageCount || 0,
-							lastMessage: conv.lastMessage || '',
-							_loaded: false
-						})
-					);
+					const conversations: Conversation[] = (data.conversations || []).map((conv: any) => ({
+						id: conv.id,
+						title: conv.title,
+						messages: [],
+						createdAt: parseTimestamp(conv.createdAt),
+						updatedAt: parseTimestamp(conv.updatedAt),
+						messageCount: conv.messageCount || 0,
+						lastMessage: conv.lastMessage || '',
+						_loaded: false
+					}));
 
 					set({
 						conversations,
@@ -226,11 +226,11 @@ function createChatHistoryStore() {
 						conversations: s.conversations.map((c) =>
 							c.id === id
 								? {
-									...c,
-									title: data.title,
-									messages,
-									_loaded: true
-								}
+										...c,
+										title: data.title,
+										messages,
+										_loaded: true
+									}
 								: c
 						)
 					}));
@@ -247,9 +247,7 @@ function createChatHistoryStore() {
 			const state = get(store);
 			if (!state.currentConversationId) return [];
 
-			const conversation = state.conversations.find(
-				(c) => c.id === state.currentConversationId
-			);
+			const conversation = state.conversations.find((c) => c.id === state.currentConversationId);
 			return conversation?.messages || [];
 		},
 
@@ -257,9 +255,7 @@ function createChatHistoryStore() {
 			const state = get(store);
 			if (!state.currentConversationId) return null;
 
-			return (
-				state.conversations.find((c) => c.id === state.currentConversationId) || null
-			);
+			return state.conversations.find((c) => c.id === state.currentConversationId) || null;
 		},
 
 		addMessage(
@@ -349,11 +345,11 @@ function createChatHistoryStore() {
 						messages: conv.messages.map((msg) =>
 							msg.id === messageId
 								? {
-									...msg,
-									content,
-									...(cost && { cost }),
-									...(media && { media })
-								}
+										...msg,
+										content,
+										...(cost && { cost }),
+										...(media && { media })
+									}
 								: msg
 						),
 						updatedAt: new Date()

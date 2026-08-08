@@ -18,9 +18,9 @@
 		<section class="legal-section">
 			<h2>Introduction</h2>
 			<p>
-				This Privacy Policy explains how Nabu ("we", "us", or "our") collects, uses, and
-				protects your information when you use our service. We are committed to protecting your
-				privacy and handling your data responsibly.
+				This Privacy Policy explains how Nabu ("we", "us", or "our") collects, uses, and protects
+				your information when you use our service. We are committed to protecting your privacy and
+				handling your data responsibly.
 			</p>
 		</section>
 

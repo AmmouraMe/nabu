@@ -5,15 +5,15 @@ SvelteKit 2 marketing automation platform on Cloudflare Workers/Pages. Built on
 
 ## Quick commands
 
-| Command | What it does |
-|---------|-------------|
-| `npm run dev` | Dev server on **port 4239** (not 4277 as some docs say) |
-| `npm run check` | `svelte-kit sync && svelte-check` |
-| `npm run test` | Vitest (happy-dom, `pool: 'forks'`, single-thread) |
-| `npm run test:e2e` | Playwright on `localhost:4239` |
-| `npm run test:coverage` | Enforces **95%** threshold (vite.config.ts, not 90%) |
-| `npm run validate:contrast` | WCAG AA theme contrast check |
-| `npm run deploy` | `vite build && wrangler pages deploy .svelte-kit/cloudflare` |
+| Command                     | What it does                                                 |
+| --------------------------- | ------------------------------------------------------------ |
+| `npm run dev`               | Dev server on **port 4239** (not 4277 as some docs say)      |
+| `npm run check`             | `svelte-kit sync && svelte-check`                            |
+| `npm run test`              | Vitest (happy-dom, `pool: 'forks'`, single-thread)           |
+| `npm run test:e2e`          | Playwright on `localhost:4239`                               |
+| `npm run test:coverage`     | Enforces **95%** threshold (vite.config.ts, not 90%)         |
+| `npm run validate:contrast` | WCAG AA theme contrast check                                 |
+| `npm run deploy`            | `vite build && wrangler pages deploy .svelte-kit/cloudflare` |
 
 ## Pre-commit order
 
@@ -41,10 +41,10 @@ CI runs check + coverage + contrast in one job, then e2e separately.
 migrations/0003_description.sql
 ```
 
-| Command | What it does |
-|---------|-------------|
-| `npm run db:migrate:local` | Apply pending to local D1 |
-| `npm run db:migrate` | Apply pending to remote D1 |
+| Command                                                                                 | What it does               |
+| --------------------------------------------------------------------------------------- | -------------------------- |
+| `npm run db:migrate:local`                                                              | Apply pending to local D1  |
+| `npm run db:migrate`                                                                    | Apply pending to remote D1 |
 | `npm run db:migrate` applies **production only**; preview DB needs `--remote --preview` |
 
 See `CLAUDE.md` and `migrations/README.md` for full rules.

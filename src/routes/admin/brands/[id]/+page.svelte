@@ -19,9 +19,7 @@
 
 	// Filter users not already having access and not the brand owner
 	$: availableUsers = allUsers.filter(
-		(u: any) =>
-			!accessList.some((a: any) => a.userId === u.id) &&
-			u.id !== brand?.ownerId
+		(u: any) => !accessList.some((a: any) => a.userId === u.id) && u.id !== brand?.ownerId
 	);
 
 	function formatDate(dateStr: string): string {
@@ -195,11 +193,7 @@
 				</svg>
 				Access ({accessList.length})
 			</button>
-			<button
-				class="tab"
-				class:active={activeTab === 'logs'}
-				on:click={() => (activeTab = 'logs')}
-			>
+			<button class="tab" class:active={activeTab === 'logs'} on:click={() => (activeTab = 'logs')}>
 				<svg
 					width="16"
 					height="16"
@@ -221,10 +215,7 @@
 			<div class="access-section">
 				<div class="section-header">
 					<h2>Collaborators</h2>
-					<button
-						class="btn btn-primary"
-						on:click={() => (showGrantForm = !showGrantForm)}
-					>
+					<button class="btn btn-primary" on:click={() => (showGrantForm = !showGrantForm)}>
 						{showGrantForm ? 'Cancel' : '+ Add User'}
 					</button>
 				</div>
@@ -274,22 +265,14 @@
 							<div class="access-card">
 								<div class="access-user">
 									{#if entry.userAvatar}
-										<img
-											src={entry.userAvatar}
-											alt={entry.userLogin}
-											class="user-avatar"
-										/>
+										<img src={entry.userAvatar} alt={entry.userLogin} class="user-avatar" />
 									{:else}
 										<div class="user-avatar-placeholder">
-											{(entry.userName || entry.userLogin || '?')
-												.charAt(0)
-												.toUpperCase()}
+											{(entry.userName || entry.userLogin || '?').charAt(0).toUpperCase()}
 										</div>
 									{/if}
 									<div class="user-details">
-										<span class="user-name"
-											>{entry.userName || entry.userLogin}</span
-										>
+										<span class="user-name">{entry.userName || entry.userLogin}</span>
 										<span class="user-email">{entry.userEmail}</span>
 									</div>
 								</div>
@@ -305,11 +288,7 @@
 									</select>
 									<button
 										class="btn btn-danger-sm"
-										on:click={() =>
-											revokeAccess(
-												entry.id,
-												entry.userName || entry.userLogin
-											)}
+										on:click={() => revokeAccess(entry.id, entry.userName || entry.userLogin)}
 										title="Revoke access"
 									>
 										<svg
@@ -346,18 +325,10 @@
 								<div class="log-content">
 									<div class="log-header">
 										{#if entry.userAvatar}
-											<img
-												src={entry.userAvatar}
-												alt={entry.userLogin}
-												class="log-avatar"
-											/>
+											<img src={entry.userAvatar} alt={entry.userLogin} class="log-avatar" />
 										{/if}
-										<span class="log-user"
-											>{entry.userName || entry.userLogin}</span
-										>
-										<span class="log-action"
-											>{formatAction(entry.action)}</span
-										>
+										<span class="log-user">{entry.userName || entry.userLogin}</span>
+										<span class="log-action">{formatAction(entry.action)}</span>
 									</div>
 									{#if entry.details}
 										{@const parsed = (() => {
@@ -370,15 +341,11 @@
 										{#if parsed}
 											<div class="log-details">
 												{#if parsed.role}
-													<span class="detail-badge"
-														>{roleLabel(parsed.role)}</span
-													>
+													<span class="detail-badge">{roleLabel(parsed.role)}</span>
 												{/if}
 												{#if parsed.oldRole && parsed.newRole}
 													<span class="detail-change">
-														{roleLabel(parsed.oldRole)} → {roleLabel(
-															parsed.newRole
-														)}
+														{roleLabel(parsed.oldRole)} → {roleLabel(parsed.newRole)}
 													</span>
 												{/if}
 											</div>

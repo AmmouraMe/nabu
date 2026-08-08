@@ -78,6 +78,6 @@ Migrations that have already run are **skipped automatically** - they will never
 
 ## Current Migrations
 
-| File | Description |
-|------|-------------|
+| File                      | Description                                                          |
+| ------------------------- | -------------------------------------------------------------------- |
 | `0001_initial_schema.sql` | Base tables: users, sessions, oauth_accounts, chat_messages, indexes |

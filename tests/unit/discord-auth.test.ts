@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock SvelteKit redirect
 const mockRedirect = vi.fn((status: number, location: string) => {
-	const err = new Error('Redirect') as Error & { status: number; location: string; };
+	const err = new Error('Redirect') as Error & { status: number; location: string };
 	err.status = status;
 	err.location = location;
 	throw err;
@@ -24,7 +24,10 @@ describe('Discord OAuth - Initial Redirect', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.resetModules();
-		vi.stubGlobal('crypto', { randomUUID: () => 'test-uuid-123', subtle: globalThis.__REAL_SUBTLE__ });
+		vi.stubGlobal('crypto', {
+			randomUUID: () => 'test-uuid-123',
+			subtle: globalThis.__REAL_SUBTLE__
+		});
 	});
 
 	it('should redirect to setup if Discord OAuth is not configured', async () => {
@@ -270,17 +273,20 @@ describe('Discord OAuth - Callback', () => {
 			} as any)
 			.mockResolvedValueOnce({
 				ok: true,
-				json: () => Promise.resolve({
-					id: 'discord-user',
-					username: 'realuser',
-					global_name: 'Real User',
-					email: 'real@example.com',
-					avatar: 'abc123'
-				})
+				json: () =>
+					Promise.resolve({
+						id: 'discord-user',
+						username: 'realuser',
+						global_name: 'Real User',
+						email: 'real@example.com',
+						avatar: 'abc123'
+					})
 			} as any);
 
 		let callCount = 0;
-		const mockUrl = new URL('http://localhost/api/auth/discord/callback?code=test-code&state=login:test-uuid-123');
+		const mockUrl = new URL(
+			'http://localhost/api/auth/discord/callback?code=test-code&state=login:test-uuid-123'
+		);
 		const mockCookies = {
 			set: vi.fn(),
 			get: vi.fn().mockReturnValue(staleSession)

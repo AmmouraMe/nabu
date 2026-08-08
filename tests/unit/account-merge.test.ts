@@ -104,11 +104,21 @@ describe('Account Merge Service', () => {
 
 			await mergeAccounts(mockDB as any, 'source-user-id', 'target-user-id');
 
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE brand_profiles SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE onboarding_messages SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE brand_field_versions SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE file_archive SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE media_activity_log SET user_id = ? WHERE user_id = ?');
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE brand_profiles SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE onboarding_messages SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE brand_field_versions SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE file_archive SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE media_activity_log SET user_id = ? WHERE user_id = ?'
+			);
 		});
 
 		it('should delete the source user after transferring data', async () => {

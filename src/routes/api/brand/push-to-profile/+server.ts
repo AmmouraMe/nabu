@@ -73,6 +73,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		fieldName: fieldMatch.fieldName,
 		newValue: valueToPush,
 		changeSource: 'manual',
+		syncTextAsset: false,
 		changeReason: revisionId
 			? `Pushed from text revision`
 			: `Pushed from text asset "${textAsset.label}"`

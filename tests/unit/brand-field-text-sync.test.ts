@@ -6,9 +6,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
 	syncFieldToTextAsset,
 	findBrandTextByKey,
-	findBrandTextByAnyKey
+	findBrandTextByAnyKey,
+	findBrandTextsByAnyKey
 } from '$lib/services/brand-assets';
-import { FIELD_TO_TEXT_MAPPING, BRAND_FIELD_LABELS } from '$lib/services/brand';
+import {
+	FIELD_TO_TEXT_MAPPING,
+	BRAND_FIELD_LABELS,
+	updateBrandFieldWithVersion
+} from '$lib/services/brand';
 
 // Mock D1 database
 function createMockDB() {
@@ -177,6 +182,29 @@ describe('Brand Field → Text Asset Sync', () => {
 		});
 	});
 
+	describe('findBrandTextsByAnyKey', () => {
+		it('returns an empty list without querying when given no aliases', async () => {
+			const result = await findBrandTextsByAnyKey(mockDB as any, 'profile-1', 'messaging', []);
+
+			expect(result).toEqual([]);
+			expect(mockDB.prepare).not.toHaveBeenCalled();
+		});
+
+		it('maps a missing D1 results array to an empty list', async () => {
+			mockDB._mockAll.mockResolvedValueOnce({});
+
+			const result = await findBrandTextsByAnyKey(
+				mockDB as any,
+				'profile-1',
+				'messaging',
+				['mission'],
+				'en'
+			);
+
+			expect(result).toEqual([]);
+		});
+	});
+
 	describe('syncFieldToTextAsset', () => {
 		it('should create a new text when no existing text matches', async () => {
 			// No existing text found
@@ -318,7 +346,7 @@ describe('Brand Field → Text Asset Sync', () => {
 				created_at: '2025-01-01T00:00:00Z',
 				updated_at: '2025-01-01T00:00:00Z'
 			};
-			mockDB._mockFirst.mockResolvedValueOnce(existingRow);
+			mockDB._mockAll.mockResolvedValueOnce({ results: [existingRow] });
 
 			await syncFieldToTextAsset(mockDB as any, {
 				brandProfileId: 'profile-1',
@@ -357,7 +385,7 @@ describe('Brand Field → Text Asset Sync', () => {
 				created_at: '2025-01-01T00:00:00Z',
 				updated_at: '2025-01-01T00:00:00Z'
 			};
-			mockDB._mockFirst.mockResolvedValueOnce(existingRow);
+			mockDB._mockAll.mockResolvedValueOnce({ results: [existingRow] });
 
 			await syncFieldToTextAsset(mockDB as any, {
 				brandProfileId: 'profile-1',
@@ -373,7 +401,7 @@ describe('Brand Field → Text Asset Sync', () => {
 
 		it('should not create an empty text asset when the field is cleared and none exists', async () => {
 			// No existing asset — clearing an untouched field must stay a no-op write.
-			mockDB._mockFirst.mockResolvedValueOnce(null);
+			mockDB._mockAll.mockResolvedValueOnce({ results: [] });
 
 			await syncFieldToTextAsset(mockDB as any, {
 				brandProfileId: 'profile-1',
@@ -390,6 +418,54 @@ describe('Brand Field → Text Asset Sync', () => {
 				(call: string[]) => typeof call[0] === 'string' && call[0].includes('UPDATE brand_texts')
 			);
 			expect(updateCall).toBeUndefined();
+		});
+
+		it('should clear every legacy alias and preserve a revision for each changed row', async () => {
+			const baseRow = {
+				brand_profile_id: 'profile-1',
+				category: 'messaging',
+				label: 'Mission Statement',
+				language: 'en',
+				sort_order: 0,
+				metadata: null,
+				created_at: '2025-01-01T00:00:00Z',
+				updated_at: '2025-01-01T00:00:00Z'
+			};
+			mockDB._mockAll.mockResolvedValueOnce({
+				results: [
+					{ ...baseRow, id: 'text-canonical', key: 'mission', value: 'Canonical value' },
+					{ ...baseRow, id: 'text-alias', key: 'mission_statement', value: 'Legacy value' }
+				]
+			});
+
+			await syncFieldToTextAsset(mockDB as any, {
+				brandProfileId: 'profile-1',
+				fieldName: 'missionStatement',
+				value: '',
+				userId: 'user-1',
+				changeSource: 'manual',
+				changeNote: 'Cleared from profile'
+			});
+
+			const blankWrites = mockDB._mockBind.mock.calls.filter(
+				(args: unknown[]) => args[0] === '' && String(args[1]).startsWith('text-')
+			);
+			expect(blankWrites).toEqual([
+				['', 'text-canonical'],
+				['', 'text-alias']
+			]);
+			const revisionInserts = mockDB.prepare.mock.calls.filter(
+				(call: string[]) =>
+					typeof call[0] === 'string' && call[0].includes('INSERT INTO brand_text_revisions')
+			);
+			expect(revisionInserts).toHaveLength(2);
+			const revisionWrites = mockDB._mockBind.mock.calls.filter(
+				(args: unknown[]) =>
+					args.includes('user-1') &&
+					args.includes('manual') &&
+					args.includes('Cleared from profile')
+			);
+			expect(revisionWrites).toHaveLength(2);
 		});
 
 		it('should update a text stored under an alias key instead of creating a duplicate', async () => {
@@ -442,6 +518,33 @@ describe('Brand Field → Text Asset Sync', () => {
 				expect(mapping.keys.length).toBeGreaterThan(0);
 				expect(BRAND_FIELD_LABELS[fieldName]).toBeDefined();
 			}
+		});
+	});
+
+	describe('updateBrandFieldWithVersion source-preservation control', () => {
+		it('still updates the profile and version when text-asset sync is disabled', async () => {
+			mockDB._mockFirst
+				.mockResolvedValueOnce({ tagline: 'Current source text' })
+				.mockResolvedValueOnce({ max_version: 0 });
+
+			await updateBrandFieldWithVersion(mockDB as any, {
+				profileId: 'profile-1',
+				userId: 'user-1',
+				fieldName: 'tagline',
+				newValue: 'Historical revision text',
+				changeSource: 'manual',
+				changeReason: 'Pushed from text revision',
+				syncTextAsset: false
+			});
+
+			const sql = mockDB.prepare.mock.calls.map((call: string[]) => call[0]);
+			expect(sql).toEqual(
+				expect.arrayContaining([
+					expect.stringContaining('UPDATE brand_profiles SET tagline = ?'),
+					expect.stringContaining('INSERT INTO brand_field_versions')
+				])
+			);
+			expect(sql.some((statement: string) => statement.includes('brand_texts'))).toBe(false);
 		});
 	});
 });

@@ -9,6 +9,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
 	createBrandText,
+	upsertBrandText,
 	getBrandTexts,
 	updateBrandText,
 	createBrandMedia,
@@ -563,6 +564,137 @@ describe('Brand Assets - Branch Coverage', () => {
 			expect(result.language).toBe('fr');
 			expect(result.sortOrder).toBe(5);
 			expect(result.metadata).toEqual({ translated: true });
+		});
+	});
+
+	describe('upsertBrandText', () => {
+		it('uses one conflict-safe statement and returns the persisted update row', async () => {
+			mockDB._mockFirst.mockResolvedValueOnce({
+				id: 'txt-existing',
+				brand_profile_id: 'bp-1',
+				category: 'messaging',
+				key: 'tagline',
+				label: 'Tagline',
+				value: 'New value',
+				language: 'en',
+				sort_order: 0,
+				metadata: null,
+				created_at: '2026-01-01',
+				updated_at: '2026-08-10 07:01:00'
+			});
+
+			const result = await upsertBrandText(mockDB as any, {
+				brandProfileId: 'bp-1',
+				category: 'messaging',
+				key: 'tagline',
+				label: 'Tagline',
+				value: 'New value'
+			});
+
+			const sql = mockDB.prepare.mock.calls[0][0] as string;
+			expect(mockDB.prepare).toHaveBeenCalledTimes(1);
+			expect(sql).toContain('ON CONFLICT(brand_profile_id, category, key, language)');
+			expect(sql).toContain("datetime('now')");
+			expect(sql).toContain('RETURNING *');
+			expect(result.created).toBe(false);
+			expect(result.text.updatedAt).toBe('2026-08-10 07:01:00');
+		});
+
+		it('recognizes its generated id as a new row', async () => {
+			const generatedId = '00000000-0000-4000-8000-000000000001';
+			const randomUUID = vi.spyOn(crypto, 'randomUUID').mockReturnValue(generatedId);
+			mockDB._mockFirst.mockResolvedValueOnce({
+				id: generatedId,
+				brand_profile_id: 'bp-1',
+				category: 'names',
+				key: 'brand_name',
+				label: 'Brand Name',
+				value: 'Nabu',
+				language: 'en',
+				sort_order: 0,
+				metadata: null,
+				created_at: '2026-08-10',
+				updated_at: '2026-08-10'
+			});
+
+			const result = await upsertBrandText(mockDB as any, {
+				brandProfileId: 'bp-1',
+				category: 'names',
+				key: 'brand_name',
+				label: 'Brand Name',
+				value: 'Nabu',
+				userId: 'user-1'
+			});
+
+			expect(result.created).toBe(true);
+			expect(mockDB._mockBind).toHaveBeenCalledWith(
+				expect.any(String),
+				generatedId,
+				1,
+				'Nabu',
+				'Brand Name',
+				'manual',
+				'user-1',
+				'Initial version',
+				expect.any(String)
+			);
+			randomUUID.mockRestore();
+		});
+
+		it('records revision context against the persisted existing row', async () => {
+			mockDB._mockFirst
+				.mockResolvedValueOnce({
+					id: 'txt-existing',
+					brand_profile_id: 'bp-1',
+					category: 'messaging',
+					key: 'tagline',
+					label: 'Tagline',
+					value: 'Valeur enregistrée',
+					language: 'fr',
+					sort_order: 2,
+					metadata: '{"source":"api"}',
+					created_at: '2026-08-10 07:00:00',
+					updated_at: '2026-08-10 07:02:00'
+				})
+				.mockResolvedValueOnce({ count: 1 });
+
+			const result = await upsertBrandText(mockDB as any, {
+				brandProfileId: 'bp-1',
+				category: 'messaging',
+				key: 'tagline',
+				label: 'Tagline',
+				value: 'Valeur enregistrée',
+				language: 'fr',
+				sortOrder: 2,
+				metadata: { source: 'api' },
+				userId: 'user-1',
+				changeSource: 'import'
+			});
+
+			expect(result.created).toBe(false);
+			expect(result.text.id).toBe('txt-existing');
+			const revisionWrite = mockDB._mockBind.mock.calls.find(
+				(args: unknown[]) =>
+					args.includes('txt-existing') &&
+					args.includes('Valeur enregistrée') &&
+					args.includes('import') &&
+					args.includes('user-1')
+			);
+			expect(revisionWrite).toBeDefined();
+		});
+
+		it('fails explicitly when SQLite returns no persisted row', async () => {
+			mockDB._mockFirst.mockResolvedValueOnce(null);
+
+			await expect(
+				upsertBrandText(mockDB as any, {
+					brandProfileId: 'bp-1',
+					category: 'names',
+					key: 'brand_name',
+					label: 'Brand Name',
+					value: 'Nabu'
+				})
+			).rejects.toThrow('Brand text upsert did not return a persisted row');
 		});
 	});
 

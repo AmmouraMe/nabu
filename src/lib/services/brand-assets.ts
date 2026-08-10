@@ -209,6 +209,40 @@ export async function findBrandTextByAnyKey(
 }
 
 /**
+ * Find every text asset stored under one of a profile field's known keys.
+ * This is primarily used when clearing a field: older data can contain both
+ * the canonical key and a legacy alias, and leaving either row untouched would
+ * make stale content reappear in the Text tab.
+ */
+export async function findBrandTextsByAnyKey(
+	db: D1Database,
+	brandProfileId: string,
+	category: string,
+	keys: string[],
+	language?: string
+): Promise<BrandText[]> {
+	if (keys.length === 0) return [];
+
+	const placeholders = keys.map(() => '?').join(', ');
+	const preference = keys.map((_, index) => `WHEN ? THEN ${index}`).join(' ');
+	const languageClause = language ? ' AND language = ?' : '';
+	const binds = language
+		? [brandProfileId, category, language, ...keys, ...keys]
+		: [brandProfileId, category, ...keys, ...keys];
+
+	const result = await db
+		.prepare(
+			`SELECT * FROM brand_texts
+       WHERE brand_profile_id = ? AND category = ?${languageClause} AND key IN (${placeholders})
+       ORDER BY CASE key ${preference} ELSE ${keys.length} END`
+		)
+		.bind(...binds)
+		.all();
+
+	return (result.results || []).map((row) => mapRowToText(row as Record<string, unknown>));
+}
+
+/**
  * Sync a brand profile field value to a corresponding text asset.
  * Uses FIELD_TO_TEXT_MAPPING to determine the text category and key.
  * Creates the text if it doesn't exist, or updates it if it does.
@@ -223,6 +257,9 @@ export async function syncFieldToTextAsset(
 		fieldName: string;
 		value: string | null;
 		language?: string;
+		userId?: string;
+		changeSource?: 'manual' | 'ai' | 'import';
+		changeNote?: string;
 	}
 ): Promise<void> {
 	// Import inline to avoid circular dependency at module level
@@ -236,8 +273,32 @@ export async function syncFieldToTextAsset(
 	const label = BRAND_FIELD_LABELS[params.fieldName] || params.fieldName;
 	const language = params.language || 'en';
 
+	if (!params.value) {
+		// Clear every canonical/legacy alias. Older datasets can contain more
+		// than one matching row, and clearing only the preferred row leaves stale
+		// content visible through the other alias.
+		const existingTexts = await findBrandTextsByAnyKey(
+			db,
+			params.brandProfileId,
+			category,
+			mapping.keys,
+			language
+		);
+
+		for (const existing of existingTexts) {
+			if (existing.value === '') continue;
+			await updateBrandText(db, existing.id, {
+				value: '',
+				userId: params.userId,
+				changeSource: params.changeSource,
+				changeNote: params.changeNote
+			});
+		}
+		return;
+	}
+
 	// Check if a text asset already exists for this field, under any of the
-	// keys it may have been stored under
+	// keys it may have been stored under.
 	const existing = await findBrandTextByAnyKey(
 		db,
 		params.brandProfileId,
@@ -246,20 +307,14 @@ export async function syncFieldToTextAsset(
 		language
 	);
 
-	if (!params.value) {
-		// The field was cleared. Blank the mirrored asset so the Text tab stops
-		// showing the old content; the row and its revision history are kept so
-		// the value stays recoverable. Never create an asset for an empty value —
-		// that would invent Text-tab entries for fields the user never filled in.
-		if (existing) {
-			await updateBrandText(db, existing.id, { value: '' });
-		}
-		return;
-	}
-
 	if (existing) {
 		// Update the existing text asset
-		await updateBrandText(db, existing.id, { value: params.value });
+		await updateBrandText(db, existing.id, {
+			value: params.value,
+			userId: params.userId,
+			changeSource: params.changeSource,
+			changeNote: params.changeNote
+		});
 	} else {
 		// Create a new text asset
 		await createBrandText(db, {
@@ -268,7 +323,9 @@ export async function syncFieldToTextAsset(
 			key,
 			label,
 			value: params.value,
-			language
+			language,
+			userId: params.userId,
+			changeSource: params.changeSource
 		});
 	}
 }
@@ -333,6 +390,65 @@ export async function createBrandText(
 		createdAt: now,
 		updatedAt: now
 	};
+}
+
+/**
+ * Atomically create or update the row identified by the table's UNIQUE key.
+ * The returned row comes from SQLite itself, so callers receive the persisted
+ * id and timestamps even when a concurrent request wins the insert race.
+ */
+export async function upsertBrandText(
+	db: D1Database,
+	params: CreateBrandTextParams
+): Promise<{ text: BrandText; created: boolean }> {
+	const proposedId = crypto.randomUUID();
+	const language = params.language || 'en';
+	const sortOrder = params.sortOrder ?? 0;
+	const metadataStr = params.metadata ? JSON.stringify(params.metadata) : null;
+
+	const row = await db
+		.prepare(
+			`INSERT INTO brand_texts
+       (id, brand_profile_id, category, key, label, value, language, sort_order, metadata, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+       ON CONFLICT(brand_profile_id, category, key, language) DO UPDATE SET
+         label = excluded.label,
+         value = excluded.value,
+         updated_at = datetime('now')
+       RETURNING *`
+		)
+		.bind(
+			proposedId,
+			params.brandProfileId,
+			params.category,
+			params.key,
+			params.label,
+			params.value,
+			language,
+			sortOrder,
+			metadataStr
+		)
+		.first<Record<string, unknown>>();
+
+	if (!row) {
+		throw new Error('Brand text upsert did not return a persisted row');
+	}
+
+	const text = mapRowToText(row);
+	const created = text.id === proposedId;
+
+	if (params.userId) {
+		await createTextRevision(db, {
+			brandTextId: text.id,
+			value: text.value,
+			label: text.label,
+			changeSource: params.changeSource ?? 'manual',
+			userId: params.userId,
+			changeNote: created ? 'Initial version' : undefined
+		});
+	}
+
+	return { text, created };
 }
 
 /**

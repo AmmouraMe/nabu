@@ -708,15 +708,18 @@ describe('Chat Models - branch coverage', () => {
 describe('Brand Assets Texts - setAsProfileField branch', () => {
 	it('POST with setAsProfileField triggers profile update', async () => {
 		vi.mock('$lib/services/brand-assets', () => ({
-			createBrandText: vi.fn().mockResolvedValue({
-				id: 'text1',
-				brandProfileId: 'bp1',
-				category: 'messaging',
-				key: 'tagline',
-				label: 'Tagline',
-				value: 'Test'
+			upsertBrandText: vi.fn().mockResolvedValue({
+				text: {
+					id: 'text1',
+					brandProfileId: 'bp1',
+					category: 'messaging',
+					key: 'tagline',
+					label: 'Tagline',
+					value: 'Test',
+					language: 'en'
+				},
+				created: true
 			}),
-			findBrandTextByKey: vi.fn().mockResolvedValue(null),
 			updateBrandText: vi.fn().mockResolvedValue(undefined),
 			deleteBrandText: vi.fn().mockResolvedValue(undefined),
 			syncFieldToTextAsset: vi.fn().mockResolvedValue(undefined),

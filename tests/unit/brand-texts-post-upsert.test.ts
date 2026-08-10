@@ -10,19 +10,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { withBrandAccess } from '../fixtures/brand-access';
 
 vi.mock('$lib/services/brand-assets', () => ({
-	createBrandText: vi.fn(),
 	getBrandTexts: vi.fn(),
 	getBrandTextsByCategory: vi.fn(),
+	upsertBrandText: vi.fn(),
 	updateBrandText: vi.fn(),
-	deleteBrandText: vi.fn(),
-	findBrandTextByKey: vi.fn()
+	deleteBrandText: vi.fn()
 }));
 
 vi.mock('$lib/services/brand', () => ({
 	updateBrandFieldWithVersion: vi.fn()
 }));
 
-import { createBrandText, updateBrandText, findBrandTextByKey } from '$lib/services/brand-assets';
+import { upsertBrandText } from '$lib/services/brand-assets';
 
 const authedLocals = { user: { id: 'user-1' } };
 const platform = { env: { DB: withBrandAccess({}, { userId: 'user-1' }) } };
@@ -59,9 +58,15 @@ const existingText = {
 describe('POST /api/brand/assets/texts — upsert instead of duplicate insert', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(findBrandTextByKey).mockResolvedValue(null);
-		vi.mocked(createBrandText).mockResolvedValue({ ...existingText, id: 'text-new' });
-		vi.mocked(updateBrandText).mockResolvedValue(undefined);
+		vi.mocked(upsertBrandText).mockResolvedValue({
+			text: {
+				...existingText,
+				id: 'text-new',
+				value: 'Illuminate your journey',
+				updatedAt: '2026-08-10 07:00:00'
+			},
+			created: true
+		});
 	});
 
 	it('creates a new text asset when none exists, returning 201', async () => {
@@ -76,12 +81,19 @@ describe('POST /api/brand/assets/texts — upsert instead of duplicate insert', 
 		expect(res.status).toBe(201);
 		const data = await res.json();
 		expect(data.created).toBe(true);
-		expect(createBrandText).toHaveBeenCalledTimes(1);
-		expect(updateBrandText).not.toHaveBeenCalled();
+		expect(upsertBrandText).toHaveBeenCalledTimes(1);
+		expect(data.text.updatedAt).toBe('2026-08-10 07:00:00');
 	});
 
 	it('updates the existing asset instead of inserting a duplicate row', async () => {
-		vi.mocked(findBrandTextByKey).mockResolvedValue(existingText);
+		vi.mocked(upsertBrandText).mockResolvedValue({
+			text: {
+				...existingText,
+				value: 'Illuminate your journey',
+				updatedAt: '2026-08-10 07:01:00'
+			},
+			created: false
+		});
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
 
 		const res = await POST({
@@ -90,10 +102,11 @@ describe('POST /api/brand/assets/texts — upsert instead of duplicate insert', 
 			locals: authedLocals
 		} as never);
 
-		expect(createBrandText).not.toHaveBeenCalled();
-		expect(updateBrandText).toHaveBeenCalledTimes(1);
-		expect(vi.mocked(updateBrandText).mock.calls[0][1]).toBe('text-existing');
-		expect(vi.mocked(updateBrandText).mock.calls[0][2]).toMatchObject({
+		expect(upsertBrandText).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(upsertBrandText).mock.calls[0][1]).toMatchObject({
+			brandProfileId: 'bp-1',
+			category: 'messaging',
+			key: 'tagline',
 			value: 'Illuminate your journey',
 			label: 'Tagline',
 			userId: 'user-1'
@@ -104,6 +117,7 @@ describe('POST /api/brand/assets/texts — upsert instead of duplicate insert', 
 		expect(data.created).toBe(false);
 		expect(data.text.id).toBe('text-existing');
 		expect(data.text.value).toBe('Illuminate your journey');
+		expect(data.text.updatedAt).toBe('2026-08-10 07:01:00');
 	});
 
 	it('scopes the lookup by language, matching the table UNIQUE constraint', async () => {
@@ -115,12 +129,9 @@ describe('POST /api/brand/assets/texts — upsert instead of duplicate insert', 
 			locals: authedLocals
 		} as never);
 
-		expect(findBrandTextByKey).toHaveBeenCalledWith(
+		expect(upsertBrandText).toHaveBeenCalledWith(
 			expect.anything(),
-			'bp-1',
-			'messaging',
-			'tagline',
-			'fr'
+			expect.objectContaining({ language: 'fr' })
 		);
 	});
 
@@ -133,12 +144,9 @@ describe('POST /api/brand/assets/texts — upsert instead of duplicate insert', 
 			locals: authedLocals
 		} as never);
 
-		expect(findBrandTextByKey).toHaveBeenCalledWith(
+		expect(upsertBrandText).toHaveBeenCalledWith(
 			expect.anything(),
-			'bp-1',
-			'messaging',
-			'tagline',
-			'en'
+			expect.objectContaining({ language: 'en' })
 		);
 	});
 });

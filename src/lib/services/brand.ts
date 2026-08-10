@@ -440,6 +440,7 @@ export async function updateBrandFieldWithVersion(
 		newValue: unknown;
 		changeSource: 'manual' | 'ai' | 'import';
 		changeReason?: string;
+		syncTextAsset?: boolean;
 	}
 ): Promise<void> {
 	const column = FIELD_TO_COLUMN[params.fieldName];
@@ -499,6 +500,7 @@ export async function updateBrandFieldWithVersion(
 	// (same behavior as manual edits via /api/brand/update-field).
 	// The field update and version are always the source of truth.
 	try {
+		if (params.syncTextAsset === false) return;
 		const { syncFieldToTextAsset } = await import('$lib/services/brand-assets');
 		// Mirror exactly what the profile column stores (dbValue) so the Text tab
 		// and the DB never diverge — e.g. JSON-array fields previously stored
@@ -506,7 +508,10 @@ export async function updateBrandFieldWithVersion(
 		await syncFieldToTextAsset(db, {
 			brandProfileId: params.profileId,
 			fieldName: params.fieldName,
-			value: dbValue
+			value: dbValue,
+			userId: params.userId,
+			changeSource: params.changeSource,
+			changeNote: params.changeReason
 		});
 	} catch (error) {
 		// Non-fatal — text asset is a derived convenience — but never silent:

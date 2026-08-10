@@ -27,8 +27,7 @@ vi.mock('$lib/services/brand-assets', () => ({
 	deleteBrandMedia: vi.fn(),
 	getLogoAssets: vi.fn(),
 	getBrandAssetSummary: vi.fn(),
-	createBrandText: vi.fn(),
-	findBrandTextByKey: vi.fn(),
+	upsertBrandText: vi.fn(),
 	getBrandTexts: vi.fn(),
 	getBrandTextsByCategory: vi.fn(),
 	updateBrandText: vi.fn(),
@@ -85,7 +84,7 @@ import {
 	deleteBrandMedia,
 	getLogoAssets,
 	getBrandAssetSummary,
-	createBrandText,
+	upsertBrandText,
 	getBrandTexts,
 	getBrandTextsByCategory,
 	updateBrandText,
@@ -256,9 +255,21 @@ describe('Variants API - platform null branches', () => {
 // /api/brand/assets/texts — uncovered branches (lines 52,63,68,77,84-85,101-102)
 // ═══════════════════════════════════════════════════════════════
 describe('Texts API - uncovered branches', () => {
+	function mockTextUpsert(overrides: Record<string, unknown> = {}) {
+		vi.mocked(upsertBrandText).mockResolvedValue({
+			text: {
+				id: 'text-1',
+				value: 'My tagline',
+				language: 'en',
+				...overrides
+			},
+			created: true
+		} as any);
+	}
+
 	it('POST: should set profileFieldUpdated=false when setAsProfileField is falsy', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 'text-1' } as any);
+		mockTextUpsert();
 		const body = {
 			brandProfileId: 'bp-1',
 			category: 'messaging',
@@ -278,7 +289,7 @@ describe('Texts API - uncovered branches', () => {
 
 	it('POST: should set profileFieldUpdated=true when setAsProfileField succeeds', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 'text-1' } as any);
+		mockTextUpsert();
 		vi.mocked(updateBrandFieldWithVersion).mockResolvedValue(undefined);
 		const body = {
 			brandProfileId: 'bp-1',
@@ -296,11 +307,15 @@ describe('Texts API - uncovered branches', () => {
 		} as any);
 		const data = await res.json();
 		expect(data.profileFieldUpdated).toBe(true);
+		expect(updateBrandFieldWithVersion).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({ syncTextAsset: false })
+		);
 	});
 
 	it('POST: should set profileFieldUpdated=false when updateBrandFieldWithVersion throws', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 'text-1' } as any);
+		mockTextUpsert();
 		vi.mocked(updateBrandFieldWithVersion).mockRejectedValue(new Error('DB error'));
 		const body = {
 			brandProfileId: 'bp-1',
@@ -323,7 +338,7 @@ describe('Texts API - uncovered branches', () => {
 
 	it('POST: should handle setAsProfileField=true without profileFieldName', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 'text-1' } as any);
+		mockTextUpsert();
 		const body = {
 			brandProfileId: 'bp-1',
 			category: 'messaging',
@@ -361,7 +376,7 @@ describe('Texts API - uncovered branches', () => {
 
 	it('POST: should include language when provided', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 'text-1' } as any);
+		mockTextUpsert({ language: 'en' });
 		const body = {
 			brandProfileId: 'bp-1',
 			category: 'messaging',
@@ -375,7 +390,7 @@ describe('Texts API - uncovered branches', () => {
 			platform: { env: { DB: mockDB } },
 			locals: authedLocals
 		} as any);
-		expect(createBrandText).toHaveBeenCalledWith(
+		expect(upsertBrandText).toHaveBeenCalledWith(
 			mockDB,
 			expect.objectContaining({ language: 'en' })
 		);

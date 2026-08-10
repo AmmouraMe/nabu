@@ -201,7 +201,8 @@ describe('POST /api/brand/push-to-profile', () => {
 				userId: 'user-1',
 				fieldName: 'visionStatement',
 				newValue: 'To be the leading platform...',
-				changeSource: 'manual'
+				changeSource: 'manual',
+				syncTextAsset: false
 			})
 		);
 	});
@@ -233,6 +234,7 @@ describe('POST /api/brand/push-to-profile', () => {
 			expect.objectContaining({
 				newValue: 'An older vision statement...',
 				changeSource: 'manual',
+				syncTextAsset: false,
 				changeReason: 'Pushed from text revision'
 			})
 		);

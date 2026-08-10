@@ -1,10 +1,9 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import {
-	createBrandText,
-	findBrandTextByKey,
 	getBrandTexts,
 	getBrandTextsByCategory,
+	upsertBrandText,
 	updateBrandText,
 	deleteBrandText
 } from '$lib/services/brand-assets';
@@ -69,37 +68,16 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	const resolvedLanguage = language || 'en';
 
-	const existing = await findBrandTextByKey(
-		platform.env.DB,
+	const { text, created } = await upsertBrandText(platform.env.DB, {
 		brandProfileId,
 		category,
 		key,
-		resolvedLanguage
-	);
-
-	let text;
-	if (existing) {
-		await updateBrandText(platform.env.DB, existing.id, {
-			value,
-			label,
-			userId: locals.user.id,
-			changeSource: 'manual'
-		});
-		// updated_at is written by the DB (datetime('now')); don't invent a
-		// client-side timestamp in a different format than a later GET returns.
-		text = { ...existing, label, value };
-	} else {
-		text = await createBrandText(platform.env.DB, {
-			brandProfileId,
-			category,
-			key,
-			label,
-			value,
-			language: resolvedLanguage,
-			userId: locals.user.id,
-			changeSource: 'manual'
-		});
-	}
+		label,
+		value,
+		language: resolvedLanguage,
+		userId: locals.user.id,
+		changeSource: 'manual'
+	});
 
 	// Optionally set the profile field to this value
 	let profileFieldUpdated = false;
@@ -111,7 +89,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				fieldName: profileFieldName,
 				newValue: value,
 				changeSource: 'ai',
-				changeReason: `Set from generated text asset: ${label}`
+				changeReason: `Set from generated text asset: ${label}`,
+				syncTextAsset: false
 			});
 			profileFieldUpdated = true;
 		} catch {
@@ -119,7 +98,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		}
 	}
 
-	const created = !existing;
 	return json({ text, profileFieldUpdated, created }, { status: created ? 201 : 200 });
 };
 

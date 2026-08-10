@@ -31,9 +31,7 @@ export default defineConfig({
 				// These are tested via E2E tests for user interaction flows
 				'**/*.svelte',
 				// Page route type files that just define load types
-				'src/routes/**/+page.ts',
-				// Hooks are tested implicitly through integration tests
-				'src/hooks.server.ts'
+				'src/routes/**/+page.ts'
 			],
 			thresholds: {
 				lines: 95,

@@ -40,13 +40,13 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 						return dbIsAdmin === null
 							? null
 							: {
-								id: userId,
-								email: `${userId}@example.com`,
-								name: null,
-								github_login: null,
-								github_avatar_url: null,
-								is_admin: dbIsAdmin
-							};
+									id: userId,
+									email: `${userId}@example.com`,
+									name: null,
+									github_login: null,
+									github_avatar_url: null,
+									is_admin: dbIsAdmin
+								};
 					}
 					return null;
 				}
@@ -122,5 +122,187 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 
 		expect((event.locals as any).user).toBeUndefined();
 		expect(deleted).toContain('session');
+	});
+});
+
+/**
+ * AGENTS.md rule: auth fails closed when D1 is unavailable. A session cookie
+ * that cannot be verified — because the DB binding (or the whole platform
+ * object) is missing — must never leave a user object on locals; the cookie
+ * is dropped and the request still resolves as anonymous.
+ */
+describe('hooks.server - auth fails closed when the session DB is unavailable', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.resetModules();
+	});
+
+	const resolve = vi.fn().mockResolvedValue(new Response('ok'));
+
+	function buildDblessEvent(cookie: string, platform: unknown) {
+		const deleted: string[] = [];
+		return {
+			deleted,
+			event: {
+				cookies: {
+					get: vi.fn().mockReturnValue(cookie),
+					delete: vi.fn((name: string) => deleted.push(name))
+				},
+				// Pre-seeded stale identity: fail-closed must clear it, not keep it.
+				locals: { user: { id: 'stale', isOwner: true, isAdmin: true } } as Record<string, unknown>,
+				platform
+			}
+		};
+	}
+
+	it('clears the user and deletes the cookie when platform.env has no DB', async () => {
+		const cookie = await signSession({ token: 'valid-signed-token' }, SECRET);
+		const { event, deleted } = buildDblessEvent(cookie, { env: { SESSION_SECRET: SECRET } });
+		const { handle } = await import('../../src/hooks.server');
+
+		const response = await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user).toBeUndefined();
+		expect(deleted).toContain('session');
+		expect(resolve).toHaveBeenCalled();
+		expect(response).toBeInstanceOf(Response);
+	});
+
+	it('clears the user and deletes the cookie when the platform is missing entirely', async () => {
+		const cookie = await signSession({ token: 'valid-signed-token' }, SECRET);
+		const { event, deleted } = buildDblessEvent(cookie, undefined);
+		const { handle } = await import('../../src/hooks.server');
+
+		const response = await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user).toBeUndefined();
+		expect(deleted).toContain('session');
+		expect(resolve).toHaveBeenCalled();
+		expect(response).toBeInstanceOf(Response);
+	});
+
+	it('clears the user and deletes the cookie when platform has no env', async () => {
+		const cookie = await signSession({ token: 'valid-signed-token' }, SECRET);
+		const { event, deleted } = buildDblessEvent(cookie, {});
+		const { handle } = await import('../../src/hooks.server');
+
+		const response = await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user).toBeUndefined();
+		expect(deleted).toContain('session');
+		expect(resolve).toHaveBeenCalled();
+		expect(response).toBeInstanceOf(Response);
+	});
+
+	it('leaves an anonymous request untouched when no session cookie is present', async () => {
+		const deleted: string[] = [];
+		const event = {
+			cookies: {
+				get: vi.fn().mockReturnValue(undefined),
+				delete: vi.fn((name: string) => deleted.push(name))
+			},
+			locals: {} as Record<string, unknown>,
+			platform: undefined
+		};
+		const { handle } = await import('../../src/hooks.server');
+
+		const response = await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user).toBeUndefined();
+		expect(deleted).toHaveLength(0);
+		expect(response).toBeInstanceOf(Response);
+	});
+});
+
+/**
+ * Remaining fail-closed branches of the session pipeline: a revoked/expired
+ * session row, a session pointing at a deleted user, and the login fallback
+ * when the email has an empty local part.
+ */
+describe('hooks.server - session validation edge branches', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.resetModules();
+	});
+
+	const resolve = vi.fn().mockResolvedValue(new Response('ok'));
+
+	function buildRowEvent(
+		cookie: string,
+		sessionRow: Record<string, unknown> | null,
+		userRow: Record<string, unknown> | null
+	) {
+		const deleted: string[] = [];
+		const prepare = vi.fn((query: string) => ({
+			bind: () => ({
+				first: async () => {
+					if (query.startsWith('SELECT * FROM sessions')) return sessionRow;
+					if (query.includes('FROM users WHERE id = ?')) return userRow;
+					return null;
+				}
+			})
+		}));
+		return {
+			deleted,
+			event: {
+				cookies: {
+					get: vi.fn().mockReturnValue(cookie),
+					delete: vi.fn((name: string) => deleted.push(name))
+				},
+				locals: { user: { id: 'stale' } } as Record<string, unknown>,
+				platform: { env: { SESSION_SECRET: SECRET, DB: { prepare } } }
+			}
+		};
+	}
+
+	it('fails closed when the session row is expired or revoked', async () => {
+		const cookie = await signSession({ token: 'revoked-token' }, SECRET);
+		const { event, deleted } = buildRowEvent(cookie, null, {
+			id: 'user-1',
+			email: 'user-1@example.com',
+			name: null,
+			github_login: null,
+			github_avatar_url: null,
+			is_admin: 0
+		});
+		const { handle } = await import('../../src/hooks.server');
+
+		await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user).toBeUndefined();
+		expect(deleted).toContain('session');
+	});
+
+	it('fails closed when the session points at a missing user row', async () => {
+		const cookie = await signSession({ token: 'orphan-token' }, SECRET);
+		const { event, deleted } = buildRowEvent(cookie, { id: 'digest', user_id: 'ghost-user' }, null);
+		const { handle } = await import('../../src/hooks.server');
+
+		await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user).toBeUndefined();
+		expect(deleted).toContain('session');
+	});
+
+	it('falls back to the full email as login when the local part is empty', async () => {
+		const cookie = await signSession({ token: 'odd-email-token' }, SECRET);
+		const { event } = buildRowEvent(
+			cookie,
+			{ id: 'digest', user_id: 'user-odd' },
+			{
+				id: 'user-odd',
+				email: '@example.com',
+				name: null,
+				github_login: null,
+				github_avatar_url: null,
+				is_admin: 0
+			}
+		);
+		const { handle } = await import('../../src/hooks.server');
+
+		await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user.login).toBe('@example.com');
+		expect((event.locals as any).user.isAdmin).toBe(false);
 	});
 });

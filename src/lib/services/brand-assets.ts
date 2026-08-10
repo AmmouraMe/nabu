@@ -325,7 +325,8 @@ export async function syncFieldToTextAsset(
 			value: params.value,
 			language,
 			userId: params.userId,
-			changeSource: params.changeSource
+			changeSource: params.changeSource,
+			changeNote: params.changeNote
 		});
 	}
 }
@@ -373,7 +374,7 @@ export async function createBrandText(
 			label: params.label,
 			changeSource: params.changeSource ?? 'manual',
 			userId: params.userId,
-			changeNote: 'Initial version'
+			changeNote: params.changeNote ?? 'Initial version'
 		});
 	}
 
@@ -406,7 +407,7 @@ export async function upsertBrandText(
 	const sortOrder = params.sortOrder ?? 0;
 	const metadataStr = params.metadata ? JSON.stringify(params.metadata) : null;
 
-	const row = await db
+	const upsertStatement = db
 		.prepare(
 			`INSERT INTO brand_texts
        (id, brand_profile_id, category, key, label, value, language, sort_order, metadata, created_at, updated_at)
@@ -427,8 +428,63 @@ export async function upsertBrandText(
 			language,
 			sortOrder,
 			metadataStr
-		)
-		.first<Record<string, unknown>>();
+		);
+
+	let row: Record<string, unknown> | null;
+
+	if (params.userId) {
+		const revisionId = crypto.randomUUID();
+		const identity = [params.brandProfileId, params.category, params.key, language] as const;
+		const clearCurrentStatement = db
+			.prepare(
+				`UPDATE brand_text_revisions
+         SET is_current = 0
+         WHERE brand_text_id = (
+           SELECT id FROM brand_texts
+           WHERE brand_profile_id = ? AND category = ? AND key = ? AND language = ?
+         )`
+			)
+			.bind(...identity);
+		const insertRevisionStatement = db
+			.prepare(
+				`INSERT INTO brand_text_revisions
+         (id, brand_text_id, revision_number, is_current, value, label,
+          change_source, user_id, change_note, created_at)
+         SELECT ?, bt.id,
+           COALESCE((
+             SELECT MAX(revision_number) + 1
+             FROM brand_text_revisions
+             WHERE brand_text_id = bt.id
+           ), 1),
+           1, bt.value, bt.label, ?, ?,
+           CASE WHEN bt.id = ? THEN COALESCE(?, 'Initial version') ELSE ? END,
+           datetime('now')
+         FROM brand_texts bt
+         WHERE bt.brand_profile_id = ? AND bt.category = ? AND bt.key = ? AND bt.language = ?`
+			)
+			.bind(
+				revisionId,
+				params.changeSource ?? 'manual',
+				params.userId,
+				proposedId,
+				params.changeNote ?? null,
+				params.changeNote ?? null,
+				...identity
+			);
+
+		// D1 executes a batch sequentially inside one transaction. Keeping the
+		// row mutation, current-marker reset, and revision insert in this batch
+		// prevents concurrent saves from marking a revision for stale content as
+		// current after a newer text value has already won the upsert race.
+		const [upsertResult] = await db.batch<Record<string, unknown>>([
+			upsertStatement,
+			clearCurrentStatement,
+			insertRevisionStatement
+		]);
+		row = (upsertResult?.results?.[0] as Record<string, unknown> | undefined) ?? null;
+	} else {
+		row = await upsertStatement.first<Record<string, unknown>>();
+	}
 
 	if (!row) {
 		throw new Error('Brand text upsert did not return a persisted row');
@@ -436,17 +492,6 @@ export async function upsertBrandText(
 
 	const text = mapRowToText(row);
 	const created = text.id === proposedId;
-
-	if (params.userId) {
-		await createTextRevision(db, {
-			brandTextId: text.id,
-			value: text.value,
-			label: text.label,
-			changeSource: params.changeSource ?? 'manual',
-			userId: params.userId,
-			changeNote: created ? 'Initial version' : undefined
-		});
-	}
 
 	return { text, created };
 }

@@ -258,6 +258,27 @@ describe('Brand Field → Text Asset Sync', () => {
 			expect(insertBind).toContain('fr');
 		});
 
+		it('should preserve the caller change note on a mirrored asset initial revision', async () => {
+			mockDB._mockFirst.mockResolvedValueOnce(null);
+
+			await syncFieldToTextAsset(mockDB as any, {
+				brandProfileId: 'profile-1',
+				fieldName: 'missionStatement',
+				value: 'Build a better future',
+				userId: 'user-1',
+				changeSource: 'ai',
+				changeNote: 'AI-generated via Fill Empty Fields'
+			});
+
+			const revisionWrite = mockDB._mockBind.mock.calls.find(
+				(args: unknown[]) =>
+					args.includes('user-1') &&
+					args.includes('ai') &&
+					args.includes('AI-generated via Fill Empty Fields')
+			);
+			expect(revisionWrite).toBeDefined();
+		});
+
 		it('should update existing text when one matches the field key', async () => {
 			// Existing text found
 			const existingRow = {

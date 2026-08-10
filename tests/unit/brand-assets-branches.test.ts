@@ -603,7 +603,7 @@ describe('Brand Assets - Branch Coverage', () => {
 		it('recognizes its generated id as a new row', async () => {
 			const generatedId = '00000000-0000-4000-8000-000000000001';
 			const randomUUID = vi.spyOn(crypto, 'randomUUID').mockReturnValue(generatedId);
-			mockDB._mockFirst.mockResolvedValueOnce({
+			const persistedRow = {
 				id: generatedId,
 				brand_profile_id: 'bp-1',
 				category: 'names',
@@ -615,7 +615,12 @@ describe('Brand Assets - Branch Coverage', () => {
 				metadata: null,
 				created_at: '2026-08-10',
 				updated_at: '2026-08-10'
-			});
+			};
+			mockDB.batch.mockResolvedValueOnce([
+				{ results: [persistedRow] },
+				{ results: [] },
+				{ results: [] }
+			]);
 
 			const result = await upsertBrandText(mockDB as any, {
 				brandProfileId: 'bp-1',
@@ -627,36 +632,36 @@ describe('Brand Assets - Branch Coverage', () => {
 			});
 
 			expect(result.created).toBe(true);
-			expect(mockDB._mockBind).toHaveBeenCalledWith(
-				expect.any(String),
-				generatedId,
-				1,
-				'Nabu',
-				'Brand Name',
-				'manual',
-				'user-1',
-				'Initial version',
-				expect.any(String)
+			expect(mockDB.batch).toHaveBeenCalledTimes(1);
+			expect(mockDB.batch.mock.calls[0][0]).toHaveLength(3);
+			const revisionInsertBind = mockDB._mockBind.mock.calls.find(
+				(args: unknown[]) => args.includes('manual') && args.includes('user-1')
+			);
+			expect(revisionInsertBind).toEqual(
+				expect.arrayContaining([generatedId, null, 'bp-1', 'names', 'brand_name', 'en'])
 			);
 			randomUUID.mockRestore();
 		});
 
 		it('records revision context against the persisted existing row', async () => {
-			mockDB._mockFirst
-				.mockResolvedValueOnce({
-					id: 'txt-existing',
-					brand_profile_id: 'bp-1',
-					category: 'messaging',
-					key: 'tagline',
-					label: 'Tagline',
-					value: 'Valeur enregistrée',
-					language: 'fr',
-					sort_order: 2,
-					metadata: '{"source":"api"}',
-					created_at: '2026-08-10 07:00:00',
-					updated_at: '2026-08-10 07:02:00'
-				})
-				.mockResolvedValueOnce({ count: 1 });
+			const persistedRow = {
+				id: 'txt-existing',
+				brand_profile_id: 'bp-1',
+				category: 'messaging',
+				key: 'tagline',
+				label: 'Tagline',
+				value: 'Valeur enregistrée',
+				language: 'fr',
+				sort_order: 2,
+				metadata: '{"source":"api"}',
+				created_at: '2026-08-10 07:00:00',
+				updated_at: '2026-08-10 07:02:00'
+			};
+			mockDB.batch.mockResolvedValueOnce([
+				{ results: [persistedRow] },
+				{ results: [] },
+				{ results: [] }
+			]);
 
 			const result = await upsertBrandText(mockDB as any, {
 				brandProfileId: 'bp-1',
@@ -675,12 +680,79 @@ describe('Brand Assets - Branch Coverage', () => {
 			expect(result.text.id).toBe('txt-existing');
 			const revisionWrite = mockDB._mockBind.mock.calls.find(
 				(args: unknown[]) =>
-					args.includes('txt-existing') &&
-					args.includes('Valeur enregistrée') &&
 					args.includes('import') &&
-					args.includes('user-1')
+					args.includes('user-1') &&
+					args.includes('bp-1') &&
+					args.includes('tagline')
 			);
 			expect(revisionWrite).toBeDefined();
+			expect(mockDB.batch.mock.calls[0][0]).toHaveLength(3);
+		});
+
+		it('keeps concurrent upserts and their current revisions in atomic batches', async () => {
+			const rows = [
+				{
+					id: 'txt-shared',
+					brand_profile_id: 'bp-1',
+					category: 'messaging',
+					key: 'tagline',
+					label: 'Tagline A',
+					value: 'Value A',
+					language: 'en',
+					sort_order: 0,
+					metadata: null,
+					created_at: '2026-08-10 07:00:00',
+					updated_at: '2026-08-10 07:01:00'
+				},
+				{
+					id: 'txt-shared',
+					brand_profile_id: 'bp-1',
+					category: 'messaging',
+					key: 'tagline',
+					label: 'Tagline B',
+					value: 'Value B',
+					language: 'en',
+					sort_order: 0,
+					metadata: null,
+					created_at: '2026-08-10 07:00:00',
+					updated_at: '2026-08-10 07:01:01'
+				}
+			];
+			mockDB.batch
+				.mockResolvedValueOnce([{ results: [rows[0]] }, { results: [] }, { results: [] }])
+				.mockResolvedValueOnce([{ results: [rows[1]] }, { results: [] }, { results: [] }]);
+
+			const [first, second] = await Promise.all([
+				upsertBrandText(mockDB as any, {
+					brandProfileId: 'bp-1',
+					category: 'messaging',
+					key: 'tagline',
+					label: 'Tagline A',
+					value: 'Value A',
+					userId: 'user-a'
+				}),
+				upsertBrandText(mockDB as any, {
+					brandProfileId: 'bp-1',
+					category: 'messaging',
+					key: 'tagline',
+					label: 'Tagline B',
+					value: 'Value B',
+					userId: 'user-b'
+				})
+			]);
+
+			expect(first.text.value).toBe('Value A');
+			expect(second.text.value).toBe('Value B');
+			expect(mockDB.batch).toHaveBeenCalledTimes(2);
+			for (const [statements] of mockDB.batch.mock.calls) {
+				expect(statements).toHaveLength(3);
+			}
+			const sql = mockDB.prepare.mock.calls.map(([statement]) => statement as string);
+			expect(sql.filter((statement) => statement.includes('ON CONFLICT'))).toHaveLength(2);
+			expect(sql.filter((statement) => statement.includes('SET is_current = 0'))).toHaveLength(2);
+			expect(
+				sql.filter((statement) => statement.includes('MAX(revision_number) + 1'))
+			).toHaveLength(2);
 		});
 
 		it('fails explicitly when SQLite returns no persisted row', async () => {

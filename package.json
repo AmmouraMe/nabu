@@ -21,7 +21,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"validate:contrast": "node scripts/validate-theme-contrast.cjs",
-		"validate:all": "npm run format:check && npm run check && npm run test && npm run validate:contrast",
+		"validate:all": "npm run format:check && npm run check && npm run test:coverage && npm run validate:contrast",
 		"db:migrate": "wrangler d1 migrations apply nabu-db",
 		"db:migrate:local": "wrangler d1 migrations apply nabu-db --local",
 		"db:migrate:list": "wrangler d1 migrations list nabu-db"

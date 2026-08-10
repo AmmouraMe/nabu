@@ -182,21 +182,26 @@ export async function findBrandTextByAnyKey(
 	db: D1Database,
 	brandProfileId: string,
 	category: string,
-	keys: string[]
+	keys: string[],
+	language?: string
 ): Promise<BrandText | null> {
 	if (keys.length === 0) return null;
 
 	const placeholders = keys.map(() => '?').join(', ');
 	const preference = keys.map((_, index) => `WHEN ? THEN ${index}`).join(' ');
+	const languageClause = language ? ' AND language = ?' : '';
+	const binds = language
+		? [brandProfileId, category, language, ...keys, ...keys]
+		: [brandProfileId, category, ...keys, ...keys];
 
 	const row = await db
 		.prepare(
 			`SELECT * FROM brand_texts
-       WHERE brand_profile_id = ? AND category = ? AND key IN (${placeholders})
+       WHERE brand_profile_id = ? AND category = ?${languageClause} AND key IN (${placeholders})
        ORDER BY CASE key ${preference} ELSE ${keys.length} END
        LIMIT 1`
 		)
-		.bind(brandProfileId, category, ...keys, ...keys)
+		.bind(...binds)
 		.first<Record<string, unknown>>();
 
 	if (!row) return null;
@@ -217,6 +222,7 @@ export async function syncFieldToTextAsset(
 		brandProfileId: string;
 		fieldName: string;
 		value: string | null;
+		language?: string;
 	}
 ): Promise<void> {
 	// Import inline to avoid circular dependency at module level
@@ -228,10 +234,17 @@ export async function syncFieldToTextAsset(
 	const category = mapping.category;
 	const key = mapping.keys[0]; // Use first key as the canonical key
 	const label = BRAND_FIELD_LABELS[params.fieldName] || params.fieldName;
+	const language = params.language || 'en';
 
 	// Check if a text asset already exists for this field, under any of the
 	// keys it may have been stored under
-	const existing = await findBrandTextByAnyKey(db, params.brandProfileId, category, mapping.keys);
+	const existing = await findBrandTextByAnyKey(
+		db,
+		params.brandProfileId,
+		category,
+		mapping.keys,
+		language
+	);
 
 	if (!params.value) {
 		// The field was cleared. Blank the mirrored asset so the Text tab stops
@@ -254,7 +267,8 @@ export async function syncFieldToTextAsset(
 			category: category as CreateBrandTextParams['category'],
 			key,
 			label,
-			value: params.value
+			value: params.value,
+			language
 		});
 	}
 }

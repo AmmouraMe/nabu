@@ -152,6 +152,29 @@ describe('Brand Field → Text Asset Sync', () => {
 				'mission_statement'
 			);
 		});
+
+		it('should scope alias lookup by language when one is given', async () => {
+			mockDB._mockFirst.mockResolvedValueOnce(null);
+
+			await findBrandTextByAnyKey(
+				mockDB as any,
+				'profile-1',
+				'messaging',
+				['mission', 'mission_statement'],
+				'fr'
+			);
+
+			expect(mockDB.prepare).toHaveBeenCalledWith(expect.stringContaining('language = ?'));
+			expect(mockDB._mockBind).toHaveBeenCalledWith(
+				'profile-1',
+				'messaging',
+				'fr',
+				'mission',
+				'mission_statement',
+				'mission',
+				'mission_statement'
+			);
+		});
 	});
 
 	describe('syncFieldToTextAsset', () => {
@@ -171,6 +194,40 @@ describe('Brand Field → Text Asset Sync', () => {
 					typeof call[0] === 'string' && call[0].includes('INSERT INTO brand_texts')
 			);
 			expect(insertCall).toBeDefined();
+			expect(mockDB._mockBind).toHaveBeenCalledWith(
+				'profile-1',
+				'messaging',
+				'en',
+				'tagline',
+				'slogan',
+				'tagline',
+				'slogan'
+			);
+		});
+
+		it('should keep lookup and creation in the requested language', async () => {
+			mockDB._mockFirst.mockResolvedValueOnce(null);
+
+			await syncFieldToTextAsset(mockDB as any, {
+				brandProfileId: 'profile-1',
+				fieldName: 'tagline',
+				value: 'Éclairez votre parcours',
+				language: 'fr'
+			});
+
+			expect(mockDB._mockBind).toHaveBeenCalledWith(
+				'profile-1',
+				'messaging',
+				'fr',
+				'tagline',
+				'slogan',
+				'tagline',
+				'slogan'
+			);
+			const insertBind = mockDB._mockBind.mock.calls.find((args: unknown[]) =>
+				args.includes('Éclairez votre parcours')
+			);
+			expect(insertBind).toContain('fr');
 		});
 
 		it('should update existing text when one matches the field key', async () => {

@@ -26,9 +26,9 @@ CI runs format:check + check + coverage + contrast in one job, then e2e separate
 `format:check` is first because it is the cheapest and because nothing enforced
 it until now: `.prettierrc` had existed all along with no `format` script and no
 gate step, so 229 of 499 source files had drifted off it. `npm run format` fixes
-drift in place. Note `validate:all` still does **not** include coverage — CI and
-the pre-commit order above gate on `test:coverage`, which is what enforces the
-95% threshold.
+drift in place. `validate:all` follows the same local gate and runs
+`test:coverage` rather than the weaker duplicate `test` command, so the 95%
+threshold cannot be skipped through the aggregate script.
 
 ## Local testing & package manager notes
 

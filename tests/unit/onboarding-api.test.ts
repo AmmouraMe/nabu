@@ -55,15 +55,20 @@ vi.mock('$lib/services/openai-chat', () => ({
 // Helper: create mock platform
 function createMockPlatform() {
 	const mockDB = {
-		prepare: vi.fn().mockReturnValue({
-			bind: vi.fn().mockReturnValue({
+		prepare: vi.fn().mockImplementation((sql: string) => {
+			const accessRow = sql.includes('SELECT user_id FROM brand_profiles')
+				? { user_id: 'user-123' }
+				: null;
+			return {
+				bind: vi.fn().mockReturnValue({
+					first: vi.fn().mockResolvedValue(accessRow),
+					all: vi.fn().mockResolvedValue({ results: [] }),
+					run: vi.fn().mockResolvedValue({ success: true })
+				}),
 				first: vi.fn().mockResolvedValue(null),
 				all: vi.fn().mockResolvedValue({ results: [] }),
 				run: vi.fn().mockResolvedValue({ success: true })
-			}),
-			first: vi.fn().mockResolvedValue(null),
-			all: vi.fn().mockResolvedValue({ results: [] }),
-			run: vi.fn().mockResolvedValue({ success: true })
+			};
 		}),
 		batch: vi.fn().mockResolvedValue([])
 	};

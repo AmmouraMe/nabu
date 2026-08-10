@@ -19,13 +19,17 @@ function createMockPlatform() {
   return {
     env: {
       DB: {
-        prepare: vi.fn().mockReturnValue({
+        prepare: vi.fn().mockImplementation((sql: string) => ({
           bind: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue(null),
+            first: vi
+              .fn()
+              .mockResolvedValue(
+                sql.includes('SELECT user_id FROM brand_profiles') ? { user_id: 'user-1' } : null
+              ),
             all: vi.fn().mockResolvedValue({ results: [] }),
             run: vi.fn().mockResolvedValue({ success: true })
           })
-        })
+        }))
       }
     }
   };

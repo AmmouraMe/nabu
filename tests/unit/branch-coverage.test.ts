@@ -543,7 +543,7 @@ describe('wavespeed-pricing - branch coverage', () => {
 			}
 		};
 		// Admin check: locals.user?.isOwner || locals.user?.isAdmin
-		mockLocals = { user: { id: 'admin-1', isAdmin: true } };
+		mockLocals = { user: { id: 'admin-1', isAdmin: true, isOwner: true } };
 	});
 
 	it('GET returns error when KV is not available', async () => {
@@ -1360,7 +1360,7 @@ describe('Auth keys [id] - branch coverage', () => {
 				}
 			}
 		};
-		mockLocals = { user: { id: 'admin-1', isAdmin: true } };
+		mockLocals = { user: { id: 'admin-1', isAdmin: true, isOwner: true } };
 	});
 
 	it('DELETE succeeds even when key not in any provider config', async () => {

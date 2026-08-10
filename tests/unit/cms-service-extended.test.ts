@@ -39,7 +39,8 @@ describe('CMS Service - Extended Branch Coverage', () => {
       mockDB.first.mockResolvedValueOnce({
         id: 'ct-1',
         slug: 'blog',
-        name: 'Blog'
+        name: 'Blog',
+        fields: '[]'
       });
       // slug uniqueness check: slug already exists
       mockDB.first.mockResolvedValueOnce({ id: 'existing-slug-item' });
@@ -77,7 +78,8 @@ describe('CMS Service - Extended Branch Coverage', () => {
       mockDB.first.mockResolvedValueOnce({
         id: 'ct-1',
         slug: 'blog',
-        name: 'Blog'
+        name: 'Blog',
+        fields: '[]'
       });
       // slug uniqueness check: exists
       mockDB.first.mockResolvedValueOnce({ id: 'existing' });
@@ -100,7 +102,8 @@ describe('CMS Service - Extended Branch Coverage', () => {
       mockDB.first.mockResolvedValueOnce({
         id: 'ct-1',
         slug: 'blog',
-        name: 'Blog'
+        name: 'Blog',
+        fields: '[]'
       });
       // slug uniqueness check: not exists
       mockDB.first.mockResolvedValueOnce(null);
@@ -139,7 +142,8 @@ describe('CMS Service - Extended Branch Coverage', () => {
       mockDB.first.mockResolvedValueOnce({
         id: 'ct-1',
         slug: 'blog',
-        name: 'Blog'
+        name: 'Blog',
+        fields: '[]'
       });
       // slug uniqueness check: not exists
       mockDB.first.mockResolvedValueOnce(null);
@@ -180,7 +184,8 @@ describe('CMS Service - Extended Branch Coverage', () => {
       mockDB.first.mockResolvedValueOnce({
         id: 'ct-1',
         slug: 'blog',
-        name: 'Blog'
+        name: 'Blog',
+        fields: '[]'
       });
       // slug uniqueness check
       mockDB.first.mockResolvedValueOnce(null);

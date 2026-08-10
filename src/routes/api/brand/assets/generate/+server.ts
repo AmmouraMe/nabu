@@ -19,6 +19,17 @@ import { getBrandProfile, buildBrandContextString } from '$lib/services/onboardi
 import { requireBrandAccess, resolveUserBrandRole } from '$lib/server/brand-access';
 import type { AIGenerationProvider } from '$lib/types/brand-assets';
 
+const ALLOWED_IMAGE_MODELS = new Set([
+	'dall-e-2',
+	'dall-e-3',
+	...AI_IMAGE_MODELS.map((model) => model.id)
+]);
+const ALLOWED_AUDIO_MODELS = new Set([
+	'tts-1',
+	'tts-1-hd',
+	...AI_AUDIO_MODELS.map((model) => model.id)
+]);
+
 /**
  * GET /api/brand/assets/generate
  * List AI generations for a brand, or get a specific generation by ID.
@@ -77,6 +88,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		throw error(400, 'Valid type required (image, audio, video)');
 	}
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+	if (type === 'image' && body.model && !ALLOWED_IMAGE_MODELS.has(body.model)) {
+		throw error(400, 'Unsupported image model');
+	}
+	if (type === 'audio' && body.model && !ALLOWED_AUDIO_MODELS.has(body.model)) {
+		throw error(400, 'Unsupported audio model');
+	}
 
 	// Before anything is generated: this writes assets into the brand and spends the
 	// AI budget, so it needs write access, not merely a session.

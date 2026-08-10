@@ -29,6 +29,7 @@ describe('Setup API - Extended Branch Coverage', () => {
 		} = {}
 	) => {
 		const mockRequest = {
+			headers: { get: vi.fn().mockReturnValue('Bearer test-setup-secret') },
 			json: vi.fn().mockResolvedValue(
 				overrides.body || {
 					clientId: 'test-client-id',
@@ -44,6 +45,7 @@ describe('Setup API - Extended Branch Coverage', () => {
 				overrides.platform !== null
 					? {
 							env: {
+								SETUP_SECRET: 'test-setup-secret',
 								KV: {
 									get: overrides.kvGet || mockKVGet,
 									put: overrides.kvPut || mockKVPut
@@ -56,14 +58,10 @@ describe('Setup API - Extended Branch Coverage', () => {
 	};
 
 	describe('GET - Check setup status', () => {
-		it('should return all false when KV is not available', async () => {
-			const response = await GET(
-				createMockEvent({ platform: null }) as unknown as Parameters<typeof GET>[0]
-			);
-			const data = await response.json();
-
-			expect(data.hasConfig).toBe(false);
-			expect(data.hasAdmin).toBe(false);
+		it('should fail when KV is not available', async () => {
+			await expect(
+				GET(createMockEvent({ platform: null }) as unknown as Parameters<typeof GET>[0])
+			).rejects.toMatchObject({ status: 500 });
 		});
 
 		it('should return setupLocked true when admin has logged in', async () => {
@@ -78,16 +76,13 @@ describe('Setup API - Extended Branch Coverage', () => {
 			expect(data.setupLocked).toBe(true);
 		});
 
-		it('should handle errors and return default false values', async () => {
+		it('should fail closed on KV errors', async () => {
 			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 			mockKVGet.mockRejectedValue(new Error('KV error'));
 
-			const response = await GET(createMockEvent() as unknown as Parameters<typeof GET>[0]);
-			const data = await response.json();
-
-			expect(data.hasConfig).toBe(false);
-			expect(data.hasAdmin).toBe(false);
-			expect(data.setupLocked).toBe(false);
+			await expect(
+				GET(createMockEvent() as unknown as Parameters<typeof GET>[0])
+			).rejects.toMatchObject({ status: 500 });
 			consoleSpy.mockRestore();
 		});
 	});
@@ -156,7 +151,7 @@ describe('Setup API - Extended Branch Coverage', () => {
 			).rejects.toThrow();
 		});
 
-		it('should allow update with existing config and no new credentials', async () => {
+		it('should reject unauthenticated reconfiguration when config exists', async () => {
 			const existingConfig = JSON.stringify({
 				id: 'existing-id',
 				clientId: 'old-client',
@@ -167,14 +162,13 @@ describe('Setup API - Extended Branch Coverage', () => {
 				.mockResolvedValueOnce(null) // setup not locked
 				.mockResolvedValueOnce(existingConfig); // existing config
 
-			const response = await POST(
-				createMockEvent({
-					body: { adminGithubUsername: 'testuser' }
-				}) as unknown as Parameters<typeof POST>[0]
-			);
-			const data = await response.json();
-
-			expect(data.success).toBe(true);
+			await expect(
+				POST(
+					createMockEvent({ body: { adminGithubUsername: 'testuser' } }) as unknown as Parameters<
+						typeof POST
+					>[0]
+				)
+			).rejects.toMatchObject({ status: 401 });
 		});
 
 		it('should throw 404 when GitHub user is not found', async () => {
@@ -225,17 +219,10 @@ describe('Setup API - Extended Branch Coverage', () => {
 			expect(data.adminId).toBe('12345');
 		});
 
-		it('should return instructions when KV is not available', async () => {
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-			const response = await POST(
-				createMockEvent({ platform: null }) as unknown as Parameters<typeof POST>[0]
-			);
-			const data = await response.json();
-
-			expect(data.success).toBe(true);
-			expect(data.message).toContain('Set up KV');
-			consoleSpy.mockRestore();
+		it('should fail when KV is not available', async () => {
+			await expect(
+				POST(createMockEvent({ platform: null }) as unknown as Parameters<typeof POST>[0])
+			).rejects.toMatchObject({ status: 500 });
 		});
 
 		it('should default to github provider when not specified', async () => {
@@ -248,23 +235,19 @@ describe('Setup API - Extended Branch Coverage', () => {
 			expect(mockKVPut).toHaveBeenCalledWith('auth_config:github', expect.any(String));
 		});
 
-		it('should use specified provider when provided', async () => {
+		it('should reject unsupported initial setup providers', async () => {
 			mockKVGet.mockResolvedValue(null);
 
-			const response = await POST(
-				createMockEvent({
+			await expect(
+				POST(createMockEvent({
 					body: {
 						clientId: 'id',
 						clientSecret: 'secret',
 						adminGithubUsername: 'test',
 						provider: 'gitlab'
 					}
-				}) as unknown as Parameters<typeof POST>[0]
-			);
-			const data = await response.json();
-
-			expect(data.success).toBe(true);
-			expect(mockKVPut).toHaveBeenCalledWith('auth_config:gitlab', expect.any(String));
+				}) as unknown as Parameters<typeof POST>[0])
+			).rejects.toMatchObject({ status: 400 });
 		});
 	});
 });

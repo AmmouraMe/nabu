@@ -23,6 +23,7 @@ import {
   generatePlaceholderBrandName,
   buildExtractionPrompt,
   parseExtractionResponse,
+  mapRowToProfile,
   type ExtractedFields
 } from '$lib/services/onboarding';
 import type { BrandContentContext } from '$lib/services/onboarding';
@@ -983,5 +984,80 @@ describe('Brand Onboarding Service', () => {
       // Should filter to only known brand fields
       expect(result).toBeNull();
     });
+  });
+});
+
+/**
+ * The write path (updateBrandField) stores JSON-field values verbatim when the
+ * caller sends a string, so a malformed value can land in style_guide or
+ * color_palette. Row mapping must degrade to `undefined` instead of throwing,
+ * or one bad PATCH permanently breaks every subsequent profile load.
+ */
+describe('Onboarding service - malformed stored JSON must not throw', () => {
+  const baseRow = {
+    id: 'profile-1',
+    user_id: 'user-1',
+    status: 'in_progress',
+    brand_name: 'Acme Corp',
+    onboarding_step: 'welcome',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z'
+  };
+
+  it('maps a profile whose style_guide column holds malformed JSON', () => {
+    const profile = mapRowToProfile({
+      ...baseRow,
+      style_guide: 'not valid json {'
+    });
+
+    // No throw, field degrades, the rest of the profile survives.
+    expect(profile.styleGuide).toBeUndefined();
+    expect(profile.brandName).toBe('Acme Corp');
+    expect(profile.id).toBe('profile-1');
+  });
+
+  it('maps a profile whose color_palette column holds malformed JSON', () => {
+    const profile = mapRowToProfile({
+      ...baseRow,
+      color_palette: '[#FF0000, broken'
+    });
+
+    expect(profile.colorPalette).toBeUndefined();
+    expect(profile.brandName).toBe('Acme Corp');
+  });
+
+  it('still parses valid JSON in style_guide and color_palette', () => {
+    const profile = mapRowToProfile({
+      ...baseRow,
+      style_guide: JSON.stringify({ logoUsage: 'clear space 2x' }),
+      color_palette: JSON.stringify(['#FF0000', '#00FF00'])
+    });
+
+    expect(profile.styleGuide).toEqual({ logoUsage: 'clear space 2x' });
+    expect(profile.colorPalette).toEqual(['#FF0000', '#00FF00']);
+  });
+
+  it('returns messages even when a metadata column holds malformed JSON', async () => {
+    const mockDB = createMockDB();
+    mockDB._mockAll.mockResolvedValueOnce({
+      results: [
+        {
+          id: 'msg-1',
+          brand_profile_id: 'bp-123',
+          user_id: 'user-123',
+          role: 'assistant',
+          content: 'Welcome!',
+          step: 'welcome',
+          metadata: '{broken metadata',
+          created_at: '2026-01-01T00:00:00Z'
+        }
+      ]
+    });
+
+    const messages = await getOnboardingMessages(mockDB as any, 'bp-123');
+
+    expect(messages).toHaveLength(1);
+    expect(messages[0].metadata).toBeUndefined();
+    expect(messages[0].content).toBe('Welcome!');
   });
 });

@@ -113,7 +113,7 @@ describe('Admin Users Extended API', () => {
 			).rejects.toThrow();
 		});
 
-		it('should allow admin users to search', async () => {
+		it('should reject non-owner admin users', async () => {
 			const mockFetch = vi.fn().mockResolvedValue({
 				ok: true,
 				json: vi.fn().mockResolvedValue({ items: [] })
@@ -121,14 +121,14 @@ describe('Admin Users Extended API', () => {
 
 			const { GET } = await import('../../src/routes/api/admin/users/search/+server');
 
-			const response = await GET({
-				url: new URL('http://localhost/api/admin/users/search?q=test'),
-				locals: { user: { id: '1', isOwner: false, isAdmin: true } },
-				fetch: mockFetch
-			} as any);
-
-			const result = await response.json();
-			expect(result.users).toEqual([]);
+			await expect(
+				GET({
+					url: new URL('http://localhost/api/admin/users/search?q=test'),
+					locals: { user: { id: '1', isOwner: false, isAdmin: true } },
+					fetch: mockFetch
+				} as any)
+			).rejects.toMatchObject({ status: 403 });
+			expect(mockFetch).not.toHaveBeenCalled();
 		});
 	});
 

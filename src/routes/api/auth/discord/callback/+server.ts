@@ -1,378 +1,119 @@
-import { externalOrigin, isSecureRequest } from '$lib/server/origin';
-import { signSession, verifySession } from '$lib/server/session';
-import { mergeAccounts } from '$lib/services/account-merge';
+import { getAuthProviderCredentials } from '$lib/server/auth-provider-config';
+import { reconcileOAuthAccount } from '$lib/server/oauth-account';
+import { finalizeOAuthLogin } from '$lib/server/oauth-finalization';
+import {
+	consumeOAuthTransaction,
+	verifyOAuthState,
+	verifyOAuthTransaction
+} from '$lib/server/oauth-state';
+import { decodeDatabaseSessionCookie } from '$lib/server/session';
+import { externalOrigin } from '$lib/server/origin';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
-// GET - Handle Discord OAuth callback
-export const GET: RequestHandler = async ({ url, cookies, platform }) => {
+export const GET: RequestHandler = async ({ url, cookies, platform, locals }) => {
 	const code = url.searchParams.get('code');
 	const state = url.searchParams.get('state');
-	const authMode = state?.startsWith('link:') ? 'link' : 'login';
-
-	if (!code) {
-		throw redirect(302, '/auth/login?error=no_code');
+	if (!code) throw redirect(302, '/auth/login?error=no_code');
+	const db = platform?.env?.DB;
+	if (!db) {
+		const browserState = await verifyOAuthState(
+			'discord',
+			state,
+			cookies.get('oauth_state_discord'),
+			platform?.env?.SESSION_SECRET
+		);
+		throw redirect(
+			302,
+			browserState ? '/auth/login?error=oauth_failed' : '/auth/login?error=invalid_state'
+		);
 	}
+	const currentToken = await decodeDatabaseSessionCookie(
+		cookies.get('session'),
+		platform.env.SESSION_SECRET
+	);
+	const pending = await verifyOAuthTransaction(
+		db,
+		'discord',
+		state,
+		cookies,
+		platform.env.SESSION_SECRET,
+		currentToken || undefined
+	);
+	if (!pending) throw redirect(302, '/auth/login?error=invalid_state');
+	const existingUser = pending.intent === 'link' ? locals.user : null;
+	if (pending.intent === 'link' && existingUser?.id !== pending.userId)
+		throw redirect(302, '/auth/login?error=invalid_state');
 
 	try {
-		// Fetch Discord OAuth configuration from env or KV
-		let clientId = platform?.env?.DISCORD_CLIENT_ID;
-		let clientSecret = platform?.env?.DISCORD_CLIENT_SECRET;
-
-		// Try to fetch from KV if environment variables not set
-		if ((!clientId || !clientSecret) && platform?.env?.KV) {
-			try {
-				const stored = await platform.env.KV.get('auth_config:discord');
-				if (stored) {
-					const config = JSON.parse(stored);
-					clientId = config.clientId;
-					clientSecret = config.clientSecret;
-				}
-			} catch (err) {
-				console.error('Failed to fetch from KV:', err);
-			}
-		}
-
-		if (!clientId || !clientSecret) {
-			console.error('Discord OAuth not configured - missing clientId or clientSecret');
-			throw redirect(302, '/auth/login?error=not_configured');
-		}
-
-		const callbackUrl = `${externalOrigin(url)}/api/auth/discord/callback`;
-
-		// Exchange code for access token
+		const { clientId, clientSecret } = await getAuthProviderCredentials(platform, 'discord');
+		if (!clientId || !clientSecret) throw redirect(302, '/auth/login?error=not_configured');
 		const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded'
-			},
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body: new URLSearchParams({
 				client_id: clientId,
 				client_secret: clientSecret,
 				code,
 				grant_type: 'authorization_code',
-				redirect_uri: callbackUrl
+				redirect_uri: `${externalOrigin(url)}/api/auth/discord/callback`
 			})
 		});
-
-		if (!tokenResponse.ok) {
-			const errorText = await tokenResponse.text();
-			console.error('Failed to exchange code for token:', tokenResponse.status, errorText);
-			throw redirect(302, '/auth/login?error=token_exchange_failed');
-		}
-
-		const tokenData = await tokenResponse.json();
-		const accessToken = tokenData.access_token;
-
-		if (!accessToken) {
-			console.error('No access token in response:', tokenData);
-			throw redirect(302, '/auth/login?error=no_access_token');
-		}
-
-		// Fetch user info from Discord
+		if (!tokenResponse.ok) throw redirect(302, '/auth/login?error=token_exchange_failed');
+		const accessToken = (await tokenResponse.json()).access_token;
+		if (!accessToken) throw redirect(302, '/auth/login?error=no_access_token');
+		const transaction = await consumeOAuthTransaction(
+			db,
+			'discord',
+			state,
+			cookies,
+			platform.env.SESSION_SECRET,
+			currentToken || undefined
+		);
+		if (!transaction) throw redirect(302, '/auth/login?error=invalid_state');
 		const userResponse = await fetch('https://discord.com/api/users/@me', {
-			headers: {
-				Authorization: `Bearer ${accessToken}`
-			}
+			headers: { Authorization: `Bearer ${accessToken}` }
 		});
-
-		if (!userResponse.ok) {
-			const errorText = await userResponse.text();
-			console.error('Failed to fetch user info:', userResponse.status, errorText);
-			throw redirect(302, '/auth/login?error=user_fetch_failed');
-		}
-
+		if (!userResponse.ok) throw redirect(302, '/auth/login?error=user_fetch_failed');
 		const discordUser = await userResponse.json();
-
-		// Build avatar URL
-		const avatarUrl = discordUser.avatar
-			? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
-			: `https://cdn.discordapp.com/embed/avatars/${parseInt(discordUser.discriminator || '0') % 5}.png`;
-
-		// Generate unique user ID with discord prefix
-		const userId = `discord_${discordUser.id}`;
-
-		// Check if user is the OAuth app owner
-		// First try environment variable, then fall back to KV
-		let appOwnerId = platform?.env?.GITHUB_OWNER_ID;
-
-		// Try to fetch from KV if environment variable not set
-		if (!appOwnerId && platform?.env?.KV) {
-			try {
-				const storedOwnerId = await platform.env.KV.get('github_owner_id');
-				if (storedOwnerId) {
-					appOwnerId = storedOwnerId;
-				}
-			} catch (err) {
-				console.error('Failed to fetch owner ID from KV:', err);
-			}
-		}
-
-		// Discord's own owner id. `appOwnerId` above is a *GitHub* account id, which a
-		// Discord snowflake can never equal — that is precisely why a Discord-only
-		// session used to be hardcoded to `isOwner: false` and could not reach /admin.
-		// This is the Discord-side counterpart, resolved the same way (env, then KV).
-		let discordOwnerId = platform?.env?.DISCORD_OWNER_ID;
-
-		if (!discordOwnerId && platform?.env?.KV) {
-			try {
-				const storedDiscordOwnerId = await platform.env.KV.get('discord_owner_id');
-				if (storedDiscordOwnerId) {
-					discordOwnerId = storedDiscordOwnerId;
-				}
-			} catch (err) {
-				console.error('Failed to fetch Discord owner ID from KV:', err);
-			}
-		}
-
-		// Compared as strings: Discord ids are 64-bit snowflakes and lose precision as
-		// JS numbers, so they must never be coerced. Unset owner id means nobody is
-		// owner — the same fail-closed default the GitHub side uses.
-		const isDiscordOwner = discordOwnerId ? discordUser.id === discordOwnerId : false;
-
-		// Only explicit profile-driven OAuth flows should be treated as account linking.
-		const existingSessionCookie = authMode === 'link' ? cookies.get('session') : undefined;
-		let existingUser = null;
-		let isLinkingMode = false;
-
-		if (existingSessionCookie) {
-			// Verified, not merely decoded — see the GitHub callback for why linking mode
-			// must not trust an unauthenticated cookie.
-			const verified = await verifySession<Record<string, any>>(
-				existingSessionCookie,
-				platform?.env?.SESSION_SECRET
-			);
-			if (verified) {
-				existingUser = verified;
-				isLinkingMode = true;
-			}
-		}
-
-		// Store or update user in database
-		let isAdmin = false;
-		if (platform?.env?.DB) {
-			try {
-				if (isLinkingMode && existingUser) {
-					// Link Discord account to existing user
-					// First check if this Discord account is already linked to another user
-					const existingOAuth = await platform.env.DB.prepare(
-						'SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?'
+		const result = await reconcileOAuthAccount({
+			db,
+			provider: 'discord',
+			providerAccountId: String(discordUser.id),
+			legacyUserId: `discord_${discordUser.id}`,
+			email: discordUser.verified === true ? discordUser.email : null,
+			linkingUserId: transaction.intent === 'link' ? existingUser?.id : undefined,
+			createUser: async (id) => {
+				await db
+					.prepare(
+						'INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)'
 					)
-						.bind('discord', discordUser.id)
-						.first<{ user_id: string }>();
-
-					if (existingOAuth && existingOAuth.user_id !== existingUser.id) {
-						// Discord account is linked to a different user - merge the accounts
-						console.log(
-							`[Auth] Merging accounts: ${existingOAuth.user_id} into ${existingUser.id}`
-						);
-						await mergeAccounts(platform.env.DB, existingOAuth.user_id, existingUser.id);
-						// After merge, the oauth_account now belongs to existingUser, so we can continue
-					}
-
-					// Link the account if not already linked
-					if (!existingOAuth) {
-						await platform.env.DB.prepare(
-							`INSERT INTO oauth_accounts (id, user_id, provider, provider_account_id, access_token, created_at)
-							VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-						)
-							.bind(crypto.randomUUID(), existingUser.id, 'discord', discordUser.id, accessToken)
-							.run();
-					}
-
-					// Redirect back to profile with success
-					return new Response(null, {
-						status: 302,
-						headers: {
-							Location: new URL('/profile?linked=discord', externalOrigin(url)).toString()
-						}
-					});
-				}
-
-				// Check if this Discord account is already linked to a user
-				const linkedAccount = await platform.env.DB.prepare(
-					'SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?'
-				)
-					.bind('discord', discordUser.id)
-					.first<{ user_id: string }>();
-
-				if (linkedAccount) {
-					// Log in as the linked user
-					const linkedUser = await platform.env.DB.prepare('SELECT * FROM users WHERE id = ?')
-						.bind(linkedAccount.user_id)
-						.first<{
-							id: string;
-							email: string;
-							name: string;
-							github_login: string;
-							github_avatar_url: string;
-							is_admin: number;
-						}>();
-
-					if (linkedUser) {
-						// Check if the linked user is the owner
-						// First check if user ID directly matches (for users who signed up with GitHub)
-						// or if this Discord account is itself the configured owner.
-						let isOwner = isDiscordOwner || (appOwnerId ? linkedUser.id === appOwnerId : false);
-
-						// If not, check if user has a linked GitHub account that matches the owner ID
-						if (!isOwner && appOwnerId) {
-							const githubLink = await platform.env.DB.prepare(
-								'SELECT provider_account_id FROM oauth_accounts WHERE user_id = ? AND provider = ?'
-							)
-								.bind(linkedUser.id, 'github')
-								.first<{ provider_account_id: string }>();
-
-							if (githubLink && githubLink.provider_account_id === appOwnerId) {
-								isOwner = true;
-							}
-						}
-
-						const sessionData = {
-							id: linkedUser.id,
-							login: linkedUser.github_login || discordUser.username,
-							name: linkedUser.name,
-							email: linkedUser.email,
-							avatarUrl: linkedUser.github_avatar_url || avatarUrl,
-							isOwner,
-							isAdmin: linkedUser.is_admin === 1 || isOwner
-						};
-
-						const sessionCookie = await signSession(sessionData, platform?.env?.SESSION_SECRET);
-
-						const isSecure = isSecureRequest(url);
-						const cookieParts = [
-							`session=${sessionCookie}`,
-							'Path=/',
-							'HttpOnly',
-							'SameSite=Lax',
-							`Max-Age=${60 * 60 * 24 * 7}`
-						];
-						if (isSecure) {
-							cookieParts.push('Secure');
-						}
-
-						return new Response(null, {
-							status: 302,
-							headers: {
-								Location: new URL('/', externalOrigin(url)).toString(),
-								'Set-Cookie': cookieParts.join('; ')
-							}
-						});
-					}
-				}
-
-				// Check if user exists with this ID
-				const existingUserRecord = await platform.env.DB.prepare(
-					'SELECT id, is_admin FROM users WHERE id = ?'
-				)
-					.bind(userId)
-					.first<{ id: string; is_admin: number }>();
-
-				if (existingUserRecord) {
-					// Update existing user
-					isAdmin = existingUserRecord.is_admin === 1;
-					await platform.env.DB.prepare(
-						`UPDATE users 
-						SET name = ?, updated_at = CURRENT_TIMESTAMP 
-						WHERE id = ?`
+					.bind(
+						id,
+						discordUser.email || `${discordUser.username}@discord.local`,
+						discordUser.global_name || discordUser.username
 					)
-						.bind(discordUser.global_name || discordUser.username, userId)
+					.run();
+			},
+			updateUser: async (id, match) => {
+				if (match === 'legacy')
+					await db
+						.prepare('UPDATE users SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+						.bind(discordUser.global_name || discordUser.username, id)
 						.run();
-
-					// Ensure Discord oauth_account record exists for existing users
-					const existingDiscordOAuth = await platform.env.DB.prepare(
-						'SELECT id FROM oauth_accounts WHERE user_id = ? AND provider = ?'
-					)
-						.bind(userId, 'discord')
-						.first();
-
-					if (!existingDiscordOAuth) {
-						await platform.env.DB.prepare(
-							`INSERT INTO oauth_accounts (id, user_id, provider, provider_account_id, access_token, created_at)
-							VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-						)
-							.bind(crypto.randomUUID(), userId, 'discord', discordUser.id, accessToken)
-							.run();
-					}
-				} else {
-					// Create new user
-					await platform.env.DB.prepare(
-						`INSERT INTO users (id, email, name, created_at) 
-						VALUES (?, ?, ?, CURRENT_TIMESTAMP)`
-					)
-						.bind(
-							userId,
-							discordUser.email || `${discordUser.username}@discord.local`,
-							discordUser.global_name || discordUser.username
-						)
-						.run();
-
-					// Also create OAuth account record for Discord
-					await platform.env.DB.prepare(
-						`INSERT INTO oauth_accounts (id, user_id, provider, provider_account_id, access_token, created_at)
-						VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-					)
-						.bind(crypto.randomUUID(), userId, 'discord', discordUser.id, accessToken)
-						.run();
-				}
-			} catch (dbErr) {
-				// Re-throw redirects
-				if (isRedirect(dbErr)) {
-					throw dbErr;
-				}
-				console.error('Database error:', dbErr);
-				// Continue with auth even if DB fails
-			}
-		}
-
-		// Create session
-		const sessionData = {
-			id: userId,
-			login: discordUser.username,
-			name: discordUser.global_name || discordUser.username,
-			email: discordUser.email,
-			avatarUrl,
-			// Owner when this Discord account matches DISCORD_OWNER_ID. Still false for
-			// everyone else, so the default stays closed.
-			isOwner: isDiscordOwner,
-			isAdmin: isAdmin || isDiscordOwner
-		};
-
-		// Signed so the contents can be trusted on the way back in.
-		const sessionCookie = await signSession(sessionData, platform?.env?.SESSION_SECRET);
-
-		// Redirect to home
-		const redirectUrl = '/';
-		const absoluteRedirectUrl = new URL(redirectUrl, externalOrigin(url)).toString();
-
-		// Build cookie string manually for proper handling
-		const isSecure = url.protocol === 'https:';
-		const cookieParts = [
-			`session=${sessionCookie}`,
-			'Path=/',
-			'HttpOnly',
-			'SameSite=Lax',
-			`Max-Age=${60 * 60 * 24 * 7}` // 7 days
-		];
-		if (isSecure) {
-			cookieParts.push('Secure');
-		}
-
-		return new Response(null, {
-			status: 302,
-			headers: {
-				Location: absoluteRedirectUrl,
-				'Set-Cookie': cookieParts.join('; ')
 			}
 		});
-	} catch (err) {
-		// Re-throw redirects immediately
-		if (isRedirect(err)) {
-			throw err;
-		}
-		// Log actual errors only
-		console.error('Discord OAuth callback error:', err);
+		return finalizeOAuthLogin({
+			db,
+			platform,
+			url,
+			userId: result.userId,
+			currentSessionToken: result.linkedProvider ? currentToken || undefined : undefined,
+			linkedProvider: result.linkedProvider
+		});
+	} catch (error) {
+		if (isRedirect(error)) throw error;
+		console.error('Discord OAuth callback error');
 		throw redirect(302, '/auth/login?error=oauth_failed');
 	}
 };

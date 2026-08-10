@@ -40,12 +40,21 @@ describe('GitHub OAuth Initiation - Extended Coverage', () => {
 			platform?: object | null;
 		} = {}
 	) => {
+		const DB = {
+			prepare: vi.fn().mockReturnValue({
+				bind: vi.fn().mockReturnValue({ run: vi.fn().mockResolvedValue(undefined) })
+			})
+		};
 		return {
 			url: new URL('http://localhost/api/auth/github'),
+			cookies: { get: vi.fn(), set: vi.fn() },
+			locals: {},
 			platform:
 				overrides.platform !== null
 					? {
 							env: {
+								DB,
+								SESSION_SECRET: 'test-session-secret',
 								GITHUB_CLIENT_ID: overrides.envClientId,
 								KV: overrides.kvGet
 									? {
@@ -82,16 +91,13 @@ describe('GitHub OAuth Initiation - Extended Coverage', () => {
 		).rejects.toThrow('Redirect to /setup?error=oauth_not_configured');
 	});
 
-	it('should handle KV fetch errors gracefully', async () => {
-		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+	it('should fail closed when KV cannot be read', async () => {
 		mockKVGet.mockRejectedValue(new Error('KV error'));
 
 		await expect(
 			GET(createMockEvent({ kvGet: mockKVGet }) as unknown as Parameters<typeof GET>[0])
 		).rejects.toThrow('Redirect to /setup?error=oauth_not_configured');
 
-		expect(consoleSpy).toHaveBeenCalled();
-		consoleSpy.mockRestore();
 	});
 
 	it('should redirect to setup when platform is not available', async () => {

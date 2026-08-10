@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { withBrandAccess } from '../fixtures/brand-access';
 
 vi.mock('@sveltejs/kit', () => ({
+	isHttpError: (value: any) => typeof value?.status === 'number',
 	error: (status: number, msg: string) => {
 		const e: any = new Error(msg);
 		e.status = status;
@@ -830,15 +831,20 @@ describe('Setup - Response error rethrow', () => {
 			await POST({
 				request: new Request('http://localhost', {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
+					headers: {
+						'Content-Type': 'application/json',
+						Authorization: 'Bearer test-setup-secret'
+					},
 					body: JSON.stringify({
 						provider: 'github',
 						clientId: 'test-id',
 						clientSecret: 'test-secret',
-						adminGithub: 'testuser'
+						adminGithubUsername: 'testuser'
 					})
 				}),
-				platform: { env: { KV: mockKV, DB: mockDB() } },
+				platform: {
+					env: { KV: mockKV, DB: mockDB(), SETUP_SECRET: 'test-setup-secret' }
+				},
 				locals: {}
 			} as any);
 		} catch (err: any) {

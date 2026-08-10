@@ -406,7 +406,21 @@ describe('CMS Service', () => {
 				created_at: '2024-01-01',
 				updated_at: '2024-01-01'
 			});
-			// Second call: update result
+			// Second call: resolve field definitions for write-time sanitization
+			mockDB.first.mockResolvedValueOnce({
+				id: 'ct-1',
+				slug: 'blog',
+				name: 'Blog',
+				description: null,
+				fields: '[{"name":"body","label":"Body","type":"richtext"}]',
+				settings: '{"isPublic":true}',
+				icon: 'article',
+				sort_order: 0,
+				is_system: 1,
+				created_at: '2024-01-01',
+				updated_at: '2024-01-01'
+			});
+			// Third call: update result
 			mockDB.first.mockResolvedValueOnce({
 				id: 'ci-1',
 				content_type_id: 'ct-1',

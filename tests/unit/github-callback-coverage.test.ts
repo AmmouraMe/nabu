@@ -1,868 +1,173 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { signSession } from '../../src/lib/server/session';
+import { createOAuthCookies, createOAuthDb, oauthTransaction } from '../fixtures/oauth';
 
-// Mock console to avoid noise
-vi.spyOn(console, 'log').mockImplementation(() => {});
-vi.spyOn(console, 'warn').mockImplementation(() => {});
-vi.spyOn(console, 'error').mockImplementation(() => {});
+const verifyOAuthState = vi.fn();
+const verifyOAuthTransaction = vi.fn();
+const consumeOAuthTransaction = vi.fn();
+const reconcileOAuthAccount = vi.fn();
+const finalizeOAuthLogin = vi.fn();
 
-describe('GitHub Callback Server - Extended Coverage', () => {
-	let mockFetch: ReturnType<typeof vi.fn>;
+vi.mock('$lib/server/oauth-state', () => ({
+	verifyOAuthState,
+	verifyOAuthTransaction,
+	consumeOAuthTransaction
+}));
+vi.mock('$lib/server/oauth-account', () => ({ reconcileOAuthAccount }));
+vi.mock('$lib/server/oauth-finalization', () => ({ finalizeOAuthLogin }));
+
+describe('GitHub OAuth callback', () => {
+	const DB = createOAuthDb();
+	const platform = {
+		env: {
+			DB,
+			GITHUB_CLIENT_ID: 'client-id',
+			GITHUB_CLIENT_SECRET: 'client-secret',
+			SESSION_SECRET: 'session-secret'
+		}
+	} as any;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.resetModules();
-		vi.stubGlobal('crypto', {
-			randomUUID: () => 'test-uuid-123',
-			subtle: globalThis.__REAL_SUBTLE__
-		});
-
-		mockFetch = vi.fn();
-		vi.stubGlobal('fetch', mockFetch);
+		verifyOAuthTransaction.mockResolvedValue(oauthTransaction('github'));
+		consumeOAuthTransaction.mockResolvedValue(oauthTransaction('github'));
+		reconcileOAuthAccount.mockResolvedValue({ userId: 'user-1' });
+		finalizeOAuthLogin.mockResolvedValue(new Response(null, { status: 302 }));
+		vi.stubGlobal('fetch', vi.fn());
 	});
 
-	describe('Error handling - no code', () => {
-		it('should redirect to login with error when no code provided', async () => {
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {}
-			};
+	function event(query: string, overrides: Record<string, unknown> = {}) {
+		return {
+			url: new URL(`http://localhost/api/auth/github/callback?${query}`),
+			cookies: createOAuthCookies(),
+			platform,
+			locals: {},
+			...overrides
+		};
+	}
 
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			try {
-				await GET(mockEvent as any);
-				expect.fail('Should have redirected');
-			} catch (err: any) {
-				expect(err.status).toBe(302);
-				expect(err.location).toBe('/auth/login?error=no_code');
-			}
+	it('rejects a missing authorization code', async () => {
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await expect(GET(event('state=login:test-state') as any)).rejects.toMatchObject({
+			status: 302,
+			location: '/auth/login?error=no_code'
 		});
 	});
 
-	describe('OAuth configuration from KV', () => {
-		it('should fetch GitHub config from KV when env vars not set', async () => {
-			const mockKV = {
-				get: vi.fn().mockImplementation((key: string) => {
-					if (key === 'auth_config:github') {
-						return JSON.stringify({
-							clientId: 'kv-github-id',
-							clientSecret: 'kv-github-secret'
-						});
-					}
-					return null;
+	it('rejects missing, expired, replayed, or unbound state before token exchange', async () => {
+		verifyOAuthTransaction.mockResolvedValueOnce(null);
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await expect(GET(event('code=code&state=bad') as any)).rejects.toMatchObject({
+			status: 302,
+			location: '/auth/login?error=invalid_state'
+		});
+		expect(fetch).not.toHaveBeenCalled();
+	});
+
+	it('fails closed when transaction storage is unavailable', async () => {
+		verifyOAuthState.mockResolvedValueOnce(oauthTransaction('github'));
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await expect(
+			GET(event('code=code&state=login:test-state', { platform: { env: {} } }) as any)
+		).rejects.toMatchObject({ status: 302, location: '/auth/login?error=oauth_failed' });
+	});
+
+	it.each([
+		[{ ok: false }, '/auth/login?error=token_exchange_failed'],
+		[{ ok: true, json: vi.fn().mockResolvedValue({}) }, '/auth/login?error=no_access_token']
+	])('handles token response failures', async (tokenResponse, location) => {
+		vi.mocked(fetch).mockResolvedValueOnce(tokenResponse as any);
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await expect(GET(event('code=code&state=login:test-state') as any)).rejects.toMatchObject({
+			status: 302,
+			location
+		});
+	});
+
+	it('consumes state only after token exchange and rejects user fetch failures', async () => {
+		vi.mocked(fetch)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: vi.fn().mockResolvedValue({ access_token: 'token' })
+			} as any)
+			.mockResolvedValueOnce({ ok: false } as any);
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await expect(GET(event('code=code&state=login:test-state') as any)).rejects.toMatchObject({
+			status: 302,
+			location: '/auth/login?error=user_fetch_failed'
+		});
+		expect(consumeOAuthTransaction).toHaveBeenCalledOnce();
+	});
+
+	it('reconciles a canonical account and delegates session finalization', async () => {
+		vi.mocked(fetch)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: vi.fn().mockResolvedValue({ access_token: 'token' })
+			} as any)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: vi.fn().mockResolvedValue({
+					id: 123,
+					login: 'test-user',
+					email: 'user@example.com',
+					name: 'Test User',
+					avatar_url: 'https://example.com/avatar.png'
 				})
-			};
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						access_token: 'test-token'
-					})
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						KV: mockKV
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			expect(mockKV.get).toHaveBeenCalledWith('auth_config:github');
-		});
-
-		it('should handle KV.get error gracefully', async () => {
-			const mockKV = {
-				get: vi.fn().mockRejectedValue(new Error('KV Error'))
-			};
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						KV: mockKV
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			try {
-				await GET(mockEvent as any);
-				expect.fail('Should have redirected');
-			} catch (err: any) {
-				expect(err.status).toBe(302);
-				expect(err.location).toBe('/auth/login?error=not_configured');
-			}
-		});
-
-		it('should redirect with not_configured when no OAuth config found', async () => {
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			try {
-				await GET(mockEvent as any);
-				expect.fail('Should have redirected');
-			} catch (err: any) {
-				expect(err.status).toBe(302);
-				expect(err.location).toBe('/auth/login?error=not_configured');
-			}
-		});
+			} as any);
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await GET(event('code=code&state=login:test-state') as any);
+		expect(reconcileOAuthAccount).toHaveBeenCalledWith(
+			expect.objectContaining({
+				db: DB,
+				provider: 'github',
+				providerAccountId: '123',
+				legacyUserId: '123'
+			})
+		);
+		expect(finalizeOAuthLogin).toHaveBeenCalledWith(
+			expect.objectContaining({ db: DB, userId: 'user-1' })
+		);
+		const reconciliation = reconcileOAuthAccount.mock.calls[0][0];
+		await reconciliation.createUser('new-user');
+		await reconciliation.updateUser('legacy-user', 'legacy');
+		await reconciliation.updateUser('email-user', 'email');
+		expect(DB.calls.some((call) => call.query.includes('INSERT INTO users'))).toBe(true);
+		expect(
+			DB.calls.filter((call) => call.query.includes('UPDATE users SET github_login'))
+		).toHaveLength(2);
 	});
 
-	describe('Token exchange errors', () => {
-		it('should redirect with error when token exchange fails', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: false,
-				status: 400,
-				text: () => Promise.resolve('Invalid code')
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret'
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			try {
-				await GET(mockEvent as any);
-				expect.fail('Should have redirected');
-			} catch (err: any) {
-				expect(err.status).toBe(302);
-				expect(err.location).toBe('/auth/login?error=token_exchange_failed');
-			}
-		});
-
-		it('should redirect with error when no access token in response', async () => {
-			mockFetch.mockResolvedValueOnce({
+	it('maps unexpected reconciliation errors to a generic OAuth failure', async () => {
+		vi.mocked(fetch)
+			.mockResolvedValueOnce({
 				ok: true,
-				json: () => Promise.resolve({})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret'
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			try {
-				await GET(mockEvent as any);
-				expect.fail('Should have redirected');
-			} catch (err: any) {
-				expect(err.status).toBe(302);
-				expect(err.location).toBe('/auth/login?error=no_access_token');
-			}
+				json: vi.fn().mockResolvedValue({ access_token: 'token' })
+			} as any)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: vi.fn().mockResolvedValue({ id: 123, login: 'user' })
+			} as any);
+		reconcileOAuthAccount.mockRejectedValueOnce(new Error('database unavailable'));
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await expect(GET(event('code=code&state=login:test-state') as any)).rejects.toMatchObject({
+			status: 302,
+			location: '/auth/login?error=oauth_failed'
 		});
+		expect(consoleSpy).toHaveBeenCalledWith('GitHub OAuth callback error');
+		consoleSpy.mockRestore();
 	});
 
-	describe('User info fetch errors', () => {
-		it('should redirect with error when user fetch fails', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: false,
-				status: 401,
-				text: () => Promise.resolve('Unauthorized')
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret'
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			try {
-				await GET(mockEvent as any);
-				expect.fail('Should have redirected');
-			} catch (err: any) {
-				expect(err.status).toBe(302);
-				expect(err.location).toBe('/auth/login?error=user_fetch_failed');
-			}
-		});
-	});
-
-	describe('Owner ID checking', () => {
-		it('should use username as owner when GITHUB_OWNER_ID is not numeric', async () => {
-			const mockKV = {
-				get: vi.fn().mockResolvedValue(null),
-				put: vi.fn().mockResolvedValue(undefined)
-			};
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'owneruser',
-						name: 'Owner User',
-						email: 'owner@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						GITHUB_OWNER_ID: 'owneruser', // username, not numeric
-						KV: mockKV
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			// Should redirect to /admin since username matches
-			expect(response.headers.get('Location')).toContain('/admin');
-		});
-
-		it('should fetch owner ID from KV when env var not set', async () => {
-			const mockKV = {
-				get: vi.fn().mockImplementation((key: string) => {
-					if (key === 'github_owner_id') {
-						return '123456789';
-					}
-					return null;
-				}),
-				put: vi.fn().mockResolvedValue(undefined)
-			};
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						KV: mockKV
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			expect(mockKV.get).toHaveBeenCalledWith('github_owner_id');
-			expect(response.headers.get('Location')).toContain('/admin');
-		});
-
-		it('should check github_owner_username from KV', async () => {
-			const mockKV = {
-				get: vi.fn().mockImplementation((key: string) => {
-					if (key === 'github_owner_username') {
-						return 'testuser';
-					}
-					return null;
-				}),
-				put: vi.fn().mockResolvedValue(undefined)
-			};
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						KV: mockKV
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			expect(response.headers.get('Location')).toContain('/admin');
-		});
-
-		it('should handle KV.get error for owner ID gracefully', async () => {
-			const mockKV = {
-				get: vi.fn().mockRejectedValue(new Error('KV Error'))
-			};
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						KV: mockKV
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			// Should continue without throwing, user will not be owner
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			expect(response.headers.get('Location')).toContain('/');
-		});
-	});
-
-	describe('Linking mode with existing session', () => {
-		it('should handle linking mode with invalid existing session', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue('invalid-base64!!!'), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret'
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			// Should not throw, treat as new login
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-		});
-
-		it('should link GitHub account to existing user', async () => {
-			// Signed: linking mode only trusts a verified session cookie.
-			const existingSession = await signSession(
-				{ id: 'existing-user-123', login: 'existinguser' },
-				undefined
-			);
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockDB = {
-				prepare: vi.fn().mockImplementation((sql: string) => {
-					if (sql.includes('oauth_accounts WHERE provider = ?')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue(null)
-							})
-						};
-					}
-					if (sql.includes('INSERT INTO oauth_accounts')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								run: vi.fn().mockResolvedValue({ success: true })
-							})
-						};
-					}
-					if (sql.includes('UPDATE users SET github_login')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								run: vi.fn().mockResolvedValue({ success: true })
-							})
-						};
-					}
-					return { bind: vi.fn().mockReturnValue({ first: vi.fn(), run: vi.fn() }) };
-				})
-			};
-
-			const mockEvent = {
-				url: new URL(
-					'http://localhost/api/auth/github/callback?code=test-code&state=link:csrf-token'
-				),
-				cookies: { get: vi.fn().mockReturnValue(existingSession), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						DB: mockDB
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			expect(response.headers.get('Location')).toContain('/profile?linked=github');
-		});
-	});
-
-	describe('Existing linked account login', () => {
-		it('should login as linked user when GitHub account is linked', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockDB = {
-				prepare: vi.fn().mockImplementation((sql: string) => {
-					if (sql.includes('oauth_accounts WHERE provider = ?')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue({ user_id: 'linked-user-456' })
-							})
-						};
-					}
-					if (sql.includes('SELECT * FROM users WHERE id')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue({
-									id: 'linked-user-456',
-									email: 'linked@test.com',
-									name: 'Linked User',
-									github_login: 'linkeduser',
-									github_avatar_url: 'https://avatars.githubusercontent.com/u/456',
-									is_admin: 1
-								})
-							})
-						};
-					}
-					return { bind: vi.fn().mockReturnValue({ first: vi.fn(), run: vi.fn() }) };
-				})
-			};
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						DB: mockDB
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			// Should redirect to /admin since user is admin
-			expect(response.headers.get('Location')).toContain('/admin');
-		});
-	});
-
-	describe('Existing user update', () => {
-		it('should update existing user and create oauth_account if missing', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Updated Name',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockDB = {
-				prepare: vi.fn().mockImplementation((sql: string) => {
-					if (sql.includes('oauth_accounts WHERE provider = ?')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue(null)
-							})
-						};
-					}
-					if (sql.includes('SELECT id, is_admin FROM users')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue({ id: '123456789', is_admin: 0 })
-							})
-						};
-					}
-					if (sql.includes('UPDATE users')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								run: vi.fn().mockResolvedValue({ success: true })
-							})
-						};
-					}
-					if (sql.includes('SELECT id FROM oauth_accounts WHERE user_id')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue(null) // No existing oauth_account
-							})
-						};
-					}
-					if (sql.includes('INSERT INTO oauth_accounts')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								run: vi.fn().mockResolvedValue({ success: true })
-							})
-						};
-					}
-					return { bind: vi.fn().mockReturnValue({ first: vi.fn(), run: vi.fn() }) };
-				})
-			};
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						DB: mockDB
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-		});
-	});
-
-	describe('New user creation', () => {
-		it('should create new user and oauth_account', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'newuser',
-						name: 'New User',
-						email: null, // No email - should use fallback
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockDB = {
-				prepare: vi.fn().mockImplementation((sql: string) => {
-					if (sql.includes('oauth_accounts WHERE provider = ?')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue(null)
-							})
-						};
-					}
-					if (sql.includes('SELECT id, is_admin FROM users')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								first: vi.fn().mockResolvedValue(null) // No existing user
-							})
-						};
-					}
-					if (sql.includes('INSERT INTO users')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								run: vi.fn().mockResolvedValue({ success: true })
-							})
-						};
-					}
-					if (sql.includes('INSERT INTO oauth_accounts')) {
-						return {
-							bind: vi.fn().mockReturnValue({
-								run: vi.fn().mockResolvedValue({ success: true })
-							})
-						};
-					}
-					return { bind: vi.fn().mockReturnValue({ first: vi.fn(), run: vi.fn() }) };
-				})
-			};
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						DB: mockDB
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-		});
-	});
-
-	describe('First admin login tracking', () => {
-		it('should set admin_first_login_completed in KV when owner first logs in', async () => {
-			const mockKV = {
-				get: vi.fn().mockImplementation((key: string) => {
-					if (key === 'github_owner_id') {
-						return '123456789';
-					}
-					if (key === 'admin_first_login_completed') {
-						return null;
-					}
-					return null;
-				}),
-				put: vi.fn().mockResolvedValue(undefined)
-			};
-
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'owner',
-						name: 'Owner User',
-						email: 'owner@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						KV: mockKV
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-			expect(mockKV.put).toHaveBeenCalledWith('admin_first_login_completed', 'true');
-		});
-	});
-
-	describe('Session cookie handling', () => {
-		it('should set Secure flag on HTTPS', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockEvent = {
-				url: new URL('https://example.com/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret'
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			const response = await GET(mockEvent as any);
-			const cookie = response.headers.get('Set-Cookie');
-			expect(cookie).toContain('Secure');
-		});
-	});
-
-	describe('Database error handling', () => {
-		it('should continue auth even if DB fails', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () => Promise.resolve({ access_token: 'test-token' })
-			});
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 123456789,
-						login: 'testuser',
-						name: 'Test User',
-						email: 'test@github.com',
-						avatar_url: 'https://avatars.githubusercontent.com/u/123456789'
-					})
-			});
-
-			const mockDB = {
-				prepare: vi.fn().mockImplementation(() => {
-					throw new Error('DB connection failed');
-				})
-			};
-
-			const mockEvent = {
-				url: new URL('http://localhost/api/auth/github/callback?code=test-code'),
-				cookies: { get: vi.fn().mockReturnValue(null), set: vi.fn() },
-				platform: {
-					env: {
-						GITHUB_CLIENT_ID: 'client-id',
-						GITHUB_CLIENT_SECRET: 'client-secret',
-						DB: mockDB
-					}
-				}
-			};
-
-			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
-
-			// Should not throw, should continue with auth
-			const response = await GET(mockEvent as any);
-			expect(response.status).toBe(302);
-		});
+	it('binds link completion to the initiating user', async () => {
+		verifyOAuthTransaction.mockResolvedValueOnce(oauthTransaction('github', 'link', 'user-1'));
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+		await expect(
+			GET(
+				event('code=code&state=link:test-state', {
+					locals: { user: { id: 'different-user' } }
+				}) as any
+			)
+		).rejects.toMatchObject({ status: 302, location: '/auth/login?error=invalid_state' });
+		expect(fetch).not.toHaveBeenCalled();
 	});
 });

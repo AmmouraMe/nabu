@@ -143,8 +143,7 @@ const mockDB = withBrandAccess(
 const mockBucket = { get: vi.fn(), put: vi.fn(), delete: vi.fn() };
 const mockKV = { get: vi.fn(), put: vi.fn(), delete: vi.fn(), list: vi.fn() };
 const authedLocals = { user: { id: 'user-1' } };
-// Admin routes gate on isOwner/isAdmin, not merely on being signed in.
-const adminLocals = { user: { id: 'user-1', isAdmin: true } };
+const adminLocals = { user: { id: 'user-1', isAdmin: true, isOwner: true } };
 
 // ═══════════════════════════════════════════════════════════════
 // 1. /api/brand/assets/texts — POST non-fatal field update fail (line ~86)
@@ -831,7 +830,7 @@ describe('Admin AI Keys — auth/platform branches', () => {
 // 15. /api/admin/auth-keys — missing platform branches (lines 97-98)
 // ═══════════════════════════════════════════════════════════════
 describe('Admin Auth Keys — auth branches', () => {
-	it('GET: throws 403 without an admin user', async () => {
+	it('GET: throws 401 without an authenticated user', async () => {
 		const { GET } = await import('../../src/routes/api/admin/auth-keys/+server');
 		try {
 			await GET({
@@ -840,7 +839,7 @@ describe('Admin Auth Keys — auth branches', () => {
 			} as any);
 			expect.fail();
 		} catch (err: any) {
-			expect(err.status).toBe(403);
+			expect(err.status).toBe(401);
 		}
 	});
 });
@@ -1045,7 +1044,7 @@ describe('Admin AI Keys Reorder — branches', () => {
 // 25. /api/admin/auth-keys/[id] — branches (lines 64, 133-135)
 // ═══════════════════════════════════════════════════════════════
 describe('Admin Auth Keys [id] — branches', () => {
-	it('PUT: throws 403 without an admin user', async () => {
+	it('PUT: throws 401 without an authenticated user', async () => {
 		const { PUT } = await import('../../src/routes/api/admin/auth-keys/[id]/+server');
 		try {
 			await PUT({
@@ -1056,11 +1055,11 @@ describe('Admin Auth Keys [id] — branches', () => {
 			} as any);
 			expect.fail();
 		} catch (err: any) {
-			expect(err.status).toBe(403);
+			expect(err.status).toBe(401);
 		}
 	});
 
-	it('DELETE: throws 403 without an admin user', async () => {
+	it('DELETE: throws 401 without an authenticated user', async () => {
 		const { DELETE } = await import('../../src/routes/api/admin/auth-keys/[id]/+server');
 		try {
 			await DELETE({
@@ -1070,7 +1069,7 @@ describe('Admin Auth Keys [id] — branches', () => {
 			} as any);
 			expect.fail();
 		} catch (err: any) {
-			expect(err.status).toBe(403);
+			expect(err.status).toBe(401);
 		}
 	});
 });

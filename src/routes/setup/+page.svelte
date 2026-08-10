@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 
 	let formData = {
+		setupSecret: '',
 		clientId: '',
 		clientSecret: '',
 		adminGithubUsername: ''
@@ -41,6 +42,9 @@
 
 		// Only require OAuth credentials if they don't already exist
 		if (!hasExistingConfig) {
+			if (!formData.setupSecret) {
+				errors.setupSecret = 'Bootstrap secret is required';
+			}
 			if (!formData.clientId.trim()) {
 				errors.clientId = 'Client ID is required';
 			}
@@ -89,7 +93,8 @@
 			const response = await fetch('/api/setup', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
+					...(formData.setupSecret ? { Authorization: `Bearer ${formData.setupSecret}` } : {})
 				},
 				body: JSON.stringify(requestBody)
 			});
@@ -192,6 +197,22 @@
 
 		<form on:submit|preventDefault={handleSubmit} class="setup-form">
 			{#if !hasExistingConfig}
+				<div class="form-group">
+					<label for="setupSecret">
+						Bootstrap Secret
+						<span class="required" aria-label="required">*</span>
+					</label>
+					<input
+						type="password"
+						id="setupSecret"
+						bind:value={formData.setupSecret}
+						class:error={errors.setupSecret}
+						autocomplete="off"
+						disabled={loading}
+					/>
+					<small class="help-text">Must match the server's SETUP_SECRET.</small>
+					{#if errors.setupSecret}<span class="error-text">{errors.setupSecret}</span>{/if}
+				</div>
 				<div class="form-group">
 					<label for="clientId">
 						GitHub Client ID

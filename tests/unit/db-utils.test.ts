@@ -249,41 +249,35 @@ describe('Database Utilities', () => {
 	});
 
 	describe('createSession', () => {
-		it('should create a new session with default expiry', async () => {
-			const mockSession = {
-				id: 'session-uuid',
-				user_id: 'user-123',
-				expires_at: new Date()
-			};
+		beforeEach(() => {
+			vi.unstubAllGlobals();
+		});
 
+		it('should create a new session with default expiry', async () => {
+			const mockRun = vi.fn().mockResolvedValue(undefined);
+			const mockBind = vi.fn().mockReturnValue({ run: mockRun });
 			const mockDb = {
 				prepare: vi.fn().mockReturnValue({
-					bind: vi.fn().mockReturnValue({
-						first: vi.fn().mockResolvedValue(mockSession)
-					})
+					bind: mockBind
 				})
 			};
 
-			vi.stubGlobal('crypto', { randomUUID: () => 'session-uuid' });
-
-			const { createSession } = await import('../../src/lib/utils/db');
+			const { createSession, hashSessionToken } = await import('../../src/lib/utils/db');
 			const result = await createSession(mockDb as any, 'user-123');
 
-			expect(result).toEqual(mockSession);
+			expect(result.user_id).toBe('user-123');
+			expect(result.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+			expect(result.id).toBe(await hashSessionToken(result.token));
 			expect(mockDb.prepare).toHaveBeenCalledWith(
-				'INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?) RETURNING *'
+				'INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)'
 			);
+			expect(mockBind).toHaveBeenCalledWith(result.id, 'user-123', result.expires_at.toISOString());
+			expect(mockRun).toHaveBeenCalled();
 		});
 
 		it('should create session with custom expiry days', async () => {
-			const mockSession = {
-				id: 'session-uuid',
-				user_id: 'user-123',
-				expires_at: new Date()
-			};
-
 			const mockBind = vi.fn().mockReturnValue({
-				first: vi.fn().mockResolvedValue(mockSession)
+				run: vi.fn().mockResolvedValue(undefined)
 			});
 
 			const mockDb = {
@@ -292,40 +286,35 @@ describe('Database Utilities', () => {
 				})
 			};
 
-			vi.stubGlobal('crypto', { randomUUID: () => 'session-uuid' });
-
 			const { createSession } = await import('../../src/lib/utils/db');
-			await createSession(mockDb as any, 'user-123', 7);
+			const result = await createSession(mockDb as any, 'user-123', 7);
 
-			// Check that bind was called with correct arguments
-			expect(mockBind).toHaveBeenCalled();
 			const bindArgs = mockBind.mock.calls[0];
-			expect(bindArgs[0]).toBe('session-uuid');
+			expect(bindArgs[0]).toBe(result.id);
 			expect(bindArgs[1]).toBe('user-123');
-			// Third arg is the expiry date string
-			expect(typeof bindArgs[2]).toBe('string');
+			expect(bindArgs[2]).toBe(result.expires_at.toISOString());
 		});
 
-		it('should throw error if session creation fails', async () => {
+		it('should propagate database errors', async () => {
 			const mockDb = {
 				prepare: vi.fn().mockReturnValue({
 					bind: vi.fn().mockReturnValue({
-						first: vi.fn().mockResolvedValue(null)
+						run: vi.fn().mockRejectedValue(new Error('write failed'))
 					})
 				})
 			};
 
-			vi.stubGlobal('crypto', { randomUUID: () => 'session-uuid' });
-
 			const { createSession } = await import('../../src/lib/utils/db');
 
-			await expect(createSession(mockDb as any, 'user-123')).rejects.toThrow(
-				'Failed to create session'
-			);
+			await expect(createSession(mockDb as any, 'user-123')).rejects.toThrow('write failed');
 		});
 	});
 
 	describe('findValidSession', () => {
+		beforeEach(() => {
+			vi.unstubAllGlobals();
+		});
+
 		it('should return session when found and valid', async () => {
 			const mockSession = {
 				id: 'session-123',
@@ -341,13 +330,14 @@ describe('Database Utilities', () => {
 				})
 			};
 
-			const { findValidSession } = await import('../../src/lib/utils/db');
+			const { findValidSession, hashSessionToken } = await import('../../src/lib/utils/db');
 			const result = await findValidSession(mockDb as any, 'session-123');
 
 			expect(result).toEqual(mockSession);
 			expect(mockDb.prepare).toHaveBeenCalledWith(
 				'SELECT * FROM sessions WHERE id = ? AND expires_at > datetime("now")'
 			);
+			expect(mockDb.prepare().bind).toHaveBeenCalledWith(await hashSessionToken('session-123'));
 		});
 
 		it('should return null when session not found or expired', async () => {
@@ -367,21 +357,25 @@ describe('Database Utilities', () => {
 	});
 
 	describe('deleteSession', () => {
+		beforeEach(() => {
+			vi.unstubAllGlobals();
+		});
+
 		it('should delete session by ID', async () => {
 			const mockRun = vi.fn().mockResolvedValue(undefined);
+			const mockBind = vi.fn().mockReturnValue({ run: mockRun });
 
 			const mockDb = {
 				prepare: vi.fn().mockReturnValue({
-					bind: vi.fn().mockReturnValue({
-						run: mockRun
-					})
+					bind: mockBind
 				})
 			};
 
-			const { deleteSession } = await import('../../src/lib/utils/db');
+			const { deleteSession, hashSessionToken } = await import('../../src/lib/utils/db');
 			await deleteSession(mockDb as any, 'session-123');
 
 			expect(mockDb.prepare).toHaveBeenCalledWith('DELETE FROM sessions WHERE id = ?');
+			expect(mockBind).toHaveBeenCalledWith(await hashSessionToken('session-123'));
 			expect(mockRun).toHaveBeenCalled();
 		});
 	});

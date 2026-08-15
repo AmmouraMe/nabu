@@ -1,6 +1,6 @@
 # Zero Environment Variable Setup Guide (Optional)
 
-> **💡 Recommended:** For production deployments, we recommend using **secure environment variables** in Cloudflare Pages. See the [Deployment documentation](../src/routes/documentation/+page.svelte) for details.
+> **💡 Recommended:** For production deployments, we recommend using **secure environment variables** in Cloudflare Pages. See [SETUP.md](./SETUP.md) for details.
 >
 > The zero-config setup described below is an **alternative approach** for scenarios where you want to configure credentials via a web UI instead.
 
@@ -100,7 +100,7 @@ Once the designated admin user logs in for the first time, the setup page is per
 2. Click **"New OAuth App"**
 3. Fill in the form:
    - **Application name:** NebulaKit (or your choice)
-   - **Homepage URL:** `https://your-app.pages.dev` (or `http://localhost:4277` for local dev)
+   - **Homepage URL:** `https://your-app.pages.dev` (or `http://localhost:4239` for local dev)
    - **Authorization callback URL:** `https://your-app.pages.dev/api/auth/github/callback`
 4. Click **"Register application"**
 5. Copy the **Client ID**
@@ -215,7 +215,7 @@ if (resetDisabled === 'true') {
 1. **Apply database migrations:**
 
    ```bash
-   wrangler d1 execute nebulakit-db --local --file=migrations/schema.sql
+   npm run db:migrate:local
    ```
 
 2. **Create KV namespaces** (for persistent local storage):
@@ -239,11 +239,11 @@ if (resetDisabled === 'true') {
    npm run dev
    ```
 
-2. Navigate to `http://localhost:4277/setup`
+2. Navigate to `http://localhost:4239/setup`
 
 3. Create a GitHub OAuth App with:
-   - **Homepage URL:** `http://localhost:4277`
-   - **Callback URL:** `http://localhost:4277/api/auth/github/callback`
+   - **Homepage URL:** `http://localhost:4239`
+   - **Callback URL:** `http://localhost:4239/api/auth/github/callback`
 
 4. Complete the setup form and log in
 
@@ -381,5 +381,5 @@ wrangler kv:namespace create "KV" --preview
 
 ## Related Documentation
 
-- [LOCAL_SETUP.md](./LOCAL_SETUP.md) - Detailed local development setup
+- [SETUP.md](./SETUP.md) - Detailed local development setup
 - [GITHUB_AUTH.md](./GITHUB_AUTH.md) - GitHub OAuth configuration details

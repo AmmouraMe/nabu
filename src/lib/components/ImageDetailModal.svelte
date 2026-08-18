@@ -4,7 +4,11 @@
 
 	const dispatch = createEventDispatcher<{
 		close: void;
-		setProfileImage: { asset: BrandMediaAsset; url: string; variant: 'icon' | 'horizontal' | 'vertical' };
+		setProfileImage: {
+			asset: BrandMediaAsset;
+			url: string;
+			variant: 'icon' | 'horizontal' | 'vertical';
+		};
 		delete: BrandMediaAsset;
 		revisions: BrandMediaAsset;
 	}>();
@@ -33,9 +37,7 @@
 	}
 
 	function formatCategory(category: string): string {
-		return category
-			.replace(/_/g, ' ')
-			.replace(/\b\w/g, (c) => c.toUpperCase());
+		return category.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 	}
 
 	function isAIGenerated(a: BrandMediaAsset): boolean {
@@ -114,7 +116,11 @@
 					{:else}
 						<div class="no-image">
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-								<path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" stroke-linecap="round" stroke-linejoin="round" />
+								<path
+									d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
 							</svg>
 							<span>No preview available</span>
 						</div>
@@ -201,12 +207,28 @@
 					<div class="modal-actions">
 						{#if showSetAsProfile}
 							<div class="logo-set-group">
-								<button class="action-btn primary-action" on:click={() => { logoMenuOpen = !logoMenuOpen; }}>
+								<button
+									class="action-btn primary-action"
+									on:click={() => {
+										logoMenuOpen = !logoMenuOpen;
+									}}
+								>
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-										<path d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" />
+										<path
+											d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										/>
 									</svg>
 									Set as Brand Logo
-									<svg class="chevron" class:open={logoMenuOpen} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg>
+									<svg
+										class="chevron"
+										class:open={logoMenuOpen}
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg
+									>
 								</button>
 								{#if logoMenuOpen}
 									<div class="logo-variant-menu">
@@ -214,11 +236,17 @@
 											<span class="variant-icon">◻️</span>
 											Icon (Square)
 										</button>
-										<button class="logo-variant-option" on:click={() => handleSetAsProfile('horizontal')}>
+										<button
+											class="logo-variant-option"
+											on:click={() => handleSetAsProfile('horizontal')}
+										>
 											<span class="variant-icon">▬</span>
 											Horizontal
 										</button>
-										<button class="logo-variant-option" on:click={() => handleSetAsProfile('vertical')}>
+										<button
+											class="logo-variant-option"
+											on:click={() => handleSetAsProfile('vertical')}
+										>
 											<span class="variant-icon">▮</span>
 											Vertical
 										</button>
@@ -228,13 +256,21 @@
 						{/if}
 						<button class="action-btn" on:click={() => dispatch('revisions', asset)}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" stroke-linecap="round" stroke-linejoin="round" />
+								<path
+									d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
 							</svg>
 							Version History
 						</button>
 						<button class="action-btn danger-action" on:click={() => dispatch('delete', asset)}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round" />
+								<path
+									d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
 							</svg>
 							Delete
 						</button>
@@ -259,8 +295,12 @@
 	}
 
 	@keyframes fadeIn {
-		from { opacity: 0; }
-		to { opacity: 1; }
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 
 	.modal-content {
@@ -278,8 +318,14 @@
 	}
 
 	@keyframes slideUp {
-		from { transform: translateY(1rem); opacity: 0; }
-		to { transform: translateY(0); opacity: 1; }
+		from {
+			transform: translateY(1rem);
+			opacity: 0;
+		}
+		to {
+			transform: translateY(0);
+			opacity: 1;
+		}
 	}
 
 	.modal-header {

@@ -138,6 +138,8 @@ export interface CreateBrandTextParams {
 	userId?: string;
 	/** Optional: source of the creation for revision tracking */
 	changeSource?: TextChangeSource;
+	/** Optional: caller-provided reason for the initial revision */
+	changeNote?: string;
 }
 
 /** Params for updating a brand text asset */

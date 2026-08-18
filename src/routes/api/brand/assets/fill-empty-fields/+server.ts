@@ -14,7 +14,7 @@ import {
 } from '$lib/services/brand';
 import { getEmptyTextFields, AI_FILLABLE_FIELDS } from '$lib/services/brand-ai-fill';
 import { buildBrandContextPrompt } from '$lib/services/ai-text-generation';
-import { getBrandTexts, syncFieldToTextAsset } from '$lib/services/brand-assets';
+import { getBrandTexts } from '$lib/services/brand-assets';
 import { getFirstEnabledAIKey, chatCompletionWithKey } from '$lib/services/openai-chat';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
@@ -80,7 +80,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 	const systemPrompt = buildBrandContextPrompt(brandContext, existingTexts);
 
-	// Generate content for each empty field sequentially (to allow each generation to benefit from previous context updates)
+	// Generate sequentially to respect provider rate limits and preserve deterministic result ordering.
+	// (Each call is independent; the system prompt is built once from initial context.)
 	const results: Array<{
 		field: string;
 		label: string;
@@ -115,7 +116,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				continue;
 			}
 
-			// Save the generated field value
+			// Save the generated field value. The update service now automatically
+			// mirrors to the Text tab (best-effort) for consistency with manual edits.
 			await updateBrandFieldWithVersion(platform.env.DB, {
 				profileId: brandProfileId,
 				userId: locals.user.id,
@@ -124,21 +126,6 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				changeSource: 'ai',
 				changeReason: 'AI-generated via Fill Empty Fields'
 			});
-
-			// And mirror it into the Text tab, exactly as editing the field by hand does
-			// (see /api/brand/update-field). Filling in bulk skipped this, so a brand could
-			// go from 3% to 82% complete while its Text tab stayed empty — the same value
-			// present or absent depending only on which button wrote it.
-			// Best-effort, like the manual path: the field is saved either way.
-			try {
-				await syncFieldToTextAsset(platform.env.DB, {
-					brandProfileId,
-					fieldName: fieldKey,
-					value: generatedText
-				});
-			} catch {
-				// Non-fatal — the profile field is written; the text asset is a convenience.
-			}
 
 			results.push({ field: fieldKey, label, status: 'success', value: generatedText });
 			totalFilled++;

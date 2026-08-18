@@ -96,7 +96,9 @@
 				const data = await res.json();
 				folders = data.folders;
 			}
-		} catch { /* non-critical */ }
+		} catch {
+			/* non-critical */
+		}
 	}
 
 	async function loadStats() {
@@ -106,7 +108,9 @@
 				const data = await res.json();
 				stats = data.stats;
 			}
-		} catch { /* non-critical */ }
+		} catch {
+			/* non-critical */
+		}
 	}
 
 	async function toggleStar(file: ArchiveFile) {
@@ -118,9 +122,11 @@
 			});
 			if (res.ok) {
 				const data = await res.json();
-				files = files.map(f => f.id === file.id ? { ...f, isStarred: data.isStarred } : f);
+				files = files.map((f) => (f.id === file.id ? { ...f, isStarred: data.isStarred } : f));
 			}
-		} catch { /* non-critical */ }
+		} catch {
+			/* non-critical */
+		}
 	}
 
 	async function deleteFile(file: ArchiveFile) {
@@ -129,13 +135,15 @@
 		try {
 			const res = await fetch(`/api/archive?id=${file.id}`, { method: 'DELETE' });
 			if (res.ok) {
-				files = files.filter(f => f.id !== file.id);
+				files = files.filter((f) => f.id !== file.id);
 				total--;
 				if (selectedFile?.id === file.id) selectedFile = null;
 				await loadStats();
 				await loadFolders();
 			}
-		} catch { /* non-critical */ }
+		} catch {
+			/* non-critical */
+		}
 	}
 
 	function setFolder(path: string | null) {
@@ -174,29 +182,42 @@
 
 	function sourceLabel(source: string): string {
 		switch (source) {
-			case 'user_upload': return 'Uploaded';
-			case 'ai_generated': return 'AI Generated';
-			case 'ai_referenced': return 'AI Referenced';
-			default: return source;
+			case 'user_upload':
+				return 'Uploaded';
+			case 'ai_generated':
+				return 'AI Generated';
+			case 'ai_referenced':
+				return 'AI Referenced';
+			default:
+				return source;
 		}
 	}
 
 	function contextLabel(context: string): string {
 		switch (context) {
-			case 'onboarding': return 'Brand Architect';
-			case 'chat': return 'Chat';
-			case 'brand_assets': return 'Brand Assets';
-			default: return context;
+			case 'onboarding':
+				return 'Brand Architect';
+			case 'chat':
+				return 'Chat';
+			case 'brand_assets':
+				return 'Brand Assets';
+			default:
+				return context;
 		}
 	}
 
 	function fileTypeIcon(type: string): string {
 		switch (type) {
-			case 'image': return '🖼️';
-			case 'video': return '🎬';
-			case 'audio': return '🎵';
-			case 'document': return '📄';
-			default: return '📎';
+			case 'image':
+				return '🖼️';
+			case 'video':
+				return '🎬';
+			case 'audio':
+				return '🎵';
+			case 'document':
+				return '📄';
+			default:
+				return '📎';
 		}
 	}
 </script>
@@ -225,7 +246,7 @@
 			</div>
 			<button
 				class="view-toggle"
-				on:click={() => viewMode = viewMode === 'grid' ? 'list' : 'grid'}
+				on:click={() => (viewMode = viewMode === 'grid' ? 'list' : 'grid')}
 				title="Toggle view"
 			>
 				{viewMode === 'grid' ? '☰' : '▦'}
@@ -239,11 +260,7 @@
 			<!-- Folder tree -->
 			<div class="sidebar-section">
 				<h3>Folders</h3>
-				<button
-					class="folder-item"
-					class:active={!activeFolder}
-					on:click={() => setFolder(null)}
-				>
+				<button class="folder-item" class:active={!activeFolder} on:click={() => setFolder(null)}>
 					📁 All Files
 					<span class="folder-count">{total}</span>
 				</button>
@@ -295,11 +312,7 @@
 
 			<!-- Starred -->
 			<div class="sidebar-section">
-				<button
-					class="filter-item"
-					class:active={showStarredOnly}
-					on:click={toggleStarredFilter}
-				>
+				<button class="filter-item" class:active={showStarredOnly} on:click={toggleStarredFilter}>
 					⭐ Starred
 				</button>
 			</div>
@@ -321,7 +334,9 @@
 				<div class="empty-state">
 					<span class="empty-icon">📂</span>
 					<p>No files found</p>
-					<span class="empty-hint">Files from your Brand Architect conversations will appear here</span>
+					<span class="empty-hint"
+						>Files from your Brand Architect conversations will appear here</span
+					>
 				</div>
 			{:else}
 				<div class="file-{viewMode}">
@@ -329,7 +344,7 @@
 						<button
 							class="file-card"
 							class:selected={selectedFile?.id === file.id}
-							on:click={() => selectedFile = selectedFile?.id === file.id ? null : file}
+							on:click={() => (selectedFile = selectedFile?.id === file.id ? null : file)}
 							in:fade={{ duration: 200 }}
 						>
 							<div class="file-preview">
@@ -368,7 +383,7 @@
 			<aside class="detail-panel" transition:fly={{ x: 20, duration: 200 }}>
 				<div class="detail-header">
 					<h3>{selectedFile.fileName}</h3>
-					<button class="close-detail" on:click={() => selectedFile = null}>✕</button>
+					<button class="close-detail" on:click={() => (selectedFile = null)}>✕</button>
 				</div>
 
 				<div class="detail-preview">
@@ -433,11 +448,7 @@
 				</div>
 
 				<div class="detail-actions">
-					<a
-						href={selectedFile.url}
-						download={selectedFile.fileName}
-						class="action-btn primary"
-					>
+					<a href={selectedFile.url} download={selectedFile.fileName} class="action-btn primary">
 						⬇️ Download
 					</a>
 					<button
@@ -642,7 +653,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.empty-icon {

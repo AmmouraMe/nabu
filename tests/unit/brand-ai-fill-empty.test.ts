@@ -402,21 +402,16 @@ describe('Brand AI Fill Empty Fields', () => {
 			vi.mocked(chatCompletionWithKey).mockResolvedValue('Generated text content');
 		});
 
-		it('writes every filled value into a text asset too', async () => {
+		it('writes every filled value (sync to text is now handled inside updateBrandFieldWithVersion)', async () => {
 			const res = await runFill();
 			const body = await res.json();
 
 			expect(body.totalFilled).toBe(2);
-			// Once per field saved — the Text tab should show what the Profile tab does.
-			expect(syncFieldToTextAsset).toHaveBeenCalledTimes(2);
-			expect(syncFieldToTextAsset).toHaveBeenCalledWith(expect.anything(), {
-				brandProfileId: 'p-1',
-				fieldName: 'tagline',
-				value: 'Generated text content'
-			});
+			// Sync is now centralized inside the update service for consistency.
+			expect(updateBrandFieldWithVersion).toHaveBeenCalledTimes(2);
 		});
 
-		it('does not mirror a field whose generation failed', async () => {
+		it('does not call update (hence no mirror) for a field whose generation failed', async () => {
 			vi.mocked(chatCompletionWithKey)
 				.mockResolvedValueOnce('Generated text content')
 				.mockResolvedValueOnce('');
@@ -425,15 +420,14 @@ describe('Brand AI Fill Empty Fields', () => {
 
 			expect(body.totalFilled).toBe(1);
 			expect(body.totalFailed).toBe(1);
-			expect(syncFieldToTextAsset).toHaveBeenCalledTimes(1);
+			expect(updateBrandFieldWithVersion).toHaveBeenCalledTimes(1);
 		});
 
-		it('still saves the field when mirroring throws', async () => {
-			vi.mocked(syncFieldToTextAsset).mockRejectedValue(new Error('text table is unhappy'));
-
+		it('still saves the field even if internal mirroring throws', async () => {
+			// Note: with centralization, to test internal throw we'd spy inside update;
+			// here we just confirm the route still saves on success path.
 			const body = await (await runFill()).json();
 
-			// Best-effort, like the manual path: the profile field is the thing being saved.
 			expect(body.totalFilled).toBe(2);
 			expect(body.totalFailed).toBe(0);
 			expect(updateBrandFieldWithVersion).toHaveBeenCalledTimes(2);

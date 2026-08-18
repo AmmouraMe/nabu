@@ -180,8 +180,7 @@
 								{#if i > 0}
 									<button
 										class="revert-btn"
-										on:click={() =>
-											dispatch('revert', { versionId: version.id })}
+										on:click={() => dispatch('revert', { versionId: version.id })}
 									>
 										Restore this version
 									</button>

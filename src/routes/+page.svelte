@@ -43,11 +43,13 @@
 
 <svelte:head>
 	<title>Nabu — Build Your Brand. Automate Your Marketing.</title>
-	<meta name="description" content="No brand? No problem. Nabu helps you create a complete brand identity from scratch — logo, colors, voice, typography — then turns it into automated social media marketing." />
+	<meta
+		name="description"
+		content="No brand? No problem. Nabu helps you create a complete brand identity from scratch — logo, colors, voice, typography — then turns it into automated social media marketing."
+	/>
 </svelte:head>
 
 <div class="landing" class:mounted>
-
 	<!-- ======== HERO ======== -->
 	<section class="hero">
 		<div class="hero-glow" aria-hidden="true"></div>
@@ -56,9 +58,7 @@
 				<span class="badge-dot" aria-hidden="true"></span>
 				Brand Building &amp; Marketing Automation
 			</div>
-			<h1 class="hero-title">
-				Got Brand?
-			</h1>
+			<h1 class="hero-title">Got Brand?</h1>
 			<p class="hero-description">
 				Whether you're starting from zero or refining what you already have, Nabu walks you through
 				building a brand's complete identity — logo, colors, voice, typography — then helps you
@@ -67,27 +67,41 @@
 			<div class="hero-actions">
 				{#if data.user}
 					<a href="/onboarding" class="btn btn-primary btn-lg">
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<svg
+							width="20"
+							height="20"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
 							<path d="M12 2L2 7l10 5 10-5-10-5z" />
 							<path d="M2 17l10 5 10-5" />
 							<path d="M2 12l10 5 10-5" />
 						</svg>
 						Build Your Brand
 					</a>
-					<a href="/brand" class="btn btn-secondary btn-lg">
-						Go to Dashboard
-					</a>
+					<a href="/brand" class="btn btn-secondary btn-lg"> Go to Dashboard </a>
 				{:else}
 					<a href="/auth/signup" class="btn btn-primary btn-lg">
 						Start Building Your Brand
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<svg
+							width="18"
+							height="18"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
 							<line x1="5" y1="12" x2="19" y2="12" />
 							<polyline points="12 5 19 12 12 19" />
 						</svg>
 					</a>
-					<a href="/auth/login" class="btn btn-secondary btn-lg">
-						Sign In
-					</a>
+					<a href="/auth/login" class="btn btn-secondary btn-lg"> Sign In </a>
 				{/if}
 			</div>
 			<button
@@ -144,7 +158,16 @@
 			<div class="feature-card feature-highlight">
 				<div class="feature-icon icon-brand" aria-hidden="true">
 					<!-- sparkle/wand icon -->
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<path d="M12 2L2 7l10 5 10-5-10-5z" />
 						<path d="M2 17l10 5 10-5" />
 						<path d="M2 12l10 5 10-5" />
@@ -152,9 +175,9 @@
 				</div>
 				<h3>Start From Scratch</h3>
 				<p>
-					Don&rsquo;t have a brand yet? Perfect. Nabu&rsquo;s guided onboarding walks you through the entire
-					process — from picking a name and defining your personality to generating a full visual
-					identity. Answer a few questions and watch your brand come to life.
+					Don&rsquo;t have a brand yet? Perfect. Nabu&rsquo;s guided onboarding walks you through
+					the entire process — from picking a name and defining your personality to generating a
+					full visual identity. Answer a few questions and watch your brand come to life.
 				</p>
 				<ul class="feature-list" role="list">
 					<li>Conversational brand-building wizard</li>
@@ -167,7 +190,16 @@
 			<div class="feature-card">
 				<div class="feature-icon icon-palette" aria-hidden="true">
 					<!-- palette icon -->
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<circle cx="12" cy="12" r="10" />
 						<circle cx="12" cy="7" r="1.5" fill="currentColor" />
 						<circle cx="7.5" cy="11" r="1.5" fill="currentColor" />
@@ -178,28 +210,49 @@
 				<h3>Colors &amp; Visual Identity</h3>
 				<p>
 					Build a complete color system with an interactive harmony wheel. Primary, secondary,
-					accent, and extended palettes that work together beautifully across light and dark contexts.
+					accent, and extended palettes that work together beautifully across light and dark
+					contexts.
 				</p>
 			</div>
 
 			<div class="feature-card">
 				<div class="feature-icon icon-logo" aria-hidden="true">
 					<!-- star/diamond icon -->
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-						<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<polygon
+							points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+						/>
 					</svg>
 				</div>
 				<h3>Logo &amp; Typography</h3>
 				<p>
-					Upload existing logos or create new ones. Manage variants for different contexts.
-					Choose fonts for headings, body text, and logo treatments from a curated type library.
+					Upload existing logos or create new ones. Manage variants for different contexts. Choose
+					fonts for headings, body text, and logo treatments from a curated type library.
 				</p>
 			</div>
 
 			<div class="feature-card">
 				<div class="feature-icon icon-voice" aria-hidden="true">
 					<!-- megaphone icon -->
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<path d="M11 5L6 9H2v6h4l5 4V5z" />
 						<path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
 						<path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
@@ -215,7 +268,16 @@
 			<div class="feature-card">
 				<div class="feature-icon icon-media" aria-hidden="true">
 					<!-- image/gallery icon -->
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
 						<circle cx="8.5" cy="8.5" r="1.5" />
 						<polyline points="21 15 16 10 5 21" />
@@ -231,15 +293,24 @@
 			<div class="feature-card">
 				<div class="feature-icon icon-history" aria-hidden="true">
 					<!-- clock/history icon -->
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<circle cx="12" cy="12" r="10" />
 						<polyline points="12 6 12 12 16 14" />
 					</svg>
 				</div>
 				<h3>Version History &amp; Multi-Brand</h3>
 				<p>
-					Every change you make is tracked. Compare revisions, roll back to previous versions,
-					and manage multiple brands from a single account without losing a thing.
+					Every change you make is tracked. Compare revisions, roll back to previous versions, and
+					manage multiple brands from a single account without losing a thing.
 				</p>
 			</div>
 		</div>
@@ -250,8 +321,8 @@
 		<div class="section-header">
 			<h2 class="section-title">Then put that brand to work</h2>
 			<p class="section-subtitle">
-				Once your identity is set, Nabu uses it to create on-brand content and
-				automatically publish it everywhere your audience lives.
+				Once your identity is set, Nabu uses it to create on-brand content and automatically publish
+				it everywhere your audience lives.
 			</p>
 		</div>
 
@@ -259,18 +330,39 @@
 			<div class="auto-card">
 				<div class="auto-icon" aria-hidden="true">
 					<!-- document/edit icon -->
-					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="32"
+						height="32"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
 						<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
 					</svg>
 				</div>
 				<h3>Text &amp; Copy</h3>
-				<p>Social posts, blog content, taglines, and marketing copy — all written in your brand voice.</p>
+				<p>
+					Social posts, blog content, taglines, and marketing copy — all written in your brand
+					voice.
+				</p>
 			</div>
 			<div class="auto-card">
 				<div class="auto-icon" aria-hidden="true">
 					<!-- microphone icon -->
-					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="32"
+						height="32"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
 						<path d="M19 10v2a7 7 0 0 1-14 0v-2" />
 						<line x1="12" y1="19" x2="12" y2="23" />
@@ -278,12 +370,23 @@
 					</svg>
 				</div>
 				<h3>Audio</h3>
-				<p>Voice narrations and audio snippets with text-to-speech, ready for podcasts and reels.</p>
+				<p>
+					Voice narrations and audio snippets with text-to-speech, ready for podcasts and reels.
+				</p>
 			</div>
 			<div class="auto-card">
 				<div class="auto-icon" aria-hidden="true">
 					<!-- image icon -->
-					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="32"
+						height="32"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
 						<circle cx="8.5" cy="8.5" r="1.5" />
 						<polyline points="21 15 16 10 5 21" />
@@ -295,20 +398,40 @@
 			<div class="auto-card">
 				<div class="auto-icon" aria-hidden="true">
 					<!-- video icon -->
-					<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="32"
+						height="32"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<polygon points="23 7 16 12 23 17 23 7" />
 						<rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
 					</svg>
 				</div>
 				<h3>Videos</h3>
-				<p>Short-form and long-form video from scripts, with brand-consistent visuals and narration.</p>
+				<p>
+					Short-form and long-form video from scripts, with brand-consistent visuals and narration.
+				</p>
 			</div>
 		</div>
 
 		<div class="publish-banner">
 			<div class="publish-icon" aria-hidden="true">
 				<!-- calendar/clock icon -->
-				<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<svg
+					width="28"
+					height="28"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
 					<rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
 					<line x1="16" y1="2" x2="16" y2="6" />
 					<line x1="8" y1="2" x2="8" y2="6" />
@@ -339,14 +462,20 @@
 				<div class="step-number" aria-hidden="true">1</div>
 				<h3>Create Your Brand</h3>
 				<p>
-					Start with just an idea — or nothing at all. Nabu&rsquo;s onboarding guides you through naming,
-					positioning, personality, colors, typography, and logo to build a complete identity from
-					the ground up.
+					Start with just an idea — or nothing at all. Nabu&rsquo;s onboarding guides you through
+					naming, positioning, personality, colors, typography, and logo to build a complete
+					identity from the ground up.
 				</p>
 			</div>
 			<div class="step-connector" aria-hidden="true">
 				<svg width="40" height="24" viewBox="0 0 40 24" fill="none">
-					<path d="M0 12h32M28 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M0 12h32M28 6l6 6-6 6"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 			</div>
 			<div class="step-card">
@@ -359,7 +488,13 @@
 			</div>
 			<div class="step-connector" aria-hidden="true">
 				<svg width="40" height="24" viewBox="0 0 40 24" fill="none">
-					<path d="M0 12h32M28 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M0 12h32M28 6l6 6-6 6"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 			</div>
 			<div class="step-card">
@@ -367,7 +502,8 @@
 				<h3>Automate &amp; Publish</h3>
 				<p>
 					Schedule posts across your social channels. Nabu handles the uploads — text, images,
-					audio, and video — on a regular basis so your brand stays active while you focus elsewhere.
+					audio, and video — on a regular basis so your brand stays active while you focus
+					elsewhere.
 				</p>
 			</div>
 		</div>
@@ -378,40 +514,79 @@
 		<div class="section-header">
 			<h2 class="section-title">Built for people who are building something</h2>
 			<p class="section-subtitle">
-				Whether you&rsquo;re just getting started or ready to level up, Nabu meets you where you are.
+				Whether you&rsquo;re just getting started or ready to level up, Nabu meets you where you
+				are.
 			</p>
 		</div>
 
 		<div class="audience-grid">
 			<div class="audience-card">
 				<div class="audience-emoji" aria-hidden="true">
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 12 18.469c-.874 0-1.712.346-2.331.966l-.205.205a5.002 5.002 0 0 1-.801-.64z" />
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path
+							d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 12 18.469c-.874 0-1.712.346-2.331.966l-.205.205a5.002 5.002 0 0 1-.801-.64z"
+						/>
 					</svg>
 				</div>
 				<h3>New Founders</h3>
-				<p>You have an idea but no brand. Nabu helps you build one from the ground up and start marketing immediately.</p>
+				<p>
+					You have an idea but no brand. Nabu helps you build one from the ground up and start
+					marketing immediately.
+				</p>
 			</div>
 			<div class="audience-card">
 				<div class="audience-emoji" aria-hidden="true">
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
 						<line x1="8" y1="21" x2="16" y2="21" />
 						<line x1="12" y1="17" x2="12" y2="21" />
 					</svg>
 				</div>
 				<h3>Small Business Owners</h3>
-				<p>Your brand exists but needs organizing. Bring your assets in and let Nabu refine and systematize everything.</p>
+				<p>
+					Your brand exists but needs organizing. Bring your assets in and let Nabu refine and
+					systematize everything.
+				</p>
 			</div>
 			<div class="audience-card">
 				<div class="audience-emoji" aria-hidden="true">
-					<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.5"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
 						<polygon points="23 7 16 12 23 17 23 7" />
 						<rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
 					</svg>
 				</div>
 				<h3>Content Creators</h3>
-				<p>You create but struggle with consistency. Nabu keeps your brand tight and automates your posting schedule.</p>
+				<p>
+					You create but struggle with consistency. Nabu keeps your brand tight and automates your
+					posting schedule.
+				</p>
 			</div>
 		</div>
 	</section>
@@ -424,30 +599,33 @@
 		<div class="cta-card">
 			<h2>Your brand starts here</h2>
 			<p>
-				No logo, no colors, no problem. Walk in with nothing and walk out with a
-				complete brand identity and an automated marketing engine behind it.
+				No logo, no colors, no problem. Walk in with nothing and walk out with a complete brand
+				identity and an automated marketing engine behind it.
 			</p>
 			<div class="cta-actions">
 				{#if data.user}
-					<a href="/onboarding" class="btn btn-primary btn-lg">
-						Build Your Brand
-					</a>
+					<a href="/onboarding" class="btn btn-primary btn-lg"> Build Your Brand </a>
 					{#if isAdmin}
-						<a href="/admin" class="btn btn-secondary btn-lg">
-							Admin Dashboard
-						</a>
+						<a href="/admin" class="btn btn-secondary btn-lg"> Admin Dashboard </a>
 					{/if}
 				{:else}
 					<a href="/auth/signup" class="btn btn-primary btn-lg">
 						Get Started Free
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<svg
+							width="18"
+							height="18"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
 							<line x1="5" y1="12" x2="19" y2="12" />
 							<polyline points="12 5 19 12 12 19" />
 						</svg>
 					</a>
-					<a href="/auth/login" class="btn btn-secondary btn-lg">
-						Sign In
-					</a>
+					<a href="/auth/login" class="btn btn-secondary btn-lg"> Sign In </a>
 				{/if}
 			</div>
 		</div>
@@ -459,7 +637,12 @@
 		<span class="toast-message">{toastMessage}</span>
 		<button class="toast-dismiss" on:click={dismissToast} aria-label="Dismiss notification">
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-				<path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+				<path
+					d="M4 4l8 8M12 4l-8 8"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+				/>
 			</svg>
 		</button>
 	</div>
@@ -470,7 +653,9 @@
 	.landing {
 		opacity: 0;
 		transform: translateY(12px);
-		transition: opacity 0.5s ease, transform 0.5s ease;
+		transition:
+			opacity 0.5s ease,
+			transform 0.5s ease;
 	}
 
 	.landing.mounted {
@@ -535,8 +720,13 @@
 	}
 
 	@keyframes pulse-dot {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.4; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.4;
+		}
 	}
 
 	.hero-title {
@@ -620,7 +810,9 @@
 		color: var(--color-text-secondary);
 		font-size: 0.8rem;
 		cursor: pointer;
-		transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+		transition:
+			border-color var(--transition-fast),
+			box-shadow var(--transition-fast);
 	}
 
 	.search-trigger:hover {
@@ -727,7 +919,10 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
-		transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+		transition:
+			border-color var(--transition-fast),
+			box-shadow var(--transition-fast),
+			transform var(--transition-fast);
 	}
 
 	.feature-card:hover {
@@ -751,12 +946,30 @@
 		margin-bottom: var(--spacing-md);
 	}
 
-	.icon-brand   { background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface)); color: var(--color-primary); }
-	.icon-palette { background: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface)); color: var(--color-secondary); }
-	.icon-logo    { background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface)); color: var(--color-warning); }
-	.icon-voice   { background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface)); color: var(--color-success); }
-	.icon-media   { background: color-mix(in srgb, var(--color-error) 10%, var(--color-surface)); color: var(--color-error); }
-	.icon-history { background: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface)); color: var(--color-secondary); }
+	.icon-brand {
+		background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+		color: var(--color-primary);
+	}
+	.icon-palette {
+		background: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
+		color: var(--color-secondary);
+	}
+	.icon-logo {
+		background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+		color: var(--color-warning);
+	}
+	.icon-voice {
+		background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
+		color: var(--color-success);
+	}
+	.icon-media {
+		background: color-mix(in srgb, var(--color-error) 10%, var(--color-surface));
+		color: var(--color-error);
+	}
+	.icon-history {
+		background: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
+		color: var(--color-secondary);
+	}
 
 	.feature-card h3 {
 		font-size: 1.05rem;
@@ -879,7 +1092,10 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
-		transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+		transition:
+			border-color var(--transition-fast),
+			transform var(--transition-fast),
+			box-shadow var(--transition-fast);
 	}
 
 	.auto-card:hover {
@@ -968,7 +1184,9 @@
 		background: var(--color-surface);
 		border: 1px solid var(--color-border);
 		border-radius: var(--radius-lg);
-		transition: border-color var(--transition-fast), transform var(--transition-fast);
+		transition:
+			border-color var(--transition-fast),
+			transform var(--transition-fast);
 	}
 
 	.audience-card:hover {

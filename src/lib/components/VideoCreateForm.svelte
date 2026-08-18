@@ -44,7 +44,14 @@
 	};
 
 	const dispatch = createEventDispatcher<{
-		generate: { prompt: string; aspectRatio: string; duration: number; model: string; provider: string; resolution: string };
+		generate: {
+			prompt: string;
+			aspectRatio: string;
+			duration: number;
+			model: string;
+			provider: string;
+			resolution: string;
+		};
 	}>();
 
 	// Derive unique providers from models
@@ -52,7 +59,10 @@
 	$: hasMultipleProviders = uniqueProviders.length > 1;
 
 	// Auto-select first provider when models change
-	$: if (uniqueProviders.length > 0 && (!selectedProvider || !uniqueProviders.includes(selectedProvider))) {
+	$: if (
+		uniqueProviders.length > 0 &&
+		(!selectedProvider || !uniqueProviders.includes(selectedProvider))
+	) {
 		selectedProvider = uniqueProviders[0];
 	}
 
@@ -62,7 +72,10 @@
 		: models;
 
 	$: hasModels = models.length > 0;
-	$: if (filteredModels.length > 0 && (!selectedModel || !filteredModels.some((m) => m.id === selectedModel))) {
+	$: if (
+		filteredModels.length > 0 &&
+		(!selectedModel || !filteredModels.some((m) => m.id === selectedModel))
+	) {
 		selectedModel = filteredModels[0].id;
 	}
 	$: canGenerate = prompt.trim().length > 0 && hasModels && !generating;
@@ -127,7 +140,11 @@
 		return null;
 	}
 
-	function computeEstimatedCost(model: VideoModel | undefined, dur: number, resolution: string): string | null {
+	function computeEstimatedCost(
+		model: VideoModel | undefined,
+		dur: number,
+		resolution: string
+	): string | null {
 		if (!model?.pricing) return null;
 		const p = model.pricing;
 
@@ -181,13 +198,23 @@
 <div class="create-form" role="region" aria-label="Create video">
 	{#if !hasModels}
 		<div class="no-provider">
-			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+			<svg
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+			>
 				<circle cx="12" cy="12" r="10" />
 				<line x1="12" y1="8" x2="12" y2="12" />
 				<line x1="12" y1="16" x2="12.01" y2="16" />
 			</svg>
 			<p>No video provider configured.</p>
-			<p class="no-provider-hint">Go to <a href="/admin/ai-keys">Admin &rarr; AI Keys</a>, edit your API key (OpenAI or WaveSpeed), and enable the <strong>Video Generation</strong> toggle with a model selected.</p>
+			<p class="no-provider-hint">
+				Go to <a href="/admin/ai-keys">Admin &rarr; AI Keys</a>, edit your API key (OpenAI or
+				WaveSpeed), and enable the <strong>Video Generation</strong> toggle with a model selected.
+			</p>
 		</div>
 	{:else}
 		<div class="form-body">
@@ -206,7 +233,12 @@
 				{#if hasMultipleProviders}
 					<div class="option-group">
 						<label class="option-label" for="provider-select">Provider</label>
-						<select id="provider-select" bind:value={selectedProvider} class="model-select" aria-label="Provider">
+						<select
+							id="provider-select"
+							bind:value={selectedProvider}
+							class="model-select"
+							aria-label="Provider"
+						>
 							{#each uniqueProviders as prov}
 								<option value={prov}>{providerDisplayNames[prov] || prov}</option>
 							{/each}
@@ -273,7 +305,12 @@
 				{#if filteredModels.length > 1 || hasMultipleProviders}
 					<div class="option-group">
 						<label class="option-label" for="model-select">Model</label>
-						<select id="model-select" bind:value={selectedModel} class="model-select" aria-label="Model">
+						<select
+							id="model-select"
+							bind:value={selectedModel}
+							class="model-select"
+							aria-label="Model"
+						>
 							{#each filteredModels as model}
 								<option value={model.id}>{model.displayName}</option>
 							{/each}
@@ -284,31 +321,44 @@
 
 			{#if hasPricing && estimatedCost}
 				<div class="pricing-preview" data-testid="pricing-preview">
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg
+						width="14"
+						height="14"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
 						<circle cx="12" cy="12" r="10" />
 						<line x1="12" y1="8" x2="12" y2="16" />
 						<line x1="8" y1="12" x2="16" y2="12" />
 					</svg>
 					<span>Estimated cost: <strong>{estimatedCost}</strong></span>
 					{#if effectiveRate != null}
-						<span class="pricing-detail">({duration}s &times; ${effectiveRate}/s{hasResolutionSelector ? ` @ ${selectedResolution}` : ''})</span>
+						<span class="pricing-detail"
+							>({duration}s &times; ${effectiveRate}/s{hasResolutionSelector
+								? ` @ ${selectedResolution}`
+								: ''})</span
+						>
 					{:else if currentModel?.pricing?.estimatedCostPerGeneration}
 						<span class="pricing-detail">(per generation)</span>
 					{/if}
 				</div>
 			{/if}
 
-			<button
-				type="button"
-				class="generate-btn"
-				disabled={!canGenerate}
-				on:click={handleGenerate}
-			>
+			<button type="button" class="generate-btn" disabled={!canGenerate} on:click={handleGenerate}>
 				{#if generating}
 					<span class="spinner"></span>
 					Generating...
 				{:else}
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
 						<polygon points="5,3 19,12 5,21" />
 					</svg>
 					Generate Video

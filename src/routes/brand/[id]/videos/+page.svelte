@@ -127,7 +127,10 @@
 
 	function isVideoUrl(url: string | null): boolean {
 		if (!url) return false;
-		return url.startsWith('http') && (url.includes('.mp4') || url.includes('googleapis') || url.includes('storage'));
+		return (
+			url.startsWith('http') &&
+			(url.includes('.mp4') || url.includes('googleapis') || url.includes('storage'))
+		);
 	}
 
 	function getStatusClass(status: string): string {
@@ -455,8 +458,13 @@
 	}
 
 	@keyframes pulse {
-		0%, 100% { opacity: 1; }
-		50% { opacity: 0.4; }
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.4;
+		}
 	}
 
 	.poll-btn {

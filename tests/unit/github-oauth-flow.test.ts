@@ -36,7 +36,10 @@ describe('GitHub Auth API', () => {
 		});
 
 		it('should redirect to GitHub OAuth when configured via env', async () => {
-			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid', subtle: globalThis.__REAL_SUBTLE__ });
+			vi.stubGlobal('crypto', {
+				randomUUID: () => 'state-uuid',
+				subtle: globalThis.__REAL_SUBTLE__
+			});
 
 			const mockPlatform = {
 				env: {
@@ -61,7 +64,10 @@ describe('GitHub Auth API', () => {
 		});
 
 		it('should mark profile-initiated GitHub OAuth as link mode', async () => {
-			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid', subtle: globalThis.__REAL_SUBTLE__ });
+			vi.stubGlobal('crypto', {
+				randomUUID: () => 'state-uuid',
+				subtle: globalThis.__REAL_SUBTLE__
+			});
 
 			const mockPlatform = {
 				env: {
@@ -84,7 +90,10 @@ describe('GitHub Auth API', () => {
 		});
 
 		it('should redirect to GitHub OAuth when configured via KV', async () => {
-			vi.stubGlobal('crypto', { randomUUID: () => 'state-uuid', subtle: globalThis.__REAL_SUBTLE__ });
+			vi.stubGlobal('crypto', {
+				randomUUID: () => 'state-uuid',
+				subtle: globalThis.__REAL_SUBTLE__
+			});
 
 			const mockPlatform = {
 				env: {
@@ -356,7 +365,9 @@ describe('GitHub Auth API', () => {
 			const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
 
 			const response = await GET({
-				url: new URL('http://localhost:4277/api/auth/github/callback?code=test-code&state=login:state-uuid'),
+				url: new URL(
+					'http://localhost:4277/api/auth/github/callback?code=test-code&state=login:state-uuid'
+				),
 				cookies: mockCookies,
 				platform: mockPlatform
 			} as any);
@@ -617,4 +628,3 @@ describe('GitHub Auth API', () => {
 		});
 	});
 });
-

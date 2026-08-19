@@ -63,16 +63,20 @@ describe('Account Merge Service', () => {
 			);
 		});
 
-		it('should transfer all sessions from source user to target user', async () => {
+		it('should revoke source sessions without affecting target sessions', async () => {
 			const { mergeAccounts } = await import('../../src/lib/services/account-merge');
 
 			const mockBatchResults = { success: true };
-			const mockPrepare = vi.fn().mockReturnValue({
-				bind: vi.fn().mockReturnValue({
-					run: vi.fn().mockResolvedValue({}),
-					first: vi.fn().mockResolvedValue({ is_admin: 0 })
+			const boundStatements: Array<{ query: string; values: unknown[] }> = [];
+			const mockPrepare = vi.fn((query: string) => ({
+				bind: vi.fn((...values: unknown[]) => {
+					boundStatements.push({ query, values });
+					return {
+						run: vi.fn().mockResolvedValue({}),
+						first: vi.fn().mockResolvedValue({ is_admin: 0 })
+					};
 				})
-			});
+			}));
 			const mockBatch = vi.fn().mockResolvedValue(mockBatchResults);
 
 			const mockDB = {
@@ -82,8 +86,17 @@ describe('Account Merge Service', () => {
 
 			await mergeAccounts(mockDB as any, 'source-user-id', 'target-user-id');
 
-			// Verify sessions are transferred
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE sessions SET user_id = ? WHERE user_id = ?');
+			expect(boundStatements).toContainEqual({
+				query: 'DELETE FROM sessions WHERE user_id = ?',
+				values: ['source-user-id']
+			});
+			expect(mockPrepare).not.toHaveBeenCalledWith(
+				'UPDATE sessions SET user_id = ? WHERE user_id = ?'
+			);
+			expect(boundStatements).not.toContainEqual({
+				query: 'DELETE FROM sessions WHERE user_id = ?',
+				values: ['target-user-id']
+			});
 		});
 
 		it('should transfer brand ownership and related brand activity to the target user', async () => {
@@ -104,11 +117,21 @@ describe('Account Merge Service', () => {
 
 			await mergeAccounts(mockDB as any, 'source-user-id', 'target-user-id');
 
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE brand_profiles SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE onboarding_messages SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE brand_field_versions SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE file_archive SET user_id = ? WHERE user_id = ?');
-			expect(mockPrepare).toHaveBeenCalledWith('UPDATE media_activity_log SET user_id = ? WHERE user_id = ?');
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE brand_profiles SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE onboarding_messages SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE brand_field_versions SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE file_archive SET user_id = ? WHERE user_id = ?'
+			);
+			expect(mockPrepare).toHaveBeenCalledWith(
+				'UPDATE media_activity_log SET user_id = ? WHERE user_id = ?'
+			);
 		});
 
 		it('should delete the source user after transferring data', async () => {

@@ -27,7 +27,6 @@ interface D1Result<T = unknown> {
 const USER_ID_TRANSFER_TABLES = [
 	'oauth_accounts',
 	'chat_messages',
-	'sessions',
 	'conversations',
 	'brand_profiles',
 	'onboarding_messages',
@@ -48,7 +47,7 @@ const USER_ID_TRANSFER_TABLES = [
  * 1. Checks if the source user is an admin (to preserve admin status)
  * 2. Transfers all oauth_accounts from source to target
  * 3. Transfers all chat_messages from source to target
- * 4. Transfers all sessions from source to target
+ * 4. Revokes all sessions belonging to the source user
  * 5. Updates target user's admin status if source was admin
  * 6. Deletes the source user
  *
@@ -67,7 +66,7 @@ export async function mergeAccounts(
 	const sourceUser = await db
 		.prepare('SELECT is_admin FROM users WHERE id = ?')
 		.bind(sourceUserId)
-		.first<{ is_admin: number; }>();
+		.first<{ is_admin: number }>();
 
 	const sourceIsAdmin = sourceUser?.is_admin === 1;
 
@@ -76,9 +75,15 @@ export async function mergeAccounts(
 
 	for (const table of USER_ID_TRANSFER_TABLES) {
 		statements.push(
-			db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = ?`).bind(targetUserId, sourceUserId)
+			db
+				.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = ?`)
+				.bind(targetUserId, sourceUserId)
 		);
 	}
+
+	// A session authenticates the identity that created it. Reassigning it would let
+	// a browser logged in as the source user inherit the target user's privileges.
+	statements.push(db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(sourceUserId));
 
 	// Avoid unique collisions when both users already have access to the same brand.
 	statements.push(
@@ -90,11 +95,15 @@ export async function mergeAccounts(
 	);
 
 	statements.push(
-		db.prepare('UPDATE brand_access SET user_id = ? WHERE user_id = ?').bind(targetUserId, sourceUserId)
+		db
+			.prepare('UPDATE brand_access SET user_id = ? WHERE user_id = ?')
+			.bind(targetUserId, sourceUserId)
 	);
 
 	statements.push(
-		db.prepare('UPDATE brand_access SET granted_by = ? WHERE granted_by = ?').bind(targetUserId, sourceUserId)
+		db
+			.prepare('UPDATE brand_access SET granted_by = ? WHERE granted_by = ?')
+			.bind(targetUserId, sourceUserId)
 	);
 
 	// If source user was admin, make target user admin too

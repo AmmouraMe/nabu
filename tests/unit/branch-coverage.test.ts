@@ -9,7 +9,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 // ──── onboarding service: getNextStep, getPreviousStep, getStepProgress ────
 describe('Onboarding service - branch coverage', () => {
 	beforeEach(() => {

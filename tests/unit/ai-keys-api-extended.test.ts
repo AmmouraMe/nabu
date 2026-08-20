@@ -470,7 +470,7 @@ describe('AI Keys API', () => {
 
 	describe('Error handling for GET /api/admin/ai-keys', () => {
 		it('should return 500 when an error occurs fetching keys', async () => {
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 			const mockKV = {
 				get: vi.fn().mockRejectedValue(new Error('KV Error'))
 			};
@@ -493,7 +493,7 @@ describe('AI Keys API', () => {
 
 	describe('Error handling for POST /api/admin/ai-keys', () => {
 		it('should return 500 when an unexpected error occurs creating key', async () => {
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 			const mockKV = {
 				get: vi.fn().mockResolvedValue(null),
 				put: vi.fn().mockRejectedValue(new Error('KV write error'))
@@ -524,7 +524,7 @@ describe('AI Keys API', () => {
 
 	describe('Error handling for PUT /api/admin/ai-keys/[id]', () => {
 		it('should return 500 when an unexpected error occurs updating key', async () => {
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 			const mockKV = {
 				get: vi.fn().mockResolvedValue(JSON.stringify({ id: 'key1', name: 'Old Name' })),
 				put: vi.fn().mockRejectedValue(new Error('KV write error'))
@@ -554,7 +554,7 @@ describe('AI Keys API', () => {
 
 	describe('Error handling for PATCH /api/admin/ai-keys/[id]', () => {
 		it('should return 500 when an unexpected error occurs toggling key', async () => {
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 			const mockKV = {
 				get: vi
 					.fn()
@@ -582,7 +582,7 @@ describe('AI Keys API', () => {
 
 	describe('Error handling for DELETE /api/admin/ai-keys/[id]', () => {
 		it('should return 500 when an unexpected error occurs deleting key', async () => {
-			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+			const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 			const mockKV = {
 				get: vi
 					.fn()
@@ -662,7 +662,9 @@ describe('AI Keys API', () => {
 
 		it('PUT should allow access for isAdmin users', async () => {
 			const mockKV = {
-				get: vi.fn().mockResolvedValue(JSON.stringify({ id: 'key1', name: 'Old Name', models: [] })),
+				get: vi
+					.fn()
+					.mockResolvedValue(JSON.stringify({ id: 'key1', name: 'Old Name', models: [] })),
 				put: vi.fn().mockResolvedValue(undefined)
 			};
 

@@ -11,7 +11,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 // ─── Mocks ───────────────────────────────────────────────────────
 
 vi.mock('$lib/services/ai-media-generation', () => ({

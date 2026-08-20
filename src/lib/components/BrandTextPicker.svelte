@@ -55,7 +55,16 @@
 		<div class="picker-header">
 			<h3>Pick text for <em>{fieldLabel}</em></h3>
 			<button class="close-btn" on:click={close} aria-label="Close">
-				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				<svg
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
 					<line x1="18" y1="6" x2="6" y2="18" />
 					<line x1="6" y1="6" x2="18" y2="18" />
 				</svg>
@@ -76,7 +85,9 @@
 			{:else if suggestions.length === 0}
 				<div class="picker-empty">
 					<p>No saved texts found for this field.</p>
-					<p class="picker-hint">Add text assets in the <strong>Text</strong> tab first, then pick them here.</p>
+					<p class="picker-hint">
+						Add text assets in the <strong>Text</strong> tab first, then pick them here.
+					</p>
 				</div>
 			{:else}
 				<p class="picker-instructions">Select a saved text to use as <em>{fieldLabel}</em>:</p>
@@ -192,7 +203,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.picker-error {

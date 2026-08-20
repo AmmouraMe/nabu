@@ -27,7 +27,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 describe('Chat Stream API - Extended Coverage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

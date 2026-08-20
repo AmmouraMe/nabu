@@ -10,7 +10,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 vi.mock('$lib/services/content-generator', () => ({
 	generateDevToPost: vi.fn().mockResolvedValue({ title: 'DT', body: 'db' }),
 	generateLinkedInUpdate: vi.fn().mockResolvedValue({ text: 'li' }),

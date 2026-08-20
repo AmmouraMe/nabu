@@ -109,7 +109,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 describe('Brand AI Fill Empty Fields', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

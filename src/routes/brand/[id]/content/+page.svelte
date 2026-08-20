@@ -59,7 +59,11 @@
 	$: scheduledItems = items.filter((i) => i.status === 'scheduled');
 	$: publishedItems = items.filter((i) => i.status === 'published');
 	$: activeItems =
-		activeTab === 'draft' ? draftItems : activeTab === 'scheduled' ? scheduledItems : publishedItems;
+		activeTab === 'draft'
+			? draftItems
+			: activeTab === 'scheduled'
+				? scheduledItems
+				: publishedItems;
 
 	import { onMount } from 'svelte';
 
@@ -265,7 +269,12 @@
 	<!-- Tab Nav -->
 	<div class="tab-nav" role="tablist">
 		{#each ['draft', 'scheduled', 'published'] as tab}
-			{@const count = tab === 'draft' ? draftItems.length : tab === 'scheduled' ? scheduledItems.length : publishedItems.length}
+			{@const count =
+				tab === 'draft'
+					? draftItems.length
+					: tab === 'scheduled'
+						? scheduledItems.length
+						: publishedItems.length}
 			<button
 				class="tab-btn"
 				class:active={activeTab === tab}
@@ -336,7 +345,12 @@
 							</button>
 						{/if}
 						{#if item.external_url}
-							<a href={item.external_url} target="_blank" rel="noopener" class="action-btn external">
+							<a
+								href={item.external_url}
+								target="_blank"
+								rel="noopener"
+								class="action-btn external"
+							>
 								View →
 							</a>
 						{/if}
@@ -355,7 +369,8 @@
 		<div class="modal" role="dialog" aria-modal="true" on:click|stopPropagation>
 			<div class="modal-header">
 				<span class="modal-platform">
-					{platformIcons[previewItem.platform] ?? ''} {platformLabels[previewItem.platform] ?? previewItem.platform}
+					{platformIcons[previewItem.platform] ?? ''}
+					{platformLabels[previewItem.platform] ?? previewItem.platform}
 				</span>
 				<button class="modal-close" on:click={() => (previewItem = null)}>×</button>
 			</div>
@@ -646,7 +661,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.error-state {

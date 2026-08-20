@@ -6,22 +6,22 @@ import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
-  if (!locals.user) throw error(401, 'Unauthorized');
-  if (!platform?.env?.BUCKET) throw error(500, 'Platform not available');
+	if (!locals.user) throw error(401, 'Unauthorized');
+	if (!platform?.env?.BUCKET) throw error(500, 'Platform not available');
 
-  const key = url.searchParams.get('key');
-  if (!key) throw error(400, 'key required');
+	const key = url.searchParams.get('key');
+	if (!key) throw error(400, 'key required');
 
-  const object = await platform.env.BUCKET.get(key);
-  if (!object) throw error(404, 'File not found');
+	const object = await platform.env.BUCKET.get(key);
+	if (!object) throw error(404, 'File not found');
 
-  const headers = new Headers();
-  headers.set('Content-Type', object.httpMetadata?.contentType || 'application/octet-stream');
-  headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+	const headers = new Headers();
+	headers.set('Content-Type', object.httpMetadata?.contentType || 'application/octet-stream');
+	headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
-  if (object.size) {
-    headers.set('Content-Length', String(object.size));
-  }
+	if (object.size) {
+		headers.set('Content-Length', String(object.size));
+	}
 
-  return new Response(object.body as ReadableStream, { headers });
+	return new Response(object.body as ReadableStream, { headers });
 };

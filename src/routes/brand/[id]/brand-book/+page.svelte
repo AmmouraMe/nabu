@@ -79,12 +79,22 @@
 
 	<div class="main-grid">
 		<!-- Preview card -->
-		<div class="preview-card" style="--preview-primary: {primaryColor}; --preview-secondary: {secondaryColor}; --preview-accent: {accentColor};">
+		<div
+			class="preview-card"
+			style="--preview-primary: {primaryColor}; --preview-secondary: {secondaryColor}; --preview-accent: {accentColor};"
+		>
 			<div class="preview-cover">
 				<div class="preview-glow"></div>
 				<div class="preview-stars">
 					{#each Array(12) as _, i}
-						<span class="preview-star" style="top:{7 + i * 7.5}%;left:{(i % 2 === 0 ? 15 + i * 5 : 75 - i * 4)}%;width:{i % 3 === 0 ? 5 : 3}px;height:{i % 3 === 0 ? 5 : 3}px;"></span>
+						<span
+							class="preview-star"
+							style="top:{7 + i * 7.5}%;left:{i % 2 === 0 ? 15 + i * 5 : 75 - i * 4}%;width:{i %
+								3 ===
+							0
+								? 5
+								: 3}px;height:{i % 3 === 0 ? 5 : 3}px;"
+						></span>
 					{/each}
 				</div>
 				<div class="preview-body">
@@ -106,7 +116,9 @@
 					<span class="swatch" style="background:{secondaryColor};" title="Secondary"></span>
 					<span class="swatch" style="background:{accentColor};" title="Accent"></span>
 				</div>
-				<span class="preview-meta">{data.headingFont ?? 'Fraunces'} · {data.toneOfVoice ?? 'brand voice'}</span>
+				<span class="preview-meta"
+					>{data.headingFont ?? 'Fraunces'} · {data.toneOfVoice ?? 'brand voice'}</span
+				>
 			</div>
 		</div>
 
@@ -133,8 +145,9 @@
 				</div>
 
 				<p class="generate-hint">
-					Generates a self-contained HTML file stored in your account.
-					Open it in any browser, then <strong>File → Print → Save as PDF</strong>
+					Generates a self-contained HTML file stored in your account. Open it in any browser, then <strong
+						>File → Print → Save as PDF</strong
+					>
 					for a perfect print-quality brand book.
 				</p>
 
@@ -142,11 +155,7 @@
 					<p class="field-error">{generateError}</p>
 				{/if}
 
-				<button
-					class="generate-btn"
-					on:click={generate}
-					disabled={generating}
-				>
+				<button class="generate-btn" on:click={generate} disabled={generating}>
 					{#if generating}
 						Generating…
 					{:else}
@@ -484,7 +493,9 @@
 		font-weight: 600;
 		color: var(--color-text-secondary);
 		cursor: pointer;
-		transition: background-color 0.15s, color 0.15s;
+		transition:
+			background-color 0.15s,
+			color 0.15s;
 	}
 
 	.mode-btn.active {
@@ -545,7 +556,9 @@
 		border-bottom: 1px solid var(--color-border);
 	}
 
-	.download-row:last-of-type { border-bottom: none; }
+	.download-row:last-of-type {
+		border-bottom: none;
+	}
 
 	.download-info {
 		display: flex;
@@ -553,7 +566,9 @@
 		gap: var(--spacing-sm);
 	}
 
-	.download-icon { font-size: 1.1rem; }
+	.download-icon {
+		font-size: 1.1rem;
+	}
 
 	.download-name {
 		font-size: 0.85rem;

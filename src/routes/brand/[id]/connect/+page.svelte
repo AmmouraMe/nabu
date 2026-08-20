@@ -158,7 +158,9 @@
 
 			{#if devtoSuccess}
 				<div class="connected-state">
-					<p class="connected-note">Your Dev.to API key is stored securely. Articles will be created as drafts.</p>
+					<p class="connected-note">
+						Your Dev.to API key is stored securely. Articles will be created as drafts.
+					</p>
 					<button class="disconnect-btn" on:click={removeDevTo}>Disconnect</button>
 				</div>
 			{:else}
@@ -182,7 +184,11 @@
 					{#if devtoError}
 						<p class="field-error">{devtoError}</p>
 					{/if}
-					<button class="connect-btn" on:click={saveDevToKey} disabled={!devtoKey.trim() || devtoSaving}>
+					<button
+						class="connect-btn"
+						on:click={saveDevToKey}
+						disabled={!devtoKey.trim() || devtoSaving}
+					>
 						{devtoSaving ? 'Saving…' : 'Connect Dev.to'}
 					</button>
 				</div>
@@ -230,9 +236,7 @@
 							placeholder="urn:li:person:XXXXXXXXXX"
 							class="form-input"
 						/>
-						<span class="field-hint">
-							Find your URN via the LinkedIn API: GET /v2/me
-						</span>
+						<span class="field-hint"> Find your URN via the LinkedIn API: GET /v2/me </span>
 					</label>
 					{#if linkedinError}
 						<p class="field-error">{linkedinError}</p>
@@ -264,7 +268,9 @@
 
 			{#if googleSuccess}
 				<div class="connected-state">
-					<p class="connected-note">Your Google AI API key is stored securely. Videos are generated via Veo 3.</p>
+					<p class="connected-note">
+						Your Google AI API key is stored securely. Videos are generated via Veo 3.
+					</p>
 					<a href="/brand/{data.brandProfileId}/videos" class="videos-link">Open Video Studio</a>
 					<button class="disconnect-btn" on:click={removeGoogle}>Disconnect</button>
 				</div>

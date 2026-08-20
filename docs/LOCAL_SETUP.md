@@ -106,4 +106,3 @@ wrangler secret put GITHUB_OWNER_ID
 ```
 
 Or use the `/setup` page in production - credentials will be saved to your production KV namespace.
-

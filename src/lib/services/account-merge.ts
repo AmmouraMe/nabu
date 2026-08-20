@@ -67,7 +67,7 @@ export async function mergeAccounts(
 	const sourceUser = await db
 		.prepare('SELECT is_admin FROM users WHERE id = ?')
 		.bind(sourceUserId)
-		.first<{ is_admin: number; }>();
+		.first<{ is_admin: number }>();
 
 	const sourceIsAdmin = sourceUser?.is_admin === 1;
 
@@ -76,7 +76,9 @@ export async function mergeAccounts(
 
 	for (const table of USER_ID_TRANSFER_TABLES) {
 		statements.push(
-			db.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = ?`).bind(targetUserId, sourceUserId)
+			db
+				.prepare(`UPDATE ${table} SET user_id = ? WHERE user_id = ?`)
+				.bind(targetUserId, sourceUserId)
 		);
 	}
 
@@ -90,11 +92,15 @@ export async function mergeAccounts(
 	);
 
 	statements.push(
-		db.prepare('UPDATE brand_access SET user_id = ? WHERE user_id = ?').bind(targetUserId, sourceUserId)
+		db
+			.prepare('UPDATE brand_access SET user_id = ? WHERE user_id = ?')
+			.bind(targetUserId, sourceUserId)
 	);
 
 	statements.push(
-		db.prepare('UPDATE brand_access SET granted_by = ? WHERE granted_by = ?').bind(targetUserId, sourceUserId)
+		db
+			.prepare('UPDATE brand_access SET granted_by = ? WHERE granted_by = ?')
+			.bind(targetUserId, sourceUserId)
 	);
 
 	// If source user was admin, make target user admin too

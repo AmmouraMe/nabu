@@ -184,8 +184,7 @@
 						<input
 							type="text"
 							value={question.question}
-							on:change={(event) =>
-								saveQuestionText(question.id, event.currentTarget?.value ?? '')}
+							on:change={(event) => saveQuestionText(question.id, event.currentTarget?.value ?? '')}
 						/>
 
 						<label class="toggle">

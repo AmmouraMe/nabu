@@ -10,12 +10,12 @@
  *      "elevator pitch" → "elevator_pitch"
  */
 export function labelToKey(label: string): string {
-  return label
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')  // replace non-alphanumeric with space
-    .replace(/\s+/g, '_')           // collapse whitespace to underscore
-    .replace(/^_+|_+$/g, '');       // trim leading/trailing underscores
+	return label
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9\s]/g, ' ') // replace non-alphanumeric with space
+		.replace(/\s+/g, '_') // collapse whitespace to underscore
+		.replace(/^_+|_+$/g, ''); // trim leading/trailing underscores
 }
 
 /**
@@ -24,8 +24,8 @@ export function labelToKey(label: string): string {
  *      "twitter_x_bio" → "Twitter X Bio"
  */
 export function keyToLabel(key: string): string {
-  return key
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+	return key
+		.split('_')
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(' ');
 }

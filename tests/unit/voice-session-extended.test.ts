@@ -17,7 +17,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 describe('Voice Session API - Extended Coverage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

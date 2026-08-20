@@ -7,21 +7,17 @@ import { getOnboardingMessages } from '$lib/services/onboarding';
 import type { OnboardingStep } from '$lib/types/onboarding';
 
 export const GET: RequestHandler = async ({ locals, platform, params, url }) => {
-  if (!locals.user) {
-    throw error(401, 'Unauthorized');
-  }
+	if (!locals.user) {
+		throw error(401, 'Unauthorized');
+	}
 
-  const { profileId } = params;
-  if (!profileId) {
-    throw error(400, 'profileId is required');
-  }
+	const { profileId } = params;
+	if (!profileId) {
+		throw error(400, 'profileId is required');
+	}
 
-  const step = url.searchParams.get('step') as OnboardingStep | null;
-  const messages = await getOnboardingMessages(
-    platform!.env.DB,
-    profileId,
-    step || undefined
-  );
+	const step = url.searchParams.get('step') as OnboardingStep | null;
+	const messages = await getOnboardingMessages(platform!.env.DB, profileId, step || undefined);
 
-  return json({ messages });
+	return json({ messages });
 };

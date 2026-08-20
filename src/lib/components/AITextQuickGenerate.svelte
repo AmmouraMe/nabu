@@ -282,11 +282,7 @@
 					<span class="result-label">{generatedPreset?.label || 'Generated Text'}</span>
 					<span class="result-category">{selectedCategory}</span>
 				</div>
-				<textarea
-					class="result-textarea"
-					bind:value={generatedText}
-					rows="4"
-				></textarea>
+				<textarea class="result-textarea" bind:value={generatedText} rows="4"></textarea>
 
 				<!-- Profile field auto-set notice or toggle -->
 				{#if fieldStatus?.matchesField && fieldStatus.fieldLabel}
@@ -318,7 +314,12 @@
 					<button class="btn primary" on:click={saveGeneratedText} aria-label="Save text">
 						💾 Save
 					</button>
-					<button class="btn secondary" on:click={regenerate} disabled={generating} aria-label="Regenerate text">
+					<button
+						class="btn secondary"
+						on:click={regenerate}
+						disabled={generating}
+						aria-label="Regenerate text"
+					>
 						{generating ? '⏳...' : '🔄 Regenerate'}
 					</button>
 				</div>
@@ -345,7 +346,9 @@
 									disabled={generating}
 									aria-label="Generate {preset.label}"
 								>
-									{generating && generatingPresetKey === preset.key ? '⏳ Generating...' : '✨ Generate'}
+									{generating && generatingPresetKey === preset.key
+										? '⏳ Generating...'
+										: '✨ Generate'}
 								</button>
 							</div>
 						{/each}
@@ -356,10 +359,7 @@
 
 		<!-- Custom prompt section -->
 		<div class="custom-prompt-section">
-			<button
-				class="custom-prompt-toggle"
-				on:click={() => (showCustomPrompt = !showCustomPrompt)}
-			>
+			<button class="custom-prompt-toggle" on:click={() => (showCustomPrompt = !showCustomPrompt)}>
 				{showCustomPrompt ? '▾' : '▸'} Custom Prompt
 			</button>
 
@@ -530,7 +530,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.presets-grid {
@@ -662,7 +664,7 @@
 		border-color: var(--color-primary);
 	}
 
-	.field-toggle input[type="checkbox"] {
+	.field-toggle input[type='checkbox'] {
 		margin-top: 2px;
 		flex-shrink: 0;
 		accent-color: var(--color-primary);

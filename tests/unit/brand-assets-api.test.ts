@@ -87,7 +87,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 beforeEach(() => {
 	vi.clearAllMocks();
 });

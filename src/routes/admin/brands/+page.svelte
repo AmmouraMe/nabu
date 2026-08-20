@@ -101,20 +101,14 @@
 							<td class="owner-cell">
 								<div class="owner-info">
 									{#if brand.ownerAvatar}
-										<img
-											src={brand.ownerAvatar}
-											alt={brand.ownerLogin}
-											class="owner-avatar"
-										/>
+										<img src={brand.ownerAvatar} alt={brand.ownerLogin} class="owner-avatar" />
 									{:else}
 										<div class="owner-avatar-placeholder">
 											{(brand.ownerName || brand.ownerLogin || '?').charAt(0).toUpperCase()}
 										</div>
 									{/if}
 									<div>
-										<span class="owner-name"
-											>{brand.ownerName || brand.ownerLogin}</span
-										>
+										<span class="owner-name">{brand.ownerName || brand.ownerLogin}</span>
 										<span class="owner-email">{brand.ownerEmail}</span>
 									</div>
 								</div>

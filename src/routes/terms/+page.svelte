@@ -18,8 +18,8 @@
 		<section class="legal-section">
 			<h2>Acceptance of Terms</h2>
 			<p>
-				By accessing or using Nabu ("the Service"), you agree to be bound by these Terms of
-				Service. If you do not agree to these terms, please do not use the Service.
+				By accessing or using Nabu ("the Service"), you agree to be bound by these Terms of Service.
+				If you do not agree to these terms, please do not use the Service.
 			</p>
 			<p>
 				We reserve the right to modify these terms at any time. Changes will be effective
@@ -68,8 +68,8 @@
 				property laws.
 			</p>
 			<p>
-				Nabu is open-source software. The source code is available under the terms of its
-				applicable license. Your use of the source code is subject to that license.
+				Nabu is open-source software. The source code is available under the terms of its applicable
+				license. Your use of the source code is subject to that license.
 			</p>
 		</section>
 

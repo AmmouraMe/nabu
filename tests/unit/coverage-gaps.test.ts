@@ -10,7 +10,6 @@ vi.mock('$lib/server/entitlements', async () =>
 	(await import('../fixtures/entitlements')).permissiveEntitlements()
 );
 
-
 vi.mock('@sveltejs/kit', () => ({
 	error: (status: number, msg: string) => {
 		const e: any = new Error(msg);
@@ -390,14 +389,12 @@ describe('ChatHistory Store - uncovered branches', () => {
 			.mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ conversations: [] }) })
 			.mockResolvedValueOnce({
 				ok: true,
-				json: vi
-					.fn()
-					.mockResolvedValue({
-						id: 'conv1',
-						title: 'New conversation',
-						createdAt: '2024-01-01',
-						updatedAt: '2024-01-01'
-					})
+				json: vi.fn().mockResolvedValue({
+					id: 'conv1',
+					title: 'New conversation',
+					createdAt: '2024-01-01',
+					updatedAt: '2024-01-01'
+				})
 			});
 
 		const { chatHistoryStore } = await import('$lib/stores/chatHistory');
@@ -444,14 +441,12 @@ describe('ChatHistory Store - uncovered branches', () => {
 			.mockResolvedValueOnce({ ok: true, json: vi.fn().mockResolvedValue({ conversations: [] }) })
 			.mockResolvedValueOnce({
 				ok: true,
-				json: vi
-					.fn()
-					.mockResolvedValue({
-						id: 'conv2',
-						title: 'New conversation',
-						createdAt: '2024-01-01',
-						updatedAt: '2024-01-01'
-					})
+				json: vi.fn().mockResolvedValue({
+					id: 'conv2',
+					title: 'New conversation',
+					createdAt: '2024-01-01',
+					updatedAt: '2024-01-01'
+				})
 			})
 			.mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({}) });
 

@@ -1,12 +1,15 @@
 <script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
 	const currentYear = new Date().getFullYear();
 	const lastUpdated = 'January 1, 2026';
 </script>
 
-<svelte:head>
-	<title>Privacy Policy - Nabu</title>
-	<meta name="description" content="Privacy Policy for Nabu" />
-</svelte:head>
+<Seo
+	path="/privacy"
+	title="Privacy Policy"
+	description="What Nabu collects, what it does not, and what happens to your data."
+	image="default"
+/>
 
 <main class="legal-page">
 	<div class="legal-container">

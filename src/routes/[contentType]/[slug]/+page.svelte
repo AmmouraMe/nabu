@@ -5,6 +5,7 @@
   Uses the content type's itemTemplate setting for layout selection.
 -->
 <script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
@@ -27,16 +28,16 @@
 	}
 </script>
 
+<Seo
+	path={`${getRoutePrefix()}/${item.slug}`}
+	title={item.seoTitle || item.title}
+	description={item.seoDescription ||
+		`${item.title} — from the ${contentType.name.toLowerCase()} on Nabu.`}
+	type="article"
+	imageUrl={item.seoImage || null}
+/>
+
 <svelte:head>
-	<title>{item.seoTitle || item.title} - Nabu</title>
-	{#if item.seoDescription}
-		<meta name="description" content={item.seoDescription} />
-	{/if}
-	{#if item.seoImage}
-		<meta property="og:image" content={item.seoImage} />
-	{/if}
-	<meta property="og:title" content={item.seoTitle || item.title} />
-	<meta property="og:type" content="article" />
 	{#if item.publishedAt}
 		<meta property="article:published_time" content={item.publishedAt} />
 	{/if}

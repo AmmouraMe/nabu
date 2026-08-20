@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
 	/**
 	 * Public API reference.
 	 *
@@ -34,13 +35,12 @@
 	}
 </script>
 
-<svelte:head>
-	<title>API reference — Nabu</title>
-	<meta
-		name="description"
-		content="Nabu's public API: manage brands and generate assets programmatically."
-	/>
-</svelte:head>
+<Seo
+	path="/docs/api"
+	title="API reference"
+	description="Nabu's public API: manage brands and generate assets programmatically."
+	image="default"
+/>
 
 <div class="docs">
 	<header class="head">

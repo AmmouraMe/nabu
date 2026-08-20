@@ -13,6 +13,8 @@
 	 * would render unstyled.
 	 */
 	import type { PageData } from './$types';
+	import Seo from '$lib/components/Seo.svelte';
+	import { absoluteUrl } from '$lib/site';
 
 	export let data: PageData;
 
@@ -130,6 +132,42 @@
 		}
 	}
 
+	/** Which card just had its name copied, so the button can confirm it. */
+	let justShared: string | null = null;
+
+	/**
+	 * Share one name.
+	 *
+	 * The Web Share API where it exists — on a phone that opens the real share
+	 * sheet, which is what someone actually wants when they find a name they like
+	 * — and the clipboard everywhere else. A cancelled share sheet throws
+	 * AbortError, which is a user changing their mind, not a failure, so nothing
+	 * is reported.
+	 */
+	async function shareName(card: NameCard) {
+		const text = `${card.name} — ${card.meaning}`;
+		// The production link, not this origin — a name shared from a preview
+		// deploy or localhost should still point somewhere a reader can open.
+		const url = absoluteUrl('/name');
+
+		try {
+			if (navigator.share) {
+				await navigator.share({ title: `${card.name} — a brand name from Nabu`, text, url });
+				return;
+			}
+			await navigator.clipboard.writeText(`${text}\n\nNamed with ${url}`);
+			justShared = card.name;
+			setTimeout(() => {
+				if (justShared === card.name) justShared = null;
+			}, 2000);
+		} catch (error) {
+			// A dismissed share sheet is not an error worth surfacing.
+			if ((error as Error)?.name === 'AbortError') return;
+			status = 'Could not share that — copy it by hand.';
+			statusIsError = true;
+		}
+	}
+
 	/** "available" from an exact-match search means far less than "free to use". */
 	function trademarkLabel(state: CheckState): string {
 		if (state === 'taken') return 'Exact match on file';
@@ -144,13 +182,12 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Name your brand — Nabu</title>
-	<meta
-		name="description"
-		content="Generate brand names against a real set of naming heuristics — few syllables, early in the alphabet, passes the radio test — then check the domains, handles and trademark register."
-	/>
-</svelte:head>
+<Seo
+	path="/name"
+	title="Name your brand"
+	description="Six brand names generated against nine real naming heuristics — short, early in the alphabet, survives the radio test — then checked against the domains, the handles and the trademark register. Free, no account."
+	image="name"
+/>
 
 <div class="wrap">
 	<h1>Name your brand.</h1>
@@ -279,6 +316,33 @@
 							<span class="chip" class:good={name.checks.typable}>
 								{name.checks.typable ? 'Easy to type' : 'Awkward to type'}
 							</span>
+						</div>
+
+						<div class="card-actions">
+							<button type="button" class="share" on:click={() => shareName(name)}>
+								{#if justShared === name.name}
+									Copied
+								{:else}
+									<svg viewBox="0 0 24 24" aria-hidden="true">
+										<path
+											d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+										/>
+										<path
+											d="M12 15V3m0 0L8 7m4-4 4 4"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2"
+											stroke-linecap="round"
+											stroke-linejoin="round"
+										/>
+									</svg>
+									Share this name
+								{/if}
+							</button>
 						</div>
 
 						<dl>
@@ -914,6 +978,45 @@
 		clip: rect(0, 0, 0, 0);
 		white-space: nowrap;
 		border: 0;
+	}
+
+	.card-actions {
+		display: flex;
+		justify-content: flex-end;
+		margin: -0.35rem 0 0.6rem;
+	}
+
+	.share {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		padding: 0.3rem 0.7rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: none;
+		color: var(--text-dim);
+		font: inherit;
+		font-size: 0.73rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition:
+			color var(--transition-fast, 150ms),
+			border-color var(--transition-fast, 150ms);
+	}
+
+	.share:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	.share:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.share svg {
+		width: 13px;
+		height: 13px;
 	}
 
 	/* Only offered once a run has happened and the ceiling is real to them. */

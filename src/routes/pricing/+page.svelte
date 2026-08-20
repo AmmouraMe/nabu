@@ -1,15 +1,15 @@
 <script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
 	import PricingSection from '$lib/components/PricingSection.svelte';
 
 	export let data: { user: App.Locals['user'] };
 </script>
 
-<svelte:head>
-	<title>Pricing — Nabu</title>
-	<meta
-		name="description"
-		content="Simple, per-brand pricing for Nabu. Start free and pick a plan for each brand independently."
-	/>
-</svelte:head>
+<Seo
+	path="/pricing"
+	title="Pricing"
+	description="Simple, per-brand pricing. Start free, and pick a plan for each brand independently so one project never subsidises another."
+	image="pricing"
+/>
 
 <PricingSection isLoggedIn={!!data.user} />

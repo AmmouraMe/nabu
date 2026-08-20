@@ -1,0 +1,61 @@
+# Nabu's public brand-name generator — its own Cloudflare Pages project.
+#
+# Separate from the Nabu Pages project on purpose. This one is unauthenticated
+# and public, so it gets no D1 binding, no R2, and no access to Nabu's KV: the
+# blast radius of anything going wrong here stops at a rate-limit counter.
+#
+# Pages rather than a plain Worker because a Pages project gets a public
+# `*.pages.dev` URL on deploy, while a Worker needs the account's workers.dev
+# subdomain registered first — which the Ammoura account has never done (API
+# code 10063, see the parent project's wrangler.toml). Pages sidesteps that
+# entirely, and serves the page itself from the CDN rather than from a Worker.
+name = "nabu-namer"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "public"
+
+# As with the parent project, `account_id` cannot live in a Pages config — it is
+# rejected outright. Export CLOUDFLARE_ACCOUNT_ID=756e4c695a0301d24f0440b9dd3741f7
+# (the Ammoura account) before any wrangler command here.
+
+# Workers AI. Free tier, and the reason this tool holds no API key at all: the
+# binding authenticates itself, so there is no third-party secret on a public
+# surface to leak.
+[ai]
+binding = "AI"
+
+# KV — the per-IP hourly rate limit, and the only state this app has.
+#
+# NOT YET CREATED. Create it before the first deploy, then paste the two ids
+# wrangler prints over the placeholders below:
+#
+#   wrangler kv namespace create NAMER_RATE_LIMIT
+#   wrangler kv namespace create NAMER_RATE_LIMIT --preview
+#
+# Do not point this at the parent project's KV namespace. Nabu's KV holds the
+# setup lock and owner ids; a public endpoint writing counter keys into it is
+# both a mess and a needless privilege. The endpoint fails closed (503) while
+# these are placeholders, which is deliberate — see functions/api/generate.ts.
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_NAMESPACE_ID"
+
+# ── Optional secrets for the availability checks ─────────────────────────────
+#
+# Both are optional, and both fail *safe*: without them the affected check
+# reports "not checked" rather than guessing, and the page says so.
+#
+#   wrangler pages secret put GITHUB_TOKEN
+#     A fine-grained PAT with NO scopes (it only reads public user existence).
+#     Without it GitHub allows 60 requests/hour per IP — and a Pages Function
+#     shares its egress IP with every other Worker on that edge, so the anonymous
+#     ceiling is exhausted almost immediately and GitHub reports unchecked.
+#
+#   wrangler pages secret put TRADEMARK_API_URL
+#   wrangler pages secret put TRADEMARK_API_KEY
+#     A trademark search endpoint that takes a term and returns a match count.
+#     Left as config rather than hard-coded because USPTO's own APIs refuse
+#     unauthenticated probes, so the exact endpoint and response shape could not
+#     be verified from here — see README, "Trademarks". The parser accepts the
+#     common count shapes and treats anything unrecognised as unchecked, so a
+#     wrong endpoint degrades to "not checked", never to a false all-clear.

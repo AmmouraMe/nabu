@@ -303,6 +303,36 @@ describe('POST /api/namer/generate', () => {
 		expect(saved[0][1]).toBeNull();
 	});
 
+	it('hands the history write to waitUntil so it survives a disconnect', async () => {
+		const saved: unknown[][] = [];
+		const db = {
+			prepare: (sql: string) => ({
+				bind: (...args: unknown[]) => ({
+					run: async () => {
+						if (sql.includes('namer_generations')) saved.push(args);
+						return { meta: { changes: 1 } };
+					}
+				})
+			})
+		};
+		const kept: Promise<unknown>[] = [];
+		const { kv } = fakeKv();
+
+		await generate(
+			event(VALID, {
+				platform: {
+					env: { KV: kv, AI: fakeAi(ONE_NAME), DB: db },
+					context: { waitUntil: (p: Promise<unknown>) => kept.push(p) }
+				}
+			}) as never
+		);
+
+		await settled(() => kept.length > 0);
+		expect(kept).toHaveLength(1);
+		await Promise.all(kept);
+		expect(saved).toHaveLength(1);
+	});
+
 	it('still generates when there is no database, just without uniqueness', async () => {
 		const { kv } = fakeKv();
 		const response = (await generate(

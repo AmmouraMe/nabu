@@ -116,13 +116,26 @@ export const POST: RequestHandler = async ({ request, platform, locals, getClien
 			// page. `locals.user?.id ?? null` is the whole ownership rule: a
 			// logged-out visitor's brief is stored against nobody and read back by
 			// nobody.
+			//
+			// Handed to `waitUntil` where the runtime offers it, so the write outlives
+			// the response instead of being cut short when the client disconnects —
+			// the same reason api-guard.ts records key usage that way. Called through
+			// `context` on purpose: pulling `waitUntil` into a local loses its `this`
+			// binding and throws on invocation.
 			if (db && delivered.length) {
-				await saveGeneration(db, {
+				const write = saveGeneration(db, {
 					id: generationId,
 					userId: locals.user?.id ?? null,
 					input: validated.value,
 					names: delivered
 				});
+
+				const ctx = platform?.context;
+				if (ctx && typeof ctx.waitUntil === 'function') {
+					ctx.waitUntil(write);
+				} else {
+					await write;
+				}
 			}
 
 			controller.close();

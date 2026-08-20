@@ -331,12 +331,48 @@ export async function checkTrademark(deps: CheckDeps, name: string): Promise<Che
 
 // ─── Orchestration ────────────────────────────────────────────────────────────
 
+/**
+ * Which groups the caller asked for.
+ *
+ * Not everyone naming a brand cares about all three — plenty of people want a
+ * .com and nothing else, and running a trademark search for them spends time and
+ * rate-limit budget on an answer they will not read.
+ */
+export interface CheckSelection {
+	domains: boolean;
+	handles: boolean;
+	trademark: boolean;
+}
+
+export const ALL_CHECKS: CheckSelection = { domains: true, handles: true, trademark: true };
+
+/**
+ * Read a selection off an untrusted body. Anything missing or malformed keeps
+ * its default of on, so a client that sends nothing gets the full set — the
+ * behaviour before this option existed.
+ */
+export function normalizeSelection(value: unknown): CheckSelection {
+	if (typeof value !== 'object' || value === null) return { ...ALL_CHECKS };
+	const raw = value as Record<string, unknown>;
+	const read = (key: keyof CheckSelection) => (typeof raw[key] === 'boolean' ? raw[key] : true);
+	return { domains: read('domains'), handles: read('handles'), trademark: read('trademark') };
+}
+
+/**
+ * Groups the caller asked for are present; groups they declined are **absent**,
+ * not present-and-unchecked.
+ *
+ * That distinction is the whole point. `unchecked` means "we looked and could
+ * not tell" — a dashed slot the user should follow up on. A group nobody asked
+ * for is not a question left open, and rendering it as one would drain the
+ * meaning out of every genuine `unchecked` on the page.
+ */
 export interface Availability {
-	domains: Check[];
-	handles: Check[];
-	trademark: Check;
-	/** TLDs deliberately not checked, so their absence is not read as clear. */
-	unverifiableTlds: string[];
+	domains?: Check[];
+	handles?: Check[];
+	trademark?: Check;
+	/** Present with `domains`: TLDs skipped so their absence is not read as clear. */
+	unverifiableTlds?: string[];
 }
 
 /**
@@ -347,21 +383,31 @@ export interface Availability {
  * straight through it. The page calls this once per card, which also lets the
  * badges fill in as they land instead of the user waiting on the slowest.
  */
-export async function checkAvailability(deps: CheckDeps, name: string): Promise<Availability> {
-	const [domains, github, bluesky, npm, trademark] = await Promise.all([
-		Promise.all(CHECKED_TLDS.map((tld) => checkDomain(deps, name, tld))),
-		checkGithub(deps, name),
-		checkBluesky(deps, name),
-		checkNpm(deps, name),
-		checkTrademark(deps, name)
+export async function checkAvailability(
+	deps: CheckDeps,
+	name: string,
+	selection: CheckSelection = ALL_CHECKS
+): Promise<Availability> {
+	// Declined groups are never dispatched, so opting out of trademarks and
+	// handles takes this from ten outbound requests to six.
+	const [domains, handles, trademark] = await Promise.all([
+		selection.domains
+			? Promise.all(CHECKED_TLDS.map((tld) => checkDomain(deps, name, tld)))
+			: undefined,
+		selection.handles
+			? Promise.all([checkGithub(deps, name), checkBluesky(deps, name), checkNpm(deps, name)])
+			: undefined,
+		selection.trademark ? checkTrademark(deps, name) : undefined
 	]);
 
-	return {
-		domains,
-		handles: [github, bluesky, npm],
-		trademark,
-		unverifiableTlds: [...UNVERIFIABLE_TLDS]
-	};
+	const result: Availability = {};
+	if (domains) {
+		result.domains = domains;
+		result.unverifiableTlds = [...UNVERIFIABLE_TLDS];
+	}
+	if (handles) result.handles = handles;
+	if (trademark) result.trademark = trademark;
+	return result;
 }
 
 // ─── Caching ──────────────────────────────────────────────────────────────────

@@ -11,7 +11,8 @@
  */
 
 import { buildNamingPrompt, parseNames, validateInput, type GeneratedName } from '../../src/naming';
-import { clientIp, consume, HOURLY_LIMIT, type RateLimitStore } from '../../src/rate-limit';
+import { consume, rateLimitIdentity, type RateLimitStore } from '../../src/rate-limit';
+import { SESSION_COOKIE, readCookie, verifySession } from '../../src/auth';
 
 /** Same model the app's content generator uses — free tier, good enough at JSON. */
 const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
@@ -40,8 +41,10 @@ export interface AiBinding {
 
 export interface Env {
 	AI: AiBinding;
-	/** KV namespace backing the per-IP hourly limit. */
+	/** KV namespace backing the hourly limit. */
 	RATE_LIMIT?: RateLimitStore;
+	/** Set only when Discord sign-in is configured; absent means everyone is anonymous. */
+	SESSION_SECRET?: string;
 }
 
 function json(body: unknown, status: number, headers: Record<string, string> = {}): Response {
@@ -93,11 +96,23 @@ export async function handleGenerate(request: Request, env: Env, now: number): P
 		return json({ error: validated.error }, 400);
 	}
 
-	const limit = await consume(env.RATE_LIMIT, clientIp(request), now);
+	// Signed-in callers are counted by Discord account and get a larger allowance;
+	// everyone else is counted by IP exactly as before.
+	const session = await verifySession(
+		readCookie(request, SESSION_COOKIE),
+		env.SESSION_SECRET ?? ''
+	);
+	const identity = rateLimitIdentity(request, session?.discordId);
+
+	const limit = await consume(env.RATE_LIMIT, identity.key, now, identity.limit);
 	if (!limit.allowed) {
+		const minutes = Math.ceil(limit.resetSeconds / 60);
 		return json(
 			{
-				error: `That's ${HOURLY_LIMIT} sets of names this hour — the limit while this stays free. Try again in ${Math.ceil(limit.resetSeconds / 60)} minutes.`
+				error: session
+					? `That's ${identity.limit} sets of names this hour. Try again in ${minutes} minutes.`
+					: `That's ${identity.limit} sets of names this hour. Sign in with Discord for more, or try again in ${minutes} minutes.`,
+				signInHelps: !session
 			},
 			429,
 			{ 'Retry-After': String(limit.resetSeconds) }

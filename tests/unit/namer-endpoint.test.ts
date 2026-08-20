@@ -13,7 +13,14 @@ import {
 	responseText,
 	type Env
 } from '../../apps/namer/functions/api/generate';
-import { clientIp, consume, HOURLY_LIMIT, windowKey } from '../../apps/namer/src/rate-limit';
+import {
+	clientIp,
+	consume,
+	HOURLY_LIMIT,
+	SIGNED_IN_HOURLY_LIMIT,
+	windowKey
+} from '../../apps/namer/src/rate-limit';
+import { newSession, signSession } from '../../apps/namer/src/auth';
 
 /** An in-memory stand-in for the KV namespace. */
 function fakeStore(initial: Record<string, string> = {}) {
@@ -207,13 +214,19 @@ describe('handleGenerate', () => {
 	});
 
 	it('429s with a Retry-After once the hourly quota is spent', async () => {
-		const store = fakeStore({ [windowKey('203.0.113.7', NOW)]: String(HOURLY_LIMIT) });
+		// Anonymous callers are keyed `ip:<address>` now, so accounts and addresses
+		// cannot collide in the same keyspace.
+		const store = fakeStore({ [windowKey('ip:203.0.113.7', NOW)]: String(HOURLY_LIMIT) });
 		const ai = fakeAi(ONE_NAME);
 		const response = await handleGenerate(post(VALID_BODY), { AI: ai, RATE_LIMIT: store }, NOW);
 
 		expect(response.status).toBe(429);
 		expect(Number(response.headers.get('Retry-After'))).toBeGreaterThan(0);
 		expect(ai.run).not.toHaveBeenCalled();
+		// An anonymous caller is told that signing in would raise the ceiling.
+		const body = await response.json();
+		expect(body.signInHelps).toBe(true);
+		expect(body.error).toMatch(/Sign in with Discord/);
 	});
 
 	it('502s when the model throws', async () => {
@@ -296,5 +309,54 @@ describe('onRequest', () => {
 
 		expect(response.status).toBe(200);
 		expect((await response.json()).names[0].name).toBe('Apex');
+	});
+});
+
+describe('handleGenerate for a signed-in caller', () => {
+	const SECRET = 'test-secret-value';
+
+	async function signedInRequest(body: unknown) {
+		const request = post(body);
+		const cookie = await signSession(newSession('42', 'davis'), SECRET);
+		request.headers.set('Cookie', `namer_session=${cookie}`);
+		return request;
+	}
+
+	it('counts against the account, not the IP, at the larger limit', async () => {
+		const kv = fakeStore();
+		const env: Env = { AI: fakeAi(ONE_NAME), RATE_LIMIT: kv, SESSION_SECRET: SECRET };
+		const response = await handleGenerate(await signedInRequest(VALID_BODY), env, NOW);
+
+		expect(response.status).toBe(200);
+		expect((await response.json()).remaining).toBe(SIGNED_IN_HOURLY_LIMIT - 1);
+		// Keyed by account, so the quota follows them off this IP.
+		expect([...kv.data.keys()][0]).toContain('u:42');
+	});
+
+	it('does not suggest signing in to someone already signed in', async () => {
+		const kv = fakeStore({ [windowKey('u:42', NOW)]: String(SIGNED_IN_HOURLY_LIMIT) });
+		const env: Env = { AI: fakeAi(ONE_NAME), RATE_LIMIT: kv, SESSION_SECRET: SECRET };
+		const response = await handleGenerate(await signedInRequest(VALID_BODY), env, NOW);
+
+		expect(response.status).toBe(429);
+		const body = await response.json();
+		expect(body.signInHelps).toBe(false);
+		expect(body.error).not.toMatch(/Sign in with Discord/);
+	});
+
+	it('treats a cookie signed with the wrong secret as anonymous', async () => {
+		const request = post(VALID_BODY);
+		request.headers.set(
+			'Cookie',
+			`namer_session=${await signSession(newSession('42', 'davis'), 'other-secret')}`
+		);
+		const kv = fakeStore();
+		await handleGenerate(
+			request,
+			{ AI: fakeAi(ONE_NAME), RATE_LIMIT: kv, SESSION_SECRET: SECRET },
+			NOW
+		);
+
+		expect([...kv.data.keys()][0]).toContain('ip:');
 	});
 });

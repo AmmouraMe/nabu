@@ -14,6 +14,8 @@
 import { describe, it, expect } from 'vitest';
 import {
 	ARCHETYPES,
+	MAX_AUDIENCE_LENGTH,
+	MAX_DESCRIPTION_LENGTH,
 	NAMING_HEURISTICS,
 	NAMES_REQUESTED,
 	alphabeticalRank,
@@ -176,15 +178,24 @@ describe('validateInput', () => {
 		expect(validateInput({ description: 12345678 }).ok).toBe(false);
 	});
 
-	it('truncates rather than refusing, so a paste does not lose the request', () => {
+	it('accepts a genuinely detailed brief, not just two sentences', () => {
+		// The page asks for as much detail as you can give; capping at 400 chars
+		// contradicted that in the same breath.
+		const result = validateInput({ description: 'x'.repeat(3500) });
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.description).toHaveLength(3500);
+	});
+
+	it('truncates past the limit rather than refusing, so a paste is not lost', () => {
 		const result = validateInput({
-			description: 'x'.repeat(900),
-			audience: 'y'.repeat(900)
+			description: 'x'.repeat(9000),
+			audience: 'y'.repeat(9000)
 		});
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		expect(result.value.description).toHaveLength(400);
-		expect(result.value.audience).toHaveLength(400);
+		expect(result.value.description).toHaveLength(MAX_DESCRIPTION_LENGTH);
+		expect(result.value.audience).toHaveLength(MAX_AUDIENCE_LENGTH);
 	});
 
 	it('drops an unknown archetype instead of failing the request', () => {

@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import {
+	ALL_CHECKS,
 	CHECKED_TLDS,
 	RDAP_REGISTRIES,
 	UNVERIFIABLE_TLDS,
@@ -19,6 +20,7 @@ import {
 	checkGithub,
 	checkNpm,
 	checkTrademark,
+	normalizeSelection,
 	parseTrademarkCount,
 	slugify,
 	tmviewSearchUrl,
@@ -373,14 +375,84 @@ describe('checkAvailability', () => {
 		const result = await checkAvailability(d, 'Ardor');
 
 		expect(result.domains).toHaveLength(CHECKED_TLDS.length);
-		expect(result.domains.every((c) => c.state === 'available')).toBe(true);
-		expect(result.handles.map((h) => h.id)).toEqual([
+		expect(result.domains?.every((c) => c.state === 'available')).toBe(true);
+		expect(result.handles?.map((h) => h.id)).toEqual([
 			'handle:github',
 			'handle:bluesky',
 			'handle:npm'
 		]);
-		expect(result.handles[0].state).toBe('taken');
-		expect(result.trademark.state).toBe('unchecked');
+		expect(result.handles?.[0].state).toBe('taken');
+		expect(result.trademark?.state).toBe('unchecked');
 		expect(result.unverifiableTlds).toEqual([...UNVERIFIABLE_TLDS]);
+	});
+});
+
+describe('normalizeSelection', () => {
+	it('reads explicit booleans', () => {
+		expect(normalizeSelection({ domains: true, handles: false, trademark: false })).toEqual({
+			domains: true,
+			handles: false,
+			trademark: false
+		});
+	});
+
+	it('defaults anything missing or malformed to on', () => {
+		// An older client that sends nothing must keep getting the full set.
+		expect(normalizeSelection(undefined)).toEqual(ALL_CHECKS);
+		expect(normalizeSelection(null)).toEqual(ALL_CHECKS);
+		expect(normalizeSelection('yes please')).toEqual(ALL_CHECKS);
+		expect(normalizeSelection({ domains: 'true' })).toEqual(ALL_CHECKS);
+	});
+});
+
+describe('checkAvailability with a selection', () => {
+	function fetchAll() {
+		return fakeFetch({
+			rdap: { status: 404 },
+			'api.github.com': { status: 404 },
+			'bsky.app': { status: 400 },
+			'registry.npmjs.org': { status: 404 }
+		});
+	}
+
+	it('omits a declined group entirely rather than returning it unchecked', async () => {
+		const result = await checkAvailability(deps({ fetch: fetchAll() as never }), 'Ardor', {
+			domains: true,
+			handles: false,
+			trademark: false
+		});
+
+		// Absent, not present-and-unchecked: "you did not ask" is not the same
+		// claim as "we looked and could not tell".
+		expect(result.domains).toHaveLength(CHECKED_TLDS.length);
+		expect(result.handles).toBeUndefined();
+		expect(result.trademark).toBeUndefined();
+	});
+
+	it('drops the unverifiable-TLD note when domains were not requested', async () => {
+		const result = await checkAvailability(deps({ fetch: fetchAll() as never }), 'Ardor', {
+			domains: false,
+			handles: true,
+			trademark: false
+		});
+		expect(result.unverifiableTlds).toBeUndefined();
+		expect(result.handles).toHaveLength(3);
+	});
+
+	it('makes no outbound request for a declined group', async () => {
+		const fetchFn = fetchAll();
+		await checkAvailability(deps({ fetch: fetchFn as never }), 'Ardor', {
+			domains: false,
+			handles: false,
+			trademark: false
+		});
+		expect(fetchFn).not.toHaveBeenCalled();
+	});
+
+	it('checks everything when no selection is given', async () => {
+		const result = await checkAvailability(deps({ fetch: fetchAll() as never }), 'Ardor');
+		expect(result.domains).toBeDefined();
+		expect(result.handles).toBeDefined();
+		expect(result.trademark).toBeDefined();
 	});
 });

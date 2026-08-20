@@ -19,8 +19,22 @@ export interface RateLimitStore {
 	put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
 }
 
-/** Generations allowed per IP per hour. */
-export const HOURLY_LIMIT = 12;
+/** Generations allowed per hour for an anonymous caller, keyed by IP. */
+export const ANON_HOURLY_LIMIT = 12;
+
+/**
+ * Generations allowed per hour once signed in with Discord, keyed by account.
+ *
+ * Higher for two reasons, not one. An account is a much better identity than an
+ * IP — a shared office or a phone network puts many people behind one address,
+ * and they currently share those 12 between them — and signing in makes a
+ * runaway caller identifiable rather than anonymous, so a bigger allowance is a
+ * smaller risk than it looks.
+ */
+export const SIGNED_IN_HOURLY_LIMIT = 60;
+
+/** @deprecated Use ANON_HOURLY_LIMIT. Kept so existing imports keep compiling. */
+export const HOURLY_LIMIT = ANON_HOURLY_LIMIT;
 
 const WINDOW_SECONDS = 3600;
 /** Outlives the window so a key cannot expire mid-window and reset the count. */
@@ -56,7 +70,7 @@ export async function consume(
 	store: RateLimitStore,
 	ip: string,
 	now: number,
-	limit: number = HOURLY_LIMIT
+	limit: number = ANON_HOURLY_LIMIT
 ): Promise<RateLimitResult> {
 	const key = windowKey(ip, now);
 	const elapsed = Math.floor((now % (WINDOW_SECONDS * 1000)) / 1000);
@@ -93,4 +107,25 @@ export async function consume(
  */
 export function clientIp(request: Request): string {
 	return request.headers.get('CF-Connecting-IP')?.trim() || 'unknown';
+}
+
+/**
+ * What a caller's allowance is counted against.
+ *
+ * A signed-in caller is counted by Discord account, so their quota follows them
+ * across networks — and, more to the point, so signing in on a shared IP stops
+ * them competing with strangers for the same twelve. The `u:` prefix keeps
+ * account keys in a different space from IP keys, so an account id that happens
+ * to look like an address cannot collide with one.
+ */
+export function rateLimitIdentity(
+	request: Request,
+	discordId?: string | null
+): {
+	key: string;
+	limit: number;
+} {
+	return discordId
+		? { key: `u:${discordId}`, limit: SIGNED_IN_HOURLY_LIMIT }
+		: { key: `ip:${clientIp(request)}`, limit: ANON_HOURLY_LIMIT };
 }

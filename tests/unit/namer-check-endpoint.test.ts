@@ -7,7 +7,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { handleCheck, onRequest, type Env } from '../../apps/namer/functions/api/check';
-import { windowKey } from '../../apps/namer/src/rate-limit';
+import { SIGNED_IN_HOURLY_LIMIT, windowKey } from '../../apps/namer/src/rate-limit';
+import { newSession, signSession } from '../../apps/namer/src/auth';
 
 const NOW = 1_700_000_000_000;
 const IP = '203.0.113.7';
@@ -80,7 +81,9 @@ describe('handleCheck', () => {
 	});
 
 	it('429s once the hourly check quota is spent', async () => {
-		const kv = store({ [windowKey(IP, NOW)]: '120' });
+		// Its own window, prefixed `check:`, so opening cards never eats into the
+		// allowance for generating more names.
+		const kv = store({ [windowKey(`check:ip:${IP}`, NOW)]: '120' });
 		const response = await handleCheck(post({ name: 'Ardor' }), { RATE_LIMIT: kv }, NOW);
 
 		expect(response.status).toBe(429);
@@ -138,6 +141,47 @@ describe('onRequest', () => {
 			env: { RATE_LIMIT: store() }
 		});
 
+		expect(response.status).toBe(200);
+		vi.unstubAllGlobals();
+	});
+});
+
+describe('handleCheck for a signed-in caller', () => {
+	const SECRET = 'test-secret-value';
+
+	it('counts against the account and scales the check allowance with it', async () => {
+		vi.stubGlobal('fetch', allFree());
+		const kv = store();
+		const request = post({ name: 'Ardor' });
+		request.headers.set(
+			'Cookie',
+			`namer_session=${await signSession(newSession('42', 'davis'), SECRET)}`
+		);
+
+		const response = await handleCheck(request, { RATE_LIMIT: kv, SESSION_SECRET: SECRET }, NOW);
+
+		expect(response.status).toBe(200);
+		// consume() wraps the identity, so the stored key is `rl:check:u:42:<bucket>`
+		// — its own window, prefixed `check:`, and tied to the account.
+		const keys = [...kv.map.keys()];
+		expect(keys.some((k) => k.includes('check:u:42'))).toBe(true);
+		expect(keys.some((k) => k.includes('ip:'))).toBe(false);
+		vi.unstubAllGlobals();
+	});
+
+	it('gives a signed-in caller the larger check ceiling', async () => {
+		vi.stubGlobal('fetch', allFree());
+		// One under the signed-in ceiling still passes.
+		const kv = store({
+			[windowKey('check:u:42', NOW)]: String(SIGNED_IN_HOURLY_LIMIT * 10 - 1)
+		});
+		const request = post({ name: 'Ardor' });
+		request.headers.set(
+			'Cookie',
+			`namer_session=${await signSession(newSession('42', 'davis'), SECRET)}`
+		);
+
+		const response = await handleCheck(request, { RATE_LIMIT: kv, SESSION_SECRET: SECRET }, NOW);
 		expect(response.status).toBe(200);
 		vi.unstubAllGlobals();
 	});

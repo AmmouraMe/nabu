@@ -11,15 +11,22 @@
  * generation legitimately produces six of these.
  */
 
-import { checkAvailability, type CheckCache } from '../../src/availability';
+import { checkAvailability, normalizeSelection, type CheckCache } from '../../src/availability';
 import { MAX_FIELD_LENGTH } from '../../src/naming';
-import { clientIp, consume, type RateLimitStore } from '../../src/rate-limit';
+import { consume, rateLimitIdentity, type RateLimitStore } from '../../src/rate-limit';
+import { SESSION_COOKIE, readCookie, verifySession } from '../../src/auth';
 
-/** Six names per generation, so this is ~20 generations' worth per hour. */
-const CHECK_HOURLY_LIMIT = 120;
+/**
+ * Ten checks per generation's worth of names, so this scales off whatever the
+ * caller's generate allowance is rather than being a second number to keep in
+ * step with it.
+ */
+const CHECKS_PER_GENERATION = 10;
 
 export interface Env {
 	RATE_LIMIT?: RateLimitStore & CheckCache;
+	/** Set only when Discord sign-in is configured. */
+	SESSION_SECRET?: string;
 	/** Lifts GitHub's anonymous per-IP ceiling. Optional; without it GitHub reports unchecked. */
 	GITHUB_TOKEN?: string;
 	/** Trademark provider endpoint. Optional; without it trademarks report unchecked. */
@@ -52,12 +59,29 @@ export async function handleCheck(request: Request, env: Env, now: number): Prom
 		return json({ error: 'Expected a name to check.' }, 400);
 	}
 
-	const limit = await consume(env.RATE_LIMIT, clientIp(request), now, CHECK_HOURLY_LIMIT);
+	const session = await verifySession(
+		readCookie(request, SESSION_COOKIE),
+		env.SESSION_SECRET ?? ''
+	);
+	const identity = rateLimitIdentity(request, session?.discordId);
+
+	// A separate window from generate's, so opening a lot of cards never eats
+	// into the allowance for asking for more names.
+	const limit = await consume(
+		env.RATE_LIMIT,
+		`check:${identity.key}`,
+		now,
+		identity.limit * CHECKS_PER_GENERATION
+	);
 	if (!limit.allowed) {
 		return json({ error: 'Too many availability checks this hour.' }, 429, {
 			'Retry-After': String(limit.resetSeconds)
 		});
 	}
+
+	// What the caller actually wants looked up. Omitted or malformed means all of
+	// it, so an older client keeps working unchanged.
+	const selection = normalizeSelection(raw.checks);
 
 	const availability = await checkAvailability(
 		{
@@ -73,7 +97,8 @@ export async function handleCheck(request: Request, env: Env, now: number): Prom
 					? { url: env.TRADEMARK_API_URL, key: env.TRADEMARK_API_KEY }
 					: undefined
 		},
-		name
+		name,
+		selection
 	);
 
 	return json({ name, ...availability }, 200);

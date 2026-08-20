@@ -250,8 +250,24 @@ export interface NamingInput {
 	archetype?: ArchetypeId;
 }
 
-/** Long enough to be a brief, short enough that nobody pastes a novel into it. */
+/**
+ * The description is the whole input to a naming decision, and the page asks for
+ * as much detail as the user can give. Capping it at 400 characters — barely two
+ * sentences — contradicted that in the same breath, and truncated silently.
+ *
+ * 4,000 characters is roughly 1,000 tokens against a ~2,000-token system prompt,
+ * so a brief this long still leaves the model ample room to answer. It is a
+ * bound rather than a target: this is a public endpoint, and some limit has to
+ * exist or the prompt is whatever a stranger decides to paste.
+ */
+export const MAX_DESCRIPTION_LENGTH = 4000;
+
+/** An audience can be a paragraph without being a brief. */
+export const MAX_AUDIENCE_LENGTH = 1000;
+
+/** Bounds a single name on the check endpoint, where anything longer is junk. */
 export const MAX_FIELD_LENGTH = 400;
+
 const MIN_DESCRIPTION_LENGTH = 8;
 
 export type ValidationResult = { ok: true; value: NamingInput } | { ok: false; error: string };
@@ -281,8 +297,8 @@ export function validateInput(body: unknown): ValidationResult {
 	return {
 		ok: true,
 		value: {
-			description: description.slice(0, MAX_FIELD_LENGTH),
-			audience: audience ? audience.slice(0, MAX_FIELD_LENGTH) : undefined,
+			description: description.slice(0, MAX_DESCRIPTION_LENGTH),
+			audience: audience ? audience.slice(0, MAX_AUDIENCE_LENGTH) : undefined,
 			archetype: normalizeArchetype(raw.archetype)
 		}
 	};

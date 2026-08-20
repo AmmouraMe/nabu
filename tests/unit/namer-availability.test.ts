@@ -1,5 +1,5 @@
 /**
- * Availability checks for apps/namer.
+ * Availability checks for the public name generator.
  *
  * The governing rule under test throughout: **nothing ambiguous is ever
  * reported as available**. A rate limit, a 500, a timeout, an unrecognised
@@ -26,7 +26,7 @@ import {
 	tmviewSearchUrl,
 	usptoSearchUrl,
 	type CheckDeps
-} from '../../apps/namer/src/availability';
+} from '../../src/lib/server/namer/availability';
 
 /** A fetch stub driven by a URL-substring → status/body table. */
 function fakeFetch(routes: Record<string, { status: number; body?: unknown }>) {

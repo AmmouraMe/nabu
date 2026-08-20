@@ -1,5 +1,5 @@
 /**
- * The naming logic behind apps/namer — the public brand-name generator.
+ * The naming logic behind the public name generator — the public brand-name generator.
  *
  * Lives in this repo's test suite rather than beside the app because the root
  * vitest config measures coverage across the whole project (workers/ and apps/
@@ -29,7 +29,7 @@ import {
 	normalizeArchetype,
 	parseNames,
 	validateInput
-} from '../../apps/namer/src/naming';
+} from '../../src/lib/server/namer/naming';
 
 describe('countSyllables', () => {
 	it('counts vowel groups as one nucleus each', () => {

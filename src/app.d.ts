@@ -83,6 +83,22 @@ declare global {
 				// Unset uses the built-in default, which is tuned for the Workers CPU
 				// budget rather than for OWASP's recommendation — raise it on a paid plan.
 				PASSWORD_ITERATIONS?: string;
+
+				/**
+				 * Optional, for the public name generator's availability checks. Each is
+				 * absent by default and the affected check then reports "not checked"
+				 * rather than guessing — see src/lib/server/namer/availability.ts.
+				 */
+				// Lifts GitHub's anonymous 60/hour-per-IP ceiling, which a Worker shares
+				// with every other Worker on its edge.
+				GITHUB_TOKEN?: string;
+				// A trademark search endpoint taking a term and returning a match count.
+				// Configuration rather than a hard-coded URL because every USPTO API
+				// refuses unauthenticated probes, so the response shape could not be
+				// verified; the parser accepts the conventional count shapes and treats
+				// anything else as unchecked.
+				TRADEMARK_API_URL?: string;
+				TRADEMARK_API_KEY?: string;
 			};
 			context: {
 				waitUntil(promise: Promise<any>): void;

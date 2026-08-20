@@ -198,6 +198,14 @@ export async function meetsDomainRequirement(
 
 /** Everything the event generator needs that is not the model's output. */
 export interface NameEventOptions {
+	/**
+	 * Claims a name globally, returning false if somebody already has it.
+	 *
+	 * Injected rather than imported so the generator stays testable without a
+	 * database, and so the uniqueness rule has exactly one implementation to audit.
+	 * Omitted means no uniqueness check at all.
+	 */
+	reserve?: (name: string) => Promise<boolean>;
 	/** TLDs that must be free, or empty to accept every name. */
 	requireTlds: string[];
 	/** Reported on the closing `done` event, for the "n left this hour" counter. */
@@ -226,14 +234,27 @@ export async function* streamNameEvents(
 	const names = createNameAccumulator();
 	let sent = 0;
 
-	/** Check the requirement, then either forward the name or say why not. */
+	/** Check the requirement, claim the name, then forward it or say why not. */
 	async function* offer(name: GeneratedName): AsyncGenerator<NamerEvent> {
 		const verdict = await meetsDomainRequirement(deps, name.name, options.requireTlds);
-		if (verdict.ok) {
-			yield { type: 'name', index: sent++, name };
-		} else {
+		if (!verdict.ok) {
 			yield { type: 'rejected', name: name.name, reason: verdict.reason };
+			return;
 		}
+
+		// Claimed before it is shown, and only after it has passed everything else —
+		// reserving a name we were about to reject anyway would burn it for the next
+		// person for no reason.
+		//
+		// The reason says only that the name is spoken for. It deliberately does not
+		// say by whom or for what: the table being consulted does not know, and the
+		// message must not imply more than the check actually learned.
+		if (options.reserve && !(await options.reserve(name.name))) {
+			yield { type: 'rejected', name: name.name, reason: 'already suggested before' };
+			return;
+		}
+
+		yield { type: 'name', index: sent++, name };
 	}
 
 	try {
@@ -265,10 +286,18 @@ export async function* streamNameEvents(
 	// Two failures that would otherwise look identical: nothing usable came back,
 	// or names came back and every one of them was already registered.
 	const produced = names.all().length;
+	if (!produced) {
+		yield {
+			type: 'error',
+			error: 'That came back unreadable — try rephrasing what you are building.'
+		};
+		return;
+	}
+
 	yield {
 		type: 'error',
-		error: produced
+		error: options.requireTlds.length
 			? `All ${produced} names were already taken on .${options.requireTlds.join(', .')}. Try again — or relax the domain requirement.`
-			: 'That came back unreadable — try rephrasing what you are building.'
+			: `All ${produced} names had been suggested before. Try again for a fresh set.`
 	};
 }

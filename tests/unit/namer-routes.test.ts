@@ -80,6 +80,37 @@ async function events(
 	return out;
 }
 
+/**
+ * Wait for the stream's `start` to finish.
+ *
+ * The endpoint returns as soon as the ReadableStream is constructed; the save
+ * happens inside `start`, which is still in flight at that moment. Polling for
+ * the effect beats a fixed sleep, which would be either flaky or slow.
+ */
+async function settled(check: () => boolean, attempts = 50): Promise<void> {
+	for (let i = 0; i < attempts && !check(); i++) {
+		await new Promise((resolve) => setTimeout(resolve, 2));
+	}
+}
+
+/** As `events`, but able to supply a reserver for the uniqueness check. */
+async function eventsWith(
+	source: string | ReadableStream<Uint8Array>,
+	options: Partial<{ requireTlds: string[]; reserve: (name: string) => Promise<boolean> }> = {},
+	fetchFn: typeof fetch = vi.fn(async () => new Response(null, { status: 404 })) as never
+): Promise<NamerEvent[]> {
+	const out: NamerEvent[] = [];
+	for await (const event of streamNameEvents({ fetch: fetchFn }, source, {
+		requireTlds: options.requireTlds ?? [],
+		remaining: 11,
+		limit: 12,
+		reserve: options.reserve
+	})) {
+		out.push(event);
+	}
+	return out;
+}
+
 /** SSE frames, one per chunk, as production sends them. */
 function sseStream(chunks: string[]): ReadableStream<Uint8Array> {
 	return new ReadableStream<Uint8Array>({
@@ -222,6 +253,62 @@ describe('POST /api/namer/generate', () => {
 
 		expect(response.status).toBe(200);
 		expect(streaming.run.mock.calls[0][1]).toMatchObject({ stream: true });
+	});
+
+	it('saves the generation, owned by the signed-in user', async () => {
+		const saved: Record<string, unknown>[] = [];
+		const db = {
+			prepare: (sql: string) => ({
+				bind: (...args: unknown[]) => ({
+					run: async () => {
+						if (sql.includes('namer_generations')) saved.push({ args });
+						return { meta: { changes: 1 } };
+					}
+				})
+			})
+		};
+		const { kv } = fakeKv();
+		await generate(
+			event(VALID, {
+				platform: { env: { KV: kv, AI: fakeAi(ONE_NAME), DB: db } },
+				locals: { user: { id: 'user-1' } }
+			}) as never
+		);
+
+		await settled(() => saved.length > 0);
+		expect(saved).toHaveLength(1);
+		expect((saved[0].args as unknown[])[1]).toBe('user-1');
+	});
+
+	it("saves a logged-out visitor's generation against nobody", async () => {
+		const saved: unknown[][] = [];
+		const db = {
+			prepare: (sql: string) => ({
+				bind: (...args: unknown[]) => ({
+					run: async () => {
+						if (sql.includes('namer_generations')) saved.push(args);
+						return { meta: { changes: 1 } };
+					}
+				})
+			})
+		};
+		const { kv } = fakeKv();
+		await generate(
+			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(ONE_NAME), DB: db } } }) as never
+		);
+
+		await settled(() => saved.length > 0);
+		// Stored, as asked — with a null owner rather than a freshly minted
+		// identifier for somebody who did not ask for an account.
+		expect(saved[0][1]).toBeNull();
+	});
+
+	it('still generates when there is no database, just without uniqueness', async () => {
+		const { kv } = fakeKv();
+		const response = (await generate(
+			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } } }) as never
+		)) as Response;
+		expect(response.status).toBe(200);
 	});
 
 	it('never touches the metered allowance', async () => {
@@ -576,5 +663,59 @@ describe('streamNameEvents', () => {
 		const last = (await events(broken)).at(-1) as { type: string; error: string };
 		expect(last.type).toBe('error');
 		expect(last.error).toMatch(/stopped part-way/);
+	});
+});
+
+describe('uniqueness in the stream', () => {
+	const TWO = '[{"name":"Apex","meaning":"The summit."},{"name":"Basil","meaning":"A herb."}]';
+
+	it('strikes off a name somebody has already been given', async () => {
+		const taken = new Set(['apex']);
+		const list = await eventsWith(TWO, {
+			reserve: async (name: string) => {
+				const key = name.toLowerCase();
+				if (taken.has(key)) return false;
+				taken.add(key);
+				return true;
+			}
+		});
+
+		expect(streamedNames(list)).toEqual(['Basil']);
+		const rejection = list.find((e) => e.type === 'rejected') as { reason: string };
+		// Says the name is spoken for, and nothing about by whom or for what — the
+		// table being consulted does not know either.
+		expect(rejection.reason).toBe('already suggested before');
+		expect(rejection.reason).not.toMatch(/user|account|someone|brand/i);
+	});
+
+	it('claims a name only after it has passed the domain requirement', async () => {
+		const reserved: string[] = [];
+		const takenDomain = vi.fn(async () => new Response(null, { status: 200 })) as never;
+		await eventsWith(
+			TWO,
+			{
+				reserve: async (name: string) => {
+					reserved.push(name);
+					return true;
+				},
+				requireTlds: ['com']
+			},
+			takenDomain
+		);
+
+		// Burning a name we were about to reject anyway would deny it to the next
+		// person for nothing.
+		expect(reserved).toEqual([]);
+	});
+
+	it('reports a wholly duplicate round without blaming domains', async () => {
+		const last = (await eventsWith(TWO, { reserve: async () => false })).at(-1) as {
+			error: string;
+		};
+		expect(last.error).toMatch(/had been suggested before/);
+	});
+
+	it('skips the check entirely when no reserver is supplied', async () => {
+		expect(streamedNames(await eventsWith(TWO, {}))).toEqual(['Apex', 'Basil']);
 	});
 });

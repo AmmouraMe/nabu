@@ -21,6 +21,8 @@ import { AI_MODEL, MAX_TOKENS, TEMPERATURE, responseText } from '$lib/server/nam
 import type { AiResult } from '$lib/server/namer/ai';
 import { consume, rateLimitIdentity } from '$lib/server/namer/rate-limit';
 import { encodeEvent, streamNameEvents } from '$lib/server/namer/stream';
+import { reserveName, saveGeneration } from '$lib/server/namer/history';
+import type { GeneratedName } from '$lib/server/namer/naming';
 
 export const POST: RequestHandler = async ({ request, platform, locals, getClientAddress }) => {
 	const kv = platform?.env?.KV;
@@ -89,18 +91,40 @@ export const POST: RequestHandler = async ({ request, platform, locals, getClien
 	// Once the first byte is out the headers are gone, so a later failure cannot
 	// change the status code — it travels as an `error` event instead, and the
 	// page reports it exactly as it would a 502.
+	const db = platform?.env?.DB;
+	const generationId = crypto.randomUUID();
+
 	const stream = new ReadableStream<Uint8Array>({
 		async start(controller) {
 			const encoder = new TextEncoder();
 			const source = result instanceof ReadableStream ? result : responseText(result as AiResult);
+			const delivered: GeneratedName[] = [];
 
 			for await (const event of streamNameEvents(checkDeps, source, {
 				requireTlds,
 				remaining: limit.remaining,
-				limit: identity.limit
+				limit: identity.limit,
+				// No database means no uniqueness rather than no generator. Names may
+				// then repeat, which is worse than the alternative but not broken.
+				reserve: db ? (name) => reserveName(db, name) : undefined
 			})) {
+				if (event.type === 'name') delivered.push(event.name);
 				controller.enqueue(encoder.encode(encodeEvent(event)));
 			}
+
+			// Saved after the fact, so a slow write never delays a name reaching the
+			// page. `locals.user?.id ?? null` is the whole ownership rule: a
+			// logged-out visitor's brief is stored against nobody and read back by
+			// nobody.
+			if (db && delivered.length) {
+				await saveGeneration(db, {
+					id: generationId,
+					userId: locals.user?.id ?? null,
+					input: validated.value,
+					names: delivered
+				});
+			}
+
 			controller.close();
 		}
 	});

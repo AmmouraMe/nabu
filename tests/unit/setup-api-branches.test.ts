@@ -239,14 +239,16 @@ describe('Setup API - Extended Branch Coverage', () => {
 			mockKVGet.mockResolvedValue(null);
 
 			await expect(
-				POST(createMockEvent({
-					body: {
-						clientId: 'id',
-						clientSecret: 'secret',
-						adminGithubUsername: 'test',
-						provider: 'gitlab'
-					}
-				}) as unknown as Parameters<typeof POST>[0])
+				POST(
+					createMockEvent({
+						body: {
+							clientId: 'id',
+							clientSecret: 'secret',
+							adminGithubUsername: 'test',
+							provider: 'gitlab'
+						}
+					}) as unknown as Parameters<typeof POST>[0]
+				)
 			).rejects.toMatchObject({ status: 400 });
 		});
 	});

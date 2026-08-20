@@ -44,7 +44,14 @@
 	let confirmRestoreId: string | null = null;
 
 	// Sort/filter state
-	type SortMode = 'custom' | 'newest' | 'oldest' | 'most-complete' | 'least-complete' | 'alpha-az' | 'alpha-za';
+	type SortMode =
+		| 'custom'
+		| 'newest'
+		| 'oldest'
+		| 'most-complete'
+		| 'least-complete'
+		| 'alpha-az'
+		| 'alpha-za';
 	let sortMode: SortMode = 'custom';
 
 	$: displayBrands = sortBrands(brands, sortMode);
@@ -54,9 +61,13 @@
 		const sorted = [...list];
 		switch (mode) {
 			case 'newest':
-				return sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+				return sorted.sort(
+					(a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+				);
 			case 'oldest':
-				return sorted.sort((a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+				return sorted.sort(
+					(a, b) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+				);
 			case 'most-complete':
 				return sorted.sort((a, b) => getCompletionStats(b).percent - getCompletionStats(a).percent);
 			case 'least-complete':
@@ -127,7 +138,8 @@
 				const slotIndex = j === 0 ? row.indices[0] : row.indices[j - 1] + 1;
 
 				// Skip no-op positions (adjacent to dragged card)
-				if (dragIndex !== null && (slotIndex === dragIndex || slotIndex === dragIndex + 1)) continue;
+				if (dragIndex !== null && (slotIndex === dragIndex || slotIndex === dragIndex + 1))
+					continue;
 
 				let gapX: number;
 				if (j === 0) {
@@ -219,7 +231,7 @@
 			isDragging = true;
 			dragIndex = index;
 
-			const card = (event.currentTarget as HTMLElement);
+			const card = event.currentTarget as HTMLElement;
 			const rect = card.getBoundingClientRect();
 
 			touchClone = card.cloneNode(true) as HTMLElement;
@@ -250,10 +262,14 @@
 		};
 
 		document.addEventListener('touchmove', earlyMove, { passive: true });
-		document.addEventListener('touchend', () => {
-			cancelTouch();
-			document.removeEventListener('touchmove', earlyMove);
-		}, { once: true });
+		document.addEventListener(
+			'touchend',
+			() => {
+				cancelTouch();
+				document.removeEventListener('touchmove', earlyMove);
+			},
+			{ once: true }
+		);
 	}
 
 	function handleTouchMove(event: TouchEvent) {
@@ -278,7 +294,12 @@
 			touchClone = null;
 		}
 
-		if (dragIndex !== null && dropSlot !== null && dropSlot !== dragIndex && dropSlot !== dragIndex + 1) {
+		if (
+			dragIndex !== null &&
+			dropSlot !== null &&
+			dropSlot !== dragIndex &&
+			dropSlot !== dragIndex + 1
+		) {
 			const reordered = [...brands];
 			const [moved] = reordered.splice(dragIndex, 1);
 			const insertAt = dropSlot > dragIndex ? dropSlot - 1 : dropSlot;
@@ -562,7 +583,9 @@
 					on:touchstart={(e) => handleTouchStart(e, i)}
 					on:touchmove|nonpassive={handleTouchMove}
 					on:touchend={handleTouchEnd}
-					style="{brand.typographyBody ? `font-family: '${brand.typographyBody}', sans-serif;` : ''}{brand.logoUrl ? `--card-bg-image: url(${brand.logoUrl});` : ''}"
+					style="{brand.typographyBody
+						? `font-family: '${brand.typographyBody}', sans-serif;`
+						: ''}{brand.logoUrl ? `--card-bg-image: url(${brand.logoUrl});` : ''}"
 				>
 					{#if confirmArchiveId === brand.id}
 						<div class="close-confirm">
@@ -574,10 +597,7 @@
 							>
 								{archivingId === brand.id ? '...' : 'Yes'}
 							</button>
-							<button
-								class="confirm-no"
-								on:click|stopPropagation={() => (confirmArchiveId = null)}
-							>
+							<button class="confirm-no" on:click|stopPropagation={() => (confirmArchiveId = null)}>
 								No
 							</button>
 						</div>
@@ -587,7 +607,16 @@
 							title="Archive brand"
 							on:click|stopPropagation={() => (confirmArchiveId = brand.id)}
 						>
-							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
 								<line x1="18" y1="6" x2="6" y2="18" />
 								<line x1="6" y1="6" x2="18" y2="18" />
 							</svg>
@@ -595,10 +624,34 @@
 					{/if}
 					{#if sortMode === 'custom'}
 						<div class="drag-handle" aria-label="Drag to reorder">
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<circle cx="9" cy="6" r="1" fill="currentColor" /><circle cx="15" cy="6" r="1" fill="currentColor" />
-								<circle cx="9" cy="12" r="1" fill="currentColor" /><circle cx="15" cy="12" r="1" fill="currentColor" />
-								<circle cx="9" cy="18" r="1" fill="currentColor" /><circle cx="15" cy="18" r="1" fill="currentColor" />
+							<svg
+								width="12"
+								height="12"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							>
+								<circle cx="9" cy="6" r="1" fill="currentColor" /><circle
+									cx="15"
+									cy="6"
+									r="1"
+									fill="currentColor"
+								/>
+								<circle cx="9" cy="12" r="1" fill="currentColor" /><circle
+									cx="15"
+									cy="12"
+									r="1"
+									fill="currentColor"
+								/>
+								<circle cx="9" cy="18" r="1" fill="currentColor" /><circle
+									cx="15"
+									cy="18"
+									r="1"
+									fill="currentColor"
+								/>
 							</svg>
 						</div>
 					{/if}
@@ -606,14 +659,14 @@
 						<h2
 							class="brand-name"
 							class:codename={!brand.brandNameConfirmed}
-							style={brand.typographyLogo ? `font-family: '${brand.typographyLogo}', sans-serif` : brand.typographyHeading ? `font-family: '${brand.typographyHeading}', sans-serif` : ''}
+							style={brand.typographyLogo
+								? `font-family: '${brand.typographyLogo}', sans-serif`
+								: brand.typographyHeading
+									? `font-family: '${brand.typographyHeading}', sans-serif`
+									: ''}
 						>
 							{#if brand.logoUrl}
-								<img
-									src={brand.logoUrl}
-									alt=""
-									class="brand-name-icon"
-								/>
+								<img src={brand.logoUrl} alt="" class="brand-name-icon" />
 							{/if}
 							{brand.brandName || 'New Brand'}
 							{#if !brand.brandNameConfirmed}
@@ -623,22 +676,13 @@
 
 						<div class="brand-colors">
 							{#if brand.primaryColor}
-								<span
-									class="color-dot"
-									style="background-color: {brand.primaryColor}"
-								></span>
+								<span class="color-dot" style="background-color: {brand.primaryColor}"></span>
 							{/if}
 							{#if brand.secondaryColor}
-								<span
-									class="color-dot"
-									style="background-color: {brand.secondaryColor}"
-								></span>
+								<span class="color-dot" style="background-color: {brand.secondaryColor}"></span>
 							{/if}
 							{#if brand.accentColor}
-								<span
-									class="color-dot"
-									style="background-color: {brand.accentColor}"
-								></span>
+								<span class="color-dot" style="background-color: {brand.accentColor}"></span>
 							{/if}
 							{#if !brand.primaryColor && !brand.secondaryColor && !brand.accentColor && !brand.logoUrl}
 								<span class="color-dot placeholder-dot"></span>
@@ -648,8 +692,12 @@
 						{#if brand.tagline}
 							<p
 								class="brand-tagline"
-								style={brand.typographyBody ? `font-family: '${brand.typographyBody}', sans-serif` : ''}
-							>{brand.tagline}</p>
+								style={brand.typographyBody
+									? `font-family: '${brand.typographyBody}', sans-serif`
+									: ''}
+							>
+								{brand.tagline}
+							</p>
 						{/if}
 
 						{#if brand.industry}
@@ -672,8 +720,6 @@
 							</div>
 						</div>
 					</a>
-
-
 				</article>
 			{/each}
 		</div>
@@ -734,22 +780,14 @@
 								<div class="archived-brand-info">
 									<div class="brand-colors">
 										{#if brand.primaryColor}
-											<span
-												class="color-dot"
-												style="background-color: {brand.primaryColor}"
-											></span>
+											<span class="color-dot" style="background-color: {brand.primaryColor}"></span>
 										{/if}
 										{#if brand.secondaryColor}
-											<span
-												class="color-dot"
-												style="background-color: {brand.secondaryColor}"
+											<span class="color-dot" style="background-color: {brand.secondaryColor}"
 											></span>
 										{/if}
 										{#if brand.accentColor}
-											<span
-												class="color-dot"
-												style="background-color: {brand.accentColor}"
-											></span>
+											<span class="color-dot" style="background-color: {brand.accentColor}"></span>
 										{/if}
 									</div>
 									<div class="archived-text">
@@ -776,10 +814,7 @@
 											>
 												{restoringId === brand.id ? '...' : 'Yes'}
 											</button>
-											<button
-												class="confirm-no"
-												on:click={() => (confirmRestoreId = null)}
-											>
+											<button class="confirm-no" on:click={() => (confirmRestoreId = null)}>
 												No
 											</button>
 										</div>
@@ -1093,7 +1128,11 @@
 		z-index: 10;
 		pointer-events: none;
 		opacity: 0;
-		transition: opacity 0.12s ease, left 0.1s ease, top 0.1s ease, height 0.1s ease;
+		transition:
+			opacity 0.12s ease,
+			left 0.1s ease,
+			top 0.1s ease,
+			height 0.1s ease;
 		transform: translateX(-50%);
 	}
 
@@ -1174,7 +1213,6 @@
 		position: relative;
 		z-index: 1;
 	}
-
 
 	.brand-colors {
 		display: flex;

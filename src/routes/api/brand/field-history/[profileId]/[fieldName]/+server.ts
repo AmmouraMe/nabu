@@ -7,22 +7,22 @@ import { getBrandProfile } from '$lib/services/onboarding';
 import { getFieldHistory } from '$lib/services/brand';
 
 export const GET: RequestHandler = async ({ locals, platform, params }) => {
-  if (!locals.user) {
-    throw error(401, 'Unauthorized');
-  }
+	if (!locals.user) {
+		throw error(401, 'Unauthorized');
+	}
 
-  const { profileId, fieldName } = params;
+	const { profileId, fieldName } = params;
 
-  // Verify profile belongs to user
-  const profile = await getBrandProfile(platform!.env.DB, profileId);
-  if (!profile) {
-    throw error(404, 'Profile not found');
-  }
-  if (profile.userId !== locals.user.id) {
-    throw error(403, 'Forbidden');
-  }
+	// Verify profile belongs to user
+	const profile = await getBrandProfile(platform!.env.DB, profileId);
+	if (!profile) {
+		throw error(404, 'Profile not found');
+	}
+	if (profile.userId !== locals.user.id) {
+		throw error(403, 'Forbidden');
+	}
 
-  const history = await getFieldHistory(platform!.env.DB, profileId, fieldName);
+	const history = await getFieldHistory(platform!.env.DB, profileId, fieldName);
 
-  return json({ history });
+	return json({ history });
 };

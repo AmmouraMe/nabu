@@ -1,6 +1,8 @@
-# Zero Environment Variable Setup Guide (Optional)
+# KV-Backed OAuth Setup Guide (Optional)
 
-> **💡 Recommended:** For production deployments, we recommend using **secure environment variables** in Cloudflare Pages. See the [Deployment documentation](../src/routes/documentation/+page.svelte) for details.
+> **💡 Recommended:** For production deployments, use Cloudflare Pages secrets.
+> `SESSION_SECRET` and a separate `SETUP_SECRET` are required even when OAuth
+> credentials are stored in KV. See [SETUP.md](./SETUP.md) for details.
 >
 > The zero-config setup described below is an **alternative approach** for scenarios where you want to configure credentials via a web UI instead.
 
@@ -14,7 +16,9 @@ Click the button above to create your own repository from the NebulaKit template
 
 ---
 
-NebulaKit can work **without any pre-configured environment variables**. Instead of relying on `.env` files or manually set secrets, all configuration is done through a web-based setup flow and stored securely in Cloudflare KV.
+Nabu can store OAuth provider configuration in Cloudflare KV instead of OAuth
+environment variables. Session signing and initial setup authorization still
+require the secrets described above.
 
 ## When to Use Zero-Config
 
@@ -46,12 +50,12 @@ NebulaKit can work **without any pre-configured environment variables**. Instead
                        └─────────────────┘    └─────────────────┘
 ```
 
-## Why No Environment Variables?
+## Why Store OAuth Configuration in KV?
 
 Traditional approaches require setting up secrets before deployment:
 
 ```bash
-# ❌ Traditional approach - secrets in env files
+# Traditional OAuth configuration
 GITHUB_CLIENT_ID=xxx
 GITHUB_CLIENT_SECRET=yyy
 ADMIN_GITHUB_ID=zzz
@@ -64,13 +68,12 @@ ADMIN_GITHUB_ID=zzz
 - Different secrets for each environment
 - Onboarding friction for new developers
 
-**NebulaKit's approach:**
+**Nabu's optional KV approach:**
 
-- ✅ Zero secrets in code or environment
-- ✅ Web-based configuration at runtime
-- ✅ Secrets stored encrypted in Cloudflare KV
-- ✅ Self-service setup for new deployments
-- ✅ Easy secret rotation without redeployment
+- OAuth provider configuration is entered through the web setup flow
+- OAuth provider configuration is stored in Cloudflare KV
+- Provider credentials can be rotated without redeploying
+- `SESSION_SECRET` and `SETUP_SECRET` remain environment secrets
 
 ---
 
@@ -78,11 +81,13 @@ ADMIN_GITHUB_ID=zzz
 
 ### When Is It Accessible?
 
-The setup page (`/setup`) is only accessible when:
+The setup page (`/setup`) can bootstrap an instance only when:
 
-1. **No admin has logged in yet** - The `admin_first_login_completed` flag is not set in KV
+1. No OAuth configuration or owner has been established.
+2. The submitted bootstrap secret matches `SETUP_SECRET`.
 
-Once the designated admin user logs in for the first time, the setup page is permanently locked.
+Once configuration or an owner exists, setup is locked. Reconfiguration requires
+an owner-authorized reset first.
 
 ### What Gets Configured?
 
@@ -110,6 +115,7 @@ Once the designated admin user logs in for the first time, the setup page is per
 
 Navigate to `/setup` and enter:
 
+- **Bootstrap secret** - The deployment's `SETUP_SECRET`
 - **GitHub Client ID** - From your OAuth app
 - **GitHub Client Secret** - Generated in the previous step
 - **Admin GitHub Username** - Your GitHub username (e.g., `octocat`)
@@ -188,15 +194,10 @@ The reset page allows you to clear all setup configuration and start fresh. This
 
 ### Security Considerations
 
-⚠️ **The reset page is accessible without authentication by default!**
-
-This is intentional for recovery scenarios, but after initial setup you should:
-
-1. Log in as the admin owner
-2. Go to **Admin Panel → Settings**
-3. **Disable the reset route**
-
-Once disabled, the reset page will redirect to the home page.
+Before an owner exists, reset remains available for recovery from a partial
+bootstrap. After an owner is established, only that authenticated owner can
+reset configuration. The admin kill switch can disable reset for everyone,
+including the owner.
 
 ```typescript
 // Check in /reset page server load
@@ -215,7 +216,7 @@ if (resetDisabled === 'true') {
 1. **Apply database migrations:**
 
    ```bash
-   wrangler d1 execute nebulakit-db --local --file=migrations/schema.sql
+   npm run db:migrate:local
    ```
 
 2. **Create KV namespaces** (for persistent local storage):
@@ -255,25 +256,32 @@ Your credentials will persist across dev server restarts in the local KV preview
 
 ### Cloudflare Pages Deployment
 
-1. **Deploy to Cloudflare Pages** - No environment variables needed!
+1. **Configure required deployment secrets:**
 
-2. **Create KV namespace:**
+   ```bash
+   wrangler secret put SESSION_SECRET
+   wrangler secret put SETUP_SECRET
+   ```
+
+2. **Deploy to Cloudflare Pages.**
+
+3. **Create KV namespace:**
 
    ```bash
    wrangler kv:namespace create "KV"
    ```
 
-3. **Bind KV to your Pages project** in the Cloudflare dashboard:
+4. **Bind KV to your Pages project** in the Cloudflare dashboard:
    - Go to Pages → Your Project → Settings → Functions
    - Add KV namespace binding: `KV` → your namespace
 
-4. **Navigate to your deployed app's `/setup` page**
+5. **Navigate to your deployed app's `/setup` page**
 
-5. **Complete setup** with production OAuth credentials
+6. **Complete setup** with `SETUP_SECRET` and production OAuth credentials
 
-6. **Log in as admin** to lock the setup
+7. **Log in as admin**
 
-7. **Disable the reset route** from the admin panel
+8. **Optionally disable the reset route** from the admin panel
 
 ---
 
@@ -296,6 +304,8 @@ Returns the current setup status.
 ### POST `/api/setup`
 
 Saves OAuth configuration.
+
+Requires `Authorization: Bearer <SETUP_SECRET>` before initial configuration.
 
 **Request:**
 
@@ -381,5 +391,5 @@ wrangler kv:namespace create "KV" --preview
 
 ## Related Documentation
 
-- [LOCAL_SETUP.md](./LOCAL_SETUP.md) - Detailed local development setup
+- [SETUP.md](./SETUP.md) - Detailed local development setup
 - [GITHUB_AUTH.md](./GITHUB_AUTH.md) - GitHub OAuth configuration details

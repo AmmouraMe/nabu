@@ -6,11 +6,11 @@ import type { RequestHandler } from './$types';
 import { getArchivedBrandProfilesByUser } from '$lib/services/brand';
 
 export const GET: RequestHandler = async ({ locals, platform }) => {
-  if (!locals.user) {
-    throw error(401, 'Unauthorized');
-  }
+	if (!locals.user) {
+		throw error(401, 'Unauthorized');
+	}
 
-  const profiles = await getArchivedBrandProfilesByUser(platform!.env.DB, locals.user.id);
+	const profiles = await getArchivedBrandProfilesByUser(platform!.env.DB, locals.user.id);
 
-  return json({ profiles });
+	return json({ profiles });
 };

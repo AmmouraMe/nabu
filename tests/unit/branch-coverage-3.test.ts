@@ -797,11 +797,9 @@ describe('Setup POST - Response instance re-throw', () => {
 				platform: {
 					env: {
 						DB: {
-							prepare: vi
-								.fn()
-								.mockReturnValue({
-									bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) })
-								})
+							prepare: vi.fn().mockReturnValue({
+								bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) })
+							})
 						},
 						KV: mockKV
 					}

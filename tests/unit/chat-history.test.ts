@@ -16,7 +16,7 @@ function mockFetch() {
 
 		// POST /api/chat/conversations — create conversation
 		if (urlStr === '/api/chat/conversations' && method === 'POST') {
-			const body = JSON.parse(options?.body as string || '{}');
+			const body = JSON.parse((options?.body as string) || '{}');
 			return new Response(
 				JSON.stringify({
 					id: crypto.randomUUID(),

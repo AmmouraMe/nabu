@@ -24,7 +24,7 @@ vi.mock('$lib/services/brand-assets', () => ({
 	deleteBrandMedia: vi.fn(),
 	getLogoAssets: vi.fn(),
 	getBrandAssetSummary: vi.fn(),
-	createBrandText: vi.fn(),
+	upsertBrandText: vi.fn(),
 	getBrandTexts: vi.fn(),
 	getBrandTextsByCategory: vi.fn(),
 	updateBrandText: vi.fn(),
@@ -59,7 +59,7 @@ import {
 	deleteBrandMedia,
 	getLogoAssets,
 	getBrandAssetSummary,
-	createBrandText,
+	upsertBrandText,
 	getBrandTexts,
 	getBrandTextsByCategory,
 	updateBrandText,
@@ -494,7 +494,10 @@ describe('POST /api/brand/assets/texts', () => {
 
 	it('should create text asset', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 't-new', value: 'Hello' } as any);
+		vi.mocked(upsertBrandText).mockResolvedValue({
+			text: { id: 't-new', value: 'Hello', language: 'en' },
+			created: true
+		} as any);
 		const body = {
 			brandProfileId: 'bp-1',
 			category: 'taglines',
@@ -510,13 +513,18 @@ describe('POST /api/brand/assets/texts', () => {
 		expect(res.status).toBe(201);
 		const data = await res.json();
 		expect(data.text.id).toBe('t-new');
+		expect(data.text.language).toBe('en');
+		expect(data.created).toBe(true);
 		expect(data.profileFieldUpdated).toBe(false);
 	});
 
 	it('should update profile field when setAsProfileField=true', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
 		const { updateBrandFieldWithVersion } = await import('$lib/services/brand');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 't-new' } as any);
+		vi.mocked(upsertBrandText).mockResolvedValue({
+			text: { id: 't-new', value: 'Updated', language: 'en' },
+			created: true
+		} as any);
 		vi.mocked(updateBrandFieldWithVersion).mockResolvedValue(undefined);
 		const body = {
 			brandProfileId: 'bp-1',
@@ -535,12 +543,24 @@ describe('POST /api/brand/assets/texts', () => {
 		expect(res.status).toBe(201);
 		const data = await res.json();
 		expect(data.profileFieldUpdated).toBe(true);
+		expect(updateBrandFieldWithVersion).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				profileId: 'bp-1',
+				fieldName: 'tagline',
+				newValue: 'Updated',
+				syncTextAsset: false
+			})
+		);
 	});
 
 	it('should handle profile field update failure gracefully', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
 		const { updateBrandFieldWithVersion } = await import('$lib/services/brand');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 't-new' } as any);
+		vi.mocked(upsertBrandText).mockResolvedValue({
+			text: { id: 't-new', value: 'v', language: 'en' },
+			created: true
+		} as any);
 		vi.mocked(updateBrandFieldWithVersion).mockRejectedValue(new Error('DB error'));
 		const body = {
 			brandProfileId: 'bp-1',

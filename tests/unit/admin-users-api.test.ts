@@ -322,5 +322,3 @@ describe('Admin Users API', () => {
 		});
 	});
 });
-
-

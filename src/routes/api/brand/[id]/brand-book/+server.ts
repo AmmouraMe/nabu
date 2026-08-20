@@ -8,7 +8,11 @@
  */
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { generateBrandBookHtml, brandBookR2Key, type BrandBookProfile } from '$lib/services/brand-book';
+import {
+	generateBrandBookHtml,
+	brandBookR2Key,
+	type BrandBookProfile
+} from '$lib/services/brand-book';
 
 const PROFILE_QUERY = `
   SELECT
@@ -25,70 +29,70 @@ const PROFILE_QUERY = `
 `;
 
 function parseMode(raw: string | null): 'light' | 'dark' {
-  return raw === 'dark' ? 'dark' : 'light';
+	return raw === 'dark' ? 'dark' : 'light';
 }
 
 export const GET: RequestHandler = async ({ locals, platform, params, url }) => {
-  if (!locals.user) throw error(401, 'Unauthorized');
+	if (!locals.user) throw error(401, 'Unauthorized');
 
-  const mode = parseMode(url.searchParams.get('mode'));
-  const db = platform!.env.DB;
-  const bucket = platform!.env.BUCKET;
+	const mode = parseMode(url.searchParams.get('mode'));
+	const db = platform!.env.DB;
+	const bucket = platform!.env.BUCKET;
 
-  const profile = await db
-    .prepare('SELECT id FROM brand_profiles WHERE id = ? AND user_id = ?')
-    .bind(params.id, locals.user.id)
-    .first<{ id: string }>();
+	const profile = await db
+		.prepare('SELECT id FROM brand_profiles WHERE id = ? AND user_id = ?')
+		.bind(params.id, locals.user.id)
+		.first<{ id: string }>();
 
-  if (!profile) throw error(404, 'Brand not found');
+	if (!profile) throw error(404, 'Brand not found');
 
-  const key = brandBookR2Key(params.id, mode);
-  const obj = await bucket.get(key);
-  if (!obj) throw error(404, 'Brand book not yet generated. POST to generate it first.');
+	const key = brandBookR2Key(params.id, mode);
+	const obj = await bucket.get(key);
+	if (!obj) throw error(404, 'Brand book not yet generated. POST to generate it first.');
 
-  const html = await obj.text();
-  return new Response(html, {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(profile.id)}-brand-book-${mode}.html"`
-    }
-  });
+	const html = await obj.text();
+	return new Response(html, {
+		headers: {
+			'Content-Type': 'text/html; charset=utf-8',
+			'Content-Disposition': `attachment; filename="${encodeURIComponent(profile.id)}-brand-book-${mode}.html"`
+		}
+	});
 };
 
 export const POST: RequestHandler = async ({ locals, platform, params, request }) => {
-  if (!locals.user) throw error(401, 'Unauthorized');
+	if (!locals.user) throw error(401, 'Unauthorized');
 
-  const body = (await request.json().catch(() => ({}))) as { mode?: string };
-  const mode = parseMode(body.mode ?? null);
+	const body = (await request.json().catch(() => ({}))) as { mode?: string };
+	const mode = parseMode(body.mode ?? null);
 
-  const db = platform!.env.DB;
-  const bucket = platform!.env.BUCKET;
+	const db = platform!.env.DB;
+	const bucket = platform!.env.BUCKET;
 
-  const profile = await db
-    .prepare(PROFILE_QUERY)
-    .bind(params.id, locals.user.id)
-    .first<BrandBookProfile>();
+	const profile = await db
+		.prepare(PROFILE_QUERY)
+		.bind(params.id, locals.user.id)
+		.first<BrandBookProfile>();
 
-  if (!profile) throw error(404, 'Brand not found');
+	if (!profile) throw error(404, 'Brand not found');
 
-  const html = generateBrandBookHtml(profile, mode);
-  const key = brandBookR2Key(params.id, mode);
+	const html = generateBrandBookHtml(profile, mode);
+	const key = brandBookR2Key(params.id, mode);
 
-  await bucket.put(key, html, {
-    httpMetadata: { contentType: 'text/html; charset=utf-8' }
-  });
+	await bucket.put(key, html, {
+		httpMetadata: { contentType: 'text/html; charset=utf-8' }
+	});
 
-  await db
-    .prepare(`UPDATE brand_profiles SET brand_book_generated_at = datetime('now') WHERE id = ?`)
-    .bind(params.id)
-    .run();
+	await db
+		.prepare(`UPDATE brand_profiles SET brand_book_generated_at = datetime('now') WHERE id = ?`)
+		.bind(params.id)
+		.run();
 
-  return new Response(
-    JSON.stringify({
-      key,
-      mode,
-      downloadPath: `/api/brand/${params.id}/brand-book?mode=${mode}`
-    }),
-    { headers: { 'Content-Type': 'application/json' } }
-  );
+	return new Response(
+		JSON.stringify({
+			key,
+			mode,
+			downloadPath: `/api/brand/${params.id}/brand-book?mode=${mode}`
+		}),
+		{ headers: { 'Content-Type': 'application/json' } }
+	);
 };

@@ -7,7 +7,11 @@
 
 	const dispatch = createEventDispatcher<{
 		select: BrandMediaAsset;
-		setProfileImage: { asset: BrandMediaAsset; url: string; variant: 'icon' | 'horizontal' | 'vertical' };
+		setProfileImage: {
+			asset: BrandMediaAsset;
+			url: string;
+			variant: 'icon' | 'horizontal' | 'vertical';
+		};
 		refresh: void;
 	}>();
 
@@ -31,7 +35,13 @@
 		detailAsset = null;
 	}
 
-	function handleSetProfileImage(e: CustomEvent<{ asset: BrandMediaAsset; url: string; variant: 'icon' | 'horizontal' | 'vertical' }>) {
+	function handleSetProfileImage(
+		e: CustomEvent<{
+			asset: BrandMediaAsset;
+			url: string;
+			variant: 'icon' | 'horizontal' | 'vertical';
+		}>
+	) {
 		closeDetail();
 		dispatch('setProfileImage', e.detail);
 	}
@@ -77,13 +87,16 @@
 
 	$: typeLabel = mediaType === 'image' ? 'Images' : mediaType === 'audio' ? 'Audio' : 'Videos';
 
-	$: categories = mediaType === 'image'
-		? ['logo', 'social', 'marketing', 'product', 'brand_elements', 'team']
-		: mediaType === 'audio'
-			? ['sonic_identity', 'music', 'voiceover']
-			: ['brand', 'social', 'marketing', 'content', 'internal'];
+	$: categories =
+		mediaType === 'image'
+			? ['logo', 'social', 'marketing', 'product', 'brand_elements', 'team']
+			: mediaType === 'audio'
+				? ['sonic_identity', 'music', 'voiceover']
+				: ['brand', 'social', 'marketing', 'content', 'internal'];
 
-	async function handleUpload(e: CustomEvent<{ file: File; mediaType: string; category: string; name: string }>) {
+	async function handleUpload(
+		e: CustomEvent<{ file: File; mediaType: string; category: string; name: string }>
+	) {
 		const { file, category, name } = e.detail;
 
 		const formData = new FormData();
@@ -108,15 +121,17 @@
 		}
 	}
 
-	async function handleAIGenerate(e: CustomEvent<{
-		type: string;
-		prompt: string;
-		model: string;
-		name: string;
-		category: string;
-		brandProfileId: string;
-		options: Record<string, unknown>;
-	}>) {
+	async function handleAIGenerate(
+		e: CustomEvent<{
+			type: string;
+			prompt: string;
+			model: string;
+			name: string;
+			category: string;
+			brandProfileId: string;
+			options: Record<string, unknown>;
+		}>
+	) {
 		const { type, prompt, name, category, brandProfileId: bpId, options } = e.detail;
 
 		// Show a placeholder immediately while the API call runs
@@ -171,7 +186,9 @@
 	function pollGeneration(generationId: string) {
 		const poll = async () => {
 			try {
-				const res = await fetch(`/api/brand/assets/generate?id=${encodeURIComponent(generationId)}`);
+				const res = await fetch(
+					`/api/brand/assets/generate?id=${encodeURIComponent(generationId)}`
+				);
 				if (!res.ok) return;
 				const data = await res.json();
 				const gen = data.generation;
@@ -317,19 +334,41 @@
 				title="Activity Log"
 			>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-					<path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 			</button>
-			<button class="action-btn upload-btn" on:click={() => mode = 'upload'} aria-label="Upload {mediaType}">
+			<button
+				class="action-btn upload-btn"
+				on:click={() => (mode = 'upload')}
+				aria-label="Upload {mediaType}"
+			>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 					<path d="M12 16V4m0 0L8 8m4-4l4 4" stroke-linecap="round" stroke-linejoin="round" />
-					<path d="M20 16.7V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.3" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M20 16.7V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.3"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 				Upload
 			</button>
-			<button class="action-btn ai-btn" on:click={() => { aiModalOpen = true; }} aria-label="Generate with AI">
+			<button
+				class="action-btn ai-btn"
+				on:click={() => {
+					aiModalOpen = true;
+				}}
+				aria-label="Generate with AI"
+			>
 				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-					<path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 				AI Generate
 			</button>
@@ -341,7 +380,7 @@
 		<div class="panel">
 			<div class="panel-header">
 				<h4>Upload {mediaType}</h4>
-				<button class="close-panel-btn" on:click={() => mode = 'gallery'} aria-label="Close">
+				<button class="close-panel-btn" on:click={() => (mode = 'gallery')} aria-label="Close">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
 					</svg>
@@ -361,24 +400,49 @@
 		<div class="empty-state">
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
 				{#if mediaType === 'image'}
-					<path d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				{:else if mediaType === 'audio'}
-					<path d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				{:else}
-					<path d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" stroke-linecap="round" stroke-linejoin="round" />
+					<path
+						d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				{/if}
 			</svg>
 			<p>No {typeLabel.toLowerCase()} yet</p>
 			<div class="empty-actions">
-				<button class="btn-secondary" on:click={() => mode = 'upload'}>
+				<button class="btn-secondary" on:click={() => (mode = 'upload')}>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-						<path d="M12 16V4m0 0L8 8m4-4l4 4M20 16.7V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.3" stroke-linecap="round" stroke-linejoin="round" />
+						<path
+							d="M12 16V4m0 0L8 8m4-4l4 4M20 16.7V19a2 2 0 01-2 2H6a2 2 0 01-2-2v-2.3"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
 					</svg>
 					Upload
 				</button>
-				<button class="btn-primary" on:click={() => { aiModalOpen = true; }}>
+				<button
+					class="btn-primary"
+					on:click={() => {
+						aiModalOpen = true;
+					}}
+				>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-						<path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" stroke-linecap="round" stroke-linejoin="round" />
+						<path
+							d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
 					</svg>
 					Generate with AI
 				</button>
@@ -407,19 +471,33 @@
 			{#each assets as asset (asset.id)}
 				<div class="asset-card">
 					<!-- Preview -->
-					<div class="asset-preview" on:click={() => openDetail(asset)} on:keydown={(e) => e.key === 'Enter' && openDetail(asset)} role="button" tabindex="0">
+					<div
+						class="asset-preview"
+						on:click={() => openDetail(asset)}
+						on:keydown={(e) => e.key === 'Enter' && openDetail(asset)}
+						role="button"
+						tabindex="0"
+					>
 						{#if mediaType === 'image'}
 							<img src={getAssetUrl(asset)} alt={asset.name} loading="lazy" />
 						{:else if mediaType === 'audio'}
 							<div class="audio-placeholder">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<path d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" stroke-linecap="round" stroke-linejoin="round" />
+									<path
+										d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
 								</svg>
 							</div>
 						{:else}
 							<div class="video-placeholder">
 								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-									<path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" stroke-linecap="round" stroke-linejoin="round" />
+									<path
+										d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
 								</svg>
 							</div>
 						{/if}
@@ -435,20 +513,39 @@
 						<span class="asset-name" title={asset.name}>{asset.name}</span>
 						<span class="asset-meta">
 							{asset.category.replace(/_/g, ' ')}
-							{#if asset.fileSize} · {formatFileSize(asset.fileSize)}{/if}
+							{#if asset.fileSize}
+								· {formatFileSize(asset.fileSize)}{/if}
 						</span>
 					</div>
 
 					<!-- Actions -->
 					<div class="asset-actions">
-						<button class="icon-btn" on:click={() => loadRevisions(asset)} title="Version history" aria-label="Version history">
+						<button
+							class="icon-btn"
+							on:click={() => loadRevisions(asset)}
+							title="Version history"
+							aria-label="Version history"
+						>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" stroke-linecap="round" stroke-linejoin="round" />
+								<path
+									d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
 							</svg>
 						</button>
-						<button class="icon-btn danger" on:click={() => deleteAsset(asset)} title="Delete" aria-label="Delete {asset.name}">
+						<button
+							class="icon-btn danger"
+							on:click={() => deleteAsset(asset)}
+							title="Delete"
+							aria-label="Delete {asset.name}"
+						>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-								<path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" stroke-linecap="round" stroke-linejoin="round" />
+								<path
+									d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
 							</svg>
 						</button>
 					</div>
@@ -462,7 +559,11 @@
 		<div class="activity-panel">
 			<div class="panel-header">
 				<h4>Activity Log</h4>
-				<button class="close-panel-btn" on:click={() => showActivityPanel = false} aria-label="Close">
+				<button
+					class="close-panel-btn"
+					on:click={() => (showActivityPanel = false)}
+					aria-label="Close"
+				>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
 					</svg>
@@ -471,7 +572,11 @@
 			<div class="activity-list">
 				{#each activityLogs as log (log.id)}
 					<div class="activity-item">
-						<div class="activity-badge" class:ai={log.source === 'ai_generated'} class:upload={log.source === 'upload'}>
+						<div
+							class="activity-badge"
+							class:ai={log.source === 'ai_generated'}
+							class:upload={log.source === 'upload'}
+						>
 							{getSourceBadge(log.source)}
 						</div>
 						<div class="activity-content">
@@ -491,7 +596,14 @@
 		<div class="revision-panel">
 			<div class="panel-header">
 				<h4>Revisions: {selectedAsset.name}</h4>
-				<button class="close-panel-btn" on:click={() => { showRevisions = false; selectedAsset = null; }} aria-label="Close">
+				<button
+					class="close-panel-btn"
+					on:click={() => {
+						showRevisions = false;
+						selectedAsset = null;
+					}}
+					aria-label="Close"
+				>
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 						<path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
 					</svg>
@@ -588,7 +700,9 @@
 		color: var(--color-text);
 		font-size: 0.8125rem;
 		cursor: pointer;
-		transition: background-color var(--transition-fast), border-color var(--transition-fast);
+		transition:
+			background-color var(--transition-fast),
+			border-color var(--transition-fast);
 	}
 
 	.action-btn:hover {
@@ -724,8 +838,13 @@
 	}
 
 	@keyframes shimmer {
-		0%, 100% { background-position: 0% 50%; }
-		50% { background-position: 100% 50%; }
+		0%,
+		100% {
+			background-position: 0% 50%;
+		}
+		50% {
+			background-position: 100% 50%;
+		}
 	}
 
 	.asset-preview {
@@ -814,7 +933,9 @@
 		padding: var(--spacing-xs);
 		border-radius: var(--radius-sm);
 		color: var(--color-text-secondary);
-		transition: color var(--transition-fast), background-color var(--transition-fast);
+		transition:
+			color var(--transition-fast),
+			background-color var(--transition-fast);
 	}
 
 	.icon-btn:hover {
@@ -921,7 +1042,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	/* Activity Log */

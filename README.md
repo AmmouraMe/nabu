@@ -93,6 +93,9 @@ npm run dev
 # Visit http://localhost:4239
 ```
 
+Full setup instructions (migrations, KV, OAuth, deployment): see
+[docs/SETUP.md](docs/SETUP.md).
+
 ---
 
 ## 📦 Development

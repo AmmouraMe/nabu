@@ -69,14 +69,14 @@ export const MODEL_PRICING: Record<
 		displayName: 'GPT-4.1'
 	},
 	'gpt-4.1-mini': {
-		inputPer1M: 0.40,
-		outputPer1M: 1.60,
+		inputPer1M: 0.4,
+		outputPer1M: 1.6,
 		type: 'text',
 		displayName: 'GPT-4.1 mini'
 	},
 	'gpt-4.1-nano': {
-		inputPer1M: 0.10,
-		outputPer1M: 0.40,
+		inputPer1M: 0.1,
+		outputPer1M: 0.4,
 		type: 'text',
 		displayName: 'GPT-4.1 nano'
 	},
@@ -114,8 +114,8 @@ export const MODEL_PRICING: Record<
 	},
 	// o4-mini (reasoning)
 	'o4-mini': {
-		inputPer1M: 1.10,
-		outputPer1M: 4.40,
+		inputPer1M: 1.1,
+		outputPer1M: 4.4,
 		type: 'text',
 		displayName: 'o4-mini'
 	},
@@ -133,8 +133,8 @@ export const MODEL_PRICING: Record<
 		displayName: 'o3 Pro'
 	},
 	'o3-mini': {
-		inputPer1M: 1.10,
-		outputPer1M: 4.40,
+		inputPer1M: 1.1,
+		outputPer1M: 4.4,
 		type: 'text',
 		displayName: 'o3 mini'
 	},
@@ -152,8 +152,8 @@ export const MODEL_PRICING: Record<
 		displayName: 'o1 Pro'
 	},
 	'o1-mini': {
-		inputPer1M: 1.10,
-		outputPer1M: 4.40,
+		inputPer1M: 1.1,
+		outputPer1M: 4.4,
 		type: 'text',
 		displayName: 'o1 mini'
 	},
@@ -198,8 +198,8 @@ export const MODEL_PRICING: Record<
 		displayName: 'GPT Realtime'
 	},
 	'gpt-realtime-mini': {
-		inputPer1M: 0.60,
-		outputPer1M: 2.40,
+		inputPer1M: 0.6,
+		outputPer1M: 2.4,
 		type: 'voice',
 		displayName: 'GPT Realtime mini'
 	},
@@ -222,14 +222,14 @@ export const MODEL_PRICING: Record<
 		displayName: 'GPT-4o Realtime'
 	},
 	'gpt-4o-mini-realtime-preview': {
-		inputPer1M: 0.60,
-		outputPer1M: 2.40,
+		inputPer1M: 0.6,
+		outputPer1M: 2.4,
 		type: 'voice',
 		displayName: 'GPT-4o mini Realtime'
 	},
 	'gpt-4o-mini-realtime-preview-2024-12-17': {
-		inputPer1M: 0.60,
-		outputPer1M: 2.40,
+		inputPer1M: 0.6,
+		outputPer1M: 2.4,
 		type: 'voice',
 		displayName: 'GPT-4o mini Realtime'
 	},
@@ -269,7 +269,7 @@ export const MODEL_PRICING: Record<
 		outputPer1M: 5.0,
 		type: 'text' as const,
 		displayName: 'Claude 3.5 Haiku'
-	},
+	}
 };
 
 // Default pricing for unknown models (use gpt-4o pricing as fallback)
@@ -405,7 +405,7 @@ export const VIDEO_PRICING: Record<
 export function calculateVideoCost(
 	model: string,
 	durationSeconds: number
-): { cost: number; displayName: string; } {
+): { cost: number; displayName: string } {
 	const pricing = VIDEO_PRICING[model];
 	if (!pricing) {
 		return { cost: 0, displayName: model };
@@ -439,12 +439,18 @@ export function formatVideoCost(model: string, durationSeconds: number): string 
  * takes priority. Returns 0 when pricing is undefined or has no rate fields.
  */
 export function calculateVideoCostFromPricing(
-	pricing: {
-		estimatedCostPerSecond?: number;
-		estimatedCostPerGeneration?: number;
-		pricingByResolution?: Record<string, { estimatedCostPerSecond?: number; estimatedCostPerGeneration?: number; }>;
-		currency?: string;
-	} | undefined | null,
+	pricing:
+		| {
+				estimatedCostPerSecond?: number;
+				estimatedCostPerGeneration?: number;
+				pricingByResolution?: Record<
+					string,
+					{ estimatedCostPerSecond?: number; estimatedCostPerGeneration?: number }
+				>;
+				currency?: string;
+		  }
+		| undefined
+		| null,
 	durationSeconds: number,
 	resolution?: string
 ): number {

@@ -97,7 +97,6 @@ describe('GitHub OAuth Initiation - Extended Coverage', () => {
 		await expect(
 			GET(createMockEvent({ kvGet: mockKVGet }) as unknown as Parameters<typeof GET>[0])
 		).rejects.toThrow('Redirect to /setup?error=oauth_not_configured');
-
 	});
 
 	it('should redirect to setup when platform is not available', async () => {

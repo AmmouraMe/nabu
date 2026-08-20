@@ -16,7 +16,9 @@ describe('Footer', () => {
 
 	it('should display the tagline', () => {
 		render(Footer);
-		expect(screen.getByText(/marketing automation with optional AI-generated content/i)).toBeInTheDocument();
+		expect(
+			screen.getByText(/marketing automation with optional AI-generated content/i)
+		).toBeInTheDocument();
 	});
 
 	it('should have navigation links section', () => {

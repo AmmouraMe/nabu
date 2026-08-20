@@ -26,8 +26,7 @@
 
 	// Full-screen pages that need height-constrained main (no body scroll)
 	$: fullScreenPage =
-		$page.url.pathname.startsWith('/chat') ||
-		$page.url.pathname.startsWith('/onboarding');
+		$page.url.pathname.startsWith('/chat') || $page.url.pathname.startsWith('/onboarding');
 
 	// Subscribe to theme changes and apply to DOM
 	if (browser) {

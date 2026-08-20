@@ -7,7 +7,10 @@
 
 <svelte:head>
 	<title>File Archive — Brand Architect | NebulaKit</title>
-	<meta name="description" content="Browse all files from your Brand Architect AI conversations — uploads, AI-generated images, audio, and video." />
+	<meta
+		name="description"
+		content="Browse all files from your Brand Architect AI conversations — uploads, AI-generated images, audio, and video."
+	/>
 </svelte:head>
 
 <div class="archive-page">
@@ -18,9 +21,7 @@
 			<div class="notice-content">
 				<span class="notice-icon">📂</span>
 				<h2>No Brand Profile Found</h2>
-				<p>
-					Start a brand onboarding session first to create your file archive.
-				</p>
+				<p>Start a brand onboarding session first to create your file archive.</p>
 				<a href="/onboarding" class="start-link">Start Brand Architect →</a>
 			</div>
 		</div>

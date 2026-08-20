@@ -500,7 +500,7 @@ After running `npm run test:coverage`, open `coverage/index.html` in your browse
 5. **Arrange-Act-Assert** - Structure tests clearly
 6. **Mock external dependencies** - Tests should be fast and isolated
 7. **Test edge cases** - Empty strings, null, undefined, large numbers
-8. **Maintain 95%+ coverage** - Use coverage reports to find gaps
+8. **Maintain 95%+ coverage (enforced threshold in vite.config.ts)** - Use coverage reports to find gaps
 
 ## 🚫 Common Mistakes
 

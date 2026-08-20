@@ -18,7 +18,6 @@ export const GET: RequestHandler = async ({ locals, platform, params, url }) => 
 	}
 
 	await requireBrandAccess(platform!.env.DB, locals.user.id, profileId, 'read');
-
 	const step = url.searchParams.get('step') as OnboardingStep | null;
 	const messages = await getOnboardingMessages(platform!.env.DB, profileId, step || undefined);
 

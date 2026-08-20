@@ -118,7 +118,7 @@ describe('Profile Page', () => {
 				},
 				hasAIProviders: false,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container, getByText } = render(ProfilePage.default, {
@@ -148,7 +148,7 @@ describe('Profile Page', () => {
 				},
 				hasAIProviders: false,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container } = render(ProfilePage.default, {
@@ -173,7 +173,7 @@ describe('Profile Page', () => {
 				},
 				hasAIProviders: false,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container } = render(ProfilePage.default, {
@@ -200,7 +200,7 @@ describe('Profile Page', () => {
 				},
 				hasAIProviders: false,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { getByText } = render(ProfilePage.default, {
@@ -224,7 +224,7 @@ describe('Profile Page', () => {
 				},
 				hasAIProviders: false,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { getByText } = render(ProfilePage.default, {
@@ -247,7 +247,7 @@ describe('Profile Page', () => {
 				},
 				hasAIProviders: false,
 				connectedAccounts: [],
-			configuredProviders: { github: false, discord: false }
+				configuredProviders: { github: false, discord: false }
 			};
 
 			const { container } = render(ProfilePage.default, {
@@ -259,5 +259,3 @@ describe('Profile Page', () => {
 		});
 	});
 });
-
-

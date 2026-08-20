@@ -21,7 +21,7 @@ vi.mock('$lib/services/brand-assets', () => ({
 	deleteBrandMedia: vi.fn(),
 	getLogoAssets: vi.fn(),
 	getBrandAssetSummary: vi.fn(),
-	createBrandText: vi.fn(),
+	upsertBrandText: vi.fn(),
 	getBrandTexts: vi.fn(),
 	getBrandTextsByCategory: vi.fn(),
 	updateBrandText: vi.fn(),
@@ -30,7 +30,6 @@ vi.mock('$lib/services/brand-assets', () => ({
 	getMediaVariants: vi.fn(),
 	deleteMediaVariant: vi.fn(),
 	getBrandTextById: vi.fn(),
-	findBrandTextByKey: vi.fn(),
 	syncFieldToTextAsset: vi.fn()
 }));
 
@@ -102,7 +101,7 @@ import {
 	getTextSuggestionsForField
 } from '$lib/services/brand';
 import {
-	createBrandText,
+	upsertBrandText,
 	getBrandTextById,
 	updateBrandText,
 	deleteBrandText
@@ -151,7 +150,10 @@ const adminLocals = { user: { id: 'user-1', isAdmin: true, isOwner: true } };
 describe('Brand Assets Texts — POST branch: field update fails', () => {
 	it('POST: catches field update failure and still returns text', async () => {
 		const { POST } = await import('../../src/routes/api/brand/assets/texts/+server');
-		vi.mocked(createBrandText).mockResolvedValue({ id: 't-1', value: 'My tagline' } as any);
+		vi.mocked(upsertBrandText).mockResolvedValue({
+			text: { id: 't-1', value: 'My tagline', language: 'en' },
+			created: true
+		} as any);
 		vi.mocked(updateBrandFieldWithVersion).mockRejectedValue(new Error('DB error'));
 
 		const res = await POST({

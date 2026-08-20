@@ -31,7 +31,6 @@ describe('Discord OAuth Init - Extended Branch Coverage', () => {
 				expect(err.status).toBe(302);
 				expect(err.location).toContain('/setup');
 			}
-
 		});
 
 		it('should use KV clientId when env var not set', async () => {

@@ -20,7 +20,8 @@ describe('Layout Server Load', () => {
 			};
 
 			const mockKV = {
-				get: vi.fn()
+				get: vi
+					.fn()
 					.mockResolvedValueOnce(JSON.stringify(['key-1'])) // ai_keys_list
 					.mockResolvedValueOnce(JSON.stringify({ enabled: true })) // ai_key:key-1
 			};
@@ -29,7 +30,7 @@ describe('Layout Server Load', () => {
 			const result = (await load({
 				locals: { user: mockUser },
 				platform: { env: { KV: mockKV } }
-			} as any)) as { user: typeof mockUser | null; hasAIProviders: boolean; };
+			} as any)) as { user: typeof mockUser | null; hasAIProviders: boolean };
 
 			expect(result.user).toEqual(mockUser);
 			expect(result.hasAIProviders).toBe(true);
@@ -45,7 +46,7 @@ describe('Layout Server Load', () => {
 			const result = (await load({
 				locals: {},
 				fetch: mockFetch
-			} as any)) as { user: null; hasAIProviders: boolean; };
+			} as any)) as { user: null; hasAIProviders: boolean };
 
 			expect(result.user).toBeNull();
 			expect(result.hasAIProviders).toBe(false);
@@ -61,7 +62,7 @@ describe('Layout Server Load', () => {
 			const result = (await load({
 				locals: { user: { id: 'user-123' } },
 				fetch: mockFetch
-			} as any)) as { hasAIProviders: boolean; };
+			} as any)) as { hasAIProviders: boolean };
 
 			expect(result.hasAIProviders).toBe(false);
 		});
@@ -73,7 +74,7 @@ describe('Layout Server Load', () => {
 			const result = (await load({
 				locals: { user: { id: 'user-123' } },
 				fetch: mockFetch
-			} as any)) as { hasAIProviders: boolean; };
+			} as any)) as { hasAIProviders: boolean };
 
 			expect(result.hasAIProviders).toBe(false);
 		});

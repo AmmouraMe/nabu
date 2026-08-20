@@ -106,21 +106,31 @@
 
 	function getSourceIcon(source: string): string {
 		switch (source) {
-			case 'ai': return '🤖';
-			case 'manual': return '✏️';
-			case 'import': return '📥';
-			case 'revert': return '↩️';
-			default: return '📝';
+			case 'ai':
+				return '🤖';
+			case 'manual':
+				return '✏️';
+			case 'import':
+				return '📥';
+			case 'revert':
+				return '↩️';
+			default:
+				return '📝';
 		}
 	}
 
 	function getSourceLabel(source: string): string {
 		switch (source) {
-			case 'ai': return 'AI Generated';
-			case 'manual': return 'Manual Edit';
-			case 'import': return 'Imported';
-			case 'revert': return 'Reverted';
-			default: return source;
+			case 'ai':
+				return 'AI Generated';
+			case 'manual':
+				return 'Manual Edit';
+			case 'import':
+				return 'Imported';
+			case 'revert':
+				return 'Reverted';
+			default:
+				return source;
 		}
 	}
 
@@ -146,7 +156,13 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-<div class="modal-backdrop" on:click={handleBackdropClick} role="dialog" aria-modal="true" aria-label="Text revision history">
+<div
+	class="modal-backdrop"
+	on:click={handleBackdropClick}
+	role="dialog"
+	aria-modal="true"
+	aria-label="Text revision history"
+>
 	<div class="modal-content">
 		<div class="modal-header">
 			<div class="modal-title-block">
@@ -186,8 +202,13 @@
 								{#if rev.isCurrent}
 									<span class="current-badge">Current</span>
 								{/if}
-								<span class="revision-source" class:ai={rev.changeSource === 'ai'} class:revert={rev.changeSource === 'revert'}>
-									{getSourceIcon(rev.changeSource)} {getSourceLabel(rev.changeSource)}
+								<span
+									class="revision-source"
+									class:ai={rev.changeSource === 'ai'}
+									class:revert={rev.changeSource === 'revert'}
+								>
+									{getSourceIcon(rev.changeSource)}
+									{getSourceLabel(rev.changeSource)}
 								</span>
 							</div>
 
@@ -201,27 +222,27 @@
 
 							<div class="revision-footer">
 								<span class="revision-date">{formatDate(rev.createdAt)}</span>
-							<div class="revision-actions">
-								{#if canPushToProfile}
-									<button
-										class="push-btn"
-										on:click={() => pushToProfile(rev.id)}
-										disabled={isPushing || isReverting}
-										title="Push this revision's value to the profile"
-									>
-										{isPushing ? '⏳...' : '📤 Push to Profile'}
-									</button>
-								{/if}
-								{#if !rev.isCurrent}
-									<button
-										class="revert-btn"
-										on:click={() => revertTo(rev.id)}
-										disabled={isReverting || isPushing}
-									>
-										{isReverting ? 'Reverting…' : '↩️ Revert to this version'}
-									</button>
-								{/if}
-							</div>
+								<div class="revision-actions">
+									{#if canPushToProfile}
+										<button
+											class="push-btn"
+											on:click={() => pushToProfile(rev.id)}
+											disabled={isPushing || isReverting}
+											title="Push this revision's value to the profile"
+										>
+											{isPushing ? '⏳...' : '📤 Push to Profile'}
+										</button>
+									{/if}
+									{#if !rev.isCurrent}
+										<button
+											class="revert-btn"
+											on:click={() => revertTo(rev.id)}
+											disabled={isReverting || isPushing}
+										>
+											{isReverting ? 'Reverting…' : '↩️ Revert to this version'}
+										</button>
+									{/if}
+								</div>
 							</div>
 						</div>
 					{/each}
@@ -331,7 +352,9 @@
 	}
 
 	@keyframes spin {
-		to { transform: rotate(360deg); }
+		to {
+			transform: rotate(360deg);
+		}
 	}
 
 	.empty-icon {

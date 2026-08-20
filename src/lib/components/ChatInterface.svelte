@@ -85,7 +85,8 @@
 	// Input state
 	const MAX_INPUT_LENGTH = 4000;
 	$: inputLength = input.length;
-	$: canSend = (input.trim().length > 0 || pendingAttachments.length > 0) && !isLoading && !isVoiceActive;
+	$: canSend =
+		(input.trim().length > 0 || pendingAttachments.length > 0) && !isLoading && !isVoiceActive;
 	$: showCharCount = inputLength > MAX_INPUT_LENGTH * 0.8;
 
 	onMount(() => {
@@ -180,7 +181,11 @@
 		};
 		chatHistoryStore.addMessage(conversationId, {
 			role: 'user',
-			content: messageContent || (messageAttachments ? `[${messageAttachments.length} attachment${messageAttachments.length > 1 ? 's' : ''}]` : ''),
+			content:
+				messageContent ||
+				(messageAttachments
+					? `[${messageAttachments.length} attachment${messageAttachments.length > 1 ? 's' : ''}]`
+					: ''),
 			cost: userCost,
 			attachments: messageAttachments
 		});
@@ -325,7 +330,9 @@
 			});
 
 			if (!response.ok) {
-				const errorData = await response.json().catch(() => ({ error: 'Failed to start video generation' }));
+				const errorData = await response
+					.json()
+					.catch(() => ({ error: 'Failed to start video generation' }));
 				throw new Error(errorData.error || 'Failed to start video generation');
 			}
 
@@ -364,11 +371,7 @@
 	/**
 	 * Connect to SSE stream for video generation progress
 	 */
-	function connectToVideoProgress(
-		conversationId: string,
-		messageId: string,
-		generationId: string
-	) {
+	function connectToVideoProgress(conversationId: string, messageId: string, generationId: string) {
 		const eventSource = new EventSource(`/api/video/${generationId}/stream`);
 
 		eventSource.onmessage = (event) => {
@@ -499,7 +502,9 @@
 				const attachmentType = getAttachmentType(file.type);
 
 				const attachment: ChatAttachment = {
-					id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+					id: crypto.randomUUID
+						? crypto.randomUUID()
+						: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
 					type: attachmentType!,
 					name: file.name,
 					url: dataUrl,
@@ -1077,11 +1082,7 @@
 				</div>
 				<div class="message-bubble">
 					{#if message.media}
-						<VideoCard
-							media={message.media}
-							prompt={message.content}
-							on:retry={handleVideoRetry}
-						/>
+						<VideoCard media={message.media} prompt={message.content} on:retry={handleVideoRetry} />
 					{:else}
 						<div class="message-content">{message.content}</div>
 					{/if}
@@ -1283,7 +1284,14 @@
 								<img src={attachment.url} alt={attachment.name} class="pending-thumbnail" />
 							{:else}
 								<div class="pending-video-icon">
-									<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<svg
+										width="20"
+										height="20"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+									>
 										<rect x="2" y="4" width="20" height="16" rx="2" />
 										<polygon points="10,9 16,12 10,15" fill="currentColor" stroke="none" />
 									</svg>
@@ -1296,7 +1304,14 @@
 								aria-label="Remove {attachment.name}"
 								title="Remove attachment"
 							>
-								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+								>
 									<line x1="18" y1="6" x2="6" y2="18" />
 									<line x1="6" y1="6" x2="18" y2="18" />
 								</svg>
@@ -1309,7 +1324,14 @@
 			<!-- Attachment error message -->
 			{#if attachmentError}
 				<div class="attachment-error" in:fade={{ duration: 200 }}>
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<svg
+						width="14"
+						height="14"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
 						<circle cx="12" cy="12" r="10" />
 						<line x1="15" y1="9" x2="9" y2="15" />
 						<line x1="9" y1="9" x2="15" y2="15" />
@@ -1359,7 +1381,9 @@
 							stroke-linecap="round"
 							stroke-linejoin="round"
 						>
-							<path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+							<path
+								d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"
+							/>
 						</svg>
 					</button>
 				{/if}
@@ -1431,7 +1455,14 @@
 				<!-- Drag overlay -->
 				{#if isDragOver}
 					<div class="drag-overlay" in:fade={{ duration: 150 }}>
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<svg
+							width="24"
+							height="24"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+						>
 							<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
 							<polyline points="17 8 12 3 7 8" />
 							<line x1="12" y1="3" x2="12" y2="15" />

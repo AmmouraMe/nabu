@@ -1,0 +1,16 @@
+# Commits git blame should step over.
+#
+# These are changes that touched a lot of lines without changing behaviour, so
+# blaming through them tells you who reformatted the file, not who wrote it.
+#
+# GitHub honours this file automatically. For local git:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Add a comment above every entry saying what it was, or the next person has
+# a bare hash and no way to judge it.
+
+# style: apply Prettier to the whole tree (formatting only, no logic change)
+# 46,529 insertions, 44,025 deletions across 229 files. Landed in #6 with the
+# brand text-sync work, which is why blame needs this to stay readable.
+7cffc6c0dfebb58f99148e58171949f40d69042f

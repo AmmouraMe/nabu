@@ -7,7 +7,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { handleGenerate, onRequest, type Env } from '../../apps/namer/functions/api/generate';
+import {
+	handleGenerate,
+	onRequest,
+	responseText,
+	type Env
+} from '../../apps/namer/functions/api/generate';
 import { clientIp, consume, HOURLY_LIMIT, windowKey } from '../../apps/namer/src/rate-limit';
 
 /** An in-memory stand-in for the KV namespace. */
@@ -35,8 +40,11 @@ function post(body: unknown, ip = '203.0.113.7'): Request {
  * though the fake ignores them, so `run.mock.calls` stays typed as a real call.
  */
 function fakeAi(response: string) {
+	// The shape production actually returns, so the happy path exercises it.
 	return {
-		run: vi.fn(async (_model: string, _inputs: Record<string, unknown>) => ({ response }))
+		run: vi.fn(async (_model: string, _inputs: Record<string, unknown>) => ({
+			choices: [{ message: { content: response } }]
+		}))
 	};
 }
 
@@ -241,6 +249,35 @@ describe('handleGenerate', () => {
 		};
 		const response = await handleGenerate(post(VALID_BODY), env, NOW);
 		expect(response.status).toBe(502);
+	});
+});
+
+describe('responseText', () => {
+	// The shape that caused a production 502: llama-3.3-70b via the Workers AI
+	// binding answers OpenAI-style, and reading only `.response` gave '' every time.
+	it('reads the OpenAI-style completion shape', () => {
+		expect(responseText({ choices: [{ message: { content: 'hello' } }] })).toBe('hello');
+	});
+
+	it('still reads the plain { response } shape', () => {
+		expect(responseText({ response: 'hello' })).toBe('hello');
+	});
+
+	it('still reads a bare string', () => {
+		expect(responseText('hello')).toBe('hello');
+	});
+
+	it('prefers response when a reply somehow carries both', () => {
+		expect(responseText({ response: 'first', choices: [{ message: { content: 'second' } }] })).toBe(
+			'first'
+		);
+	});
+
+	it('returns empty for shapes it does not recognise, so the caller 502s', () => {
+		expect(responseText({})).toBe('');
+		expect(responseText({ choices: [] })).toBe('');
+		expect(responseText({ choices: [{}] })).toBe('');
+		expect(responseText({ choices: [{ message: {} }] })).toBe('');
 	});
 });
 

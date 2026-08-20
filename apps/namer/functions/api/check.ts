@@ -61,7 +61,11 @@ export async function handleCheck(request: Request, env: Env, now: number): Prom
 
 	const availability = await checkAvailability(
 		{
-			fetch,
+			// Bound, not passed bare. A detached `fetch` called as `deps.fetch(...)`
+			// takes `deps` as its `this`, which throws "Illegal invocation" on the
+			// Workers runtime — and every lookup then degrades to unchecked. Unit
+			// tests inject a stub and never see this, so it only showed up in prod.
+			fetch: globalThis.fetch.bind(globalThis),
 			cache: env.RATE_LIMIT,
 			githubToken: env.GITHUB_TOKEN,
 			trademark:

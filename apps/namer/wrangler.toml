@@ -25,11 +25,13 @@ binding = "AI"
 
 # KV — the per-IP hourly rate limit, and the only state this app has.
 #
-# NOT YET CREATED. Create it before the first deploy, then paste the two ids
-# wrangler prints over the placeholders below:
-#
+# Created 2026-08-20 on the Ammoura account with:
 #   wrangler kv namespace create NAMER_RATE_LIMIT
 #   wrangler kv namespace create NAMER_RATE_LIMIT --preview
+#
+# The binding stays RATE_LIMIT even though the namespaces are titled
+# nabu-namer-NAMER_RATE_LIMIT — the title is just wrangler's label for the
+# dashboard, while the binding is the name the code reads off `env`.
 #
 # Do not point this at the parent project's KV namespace. Nabu's KV holds the
 # setup lock and owner ids; a public endpoint writing counter keys into it is
@@ -37,8 +39,8 @@ binding = "AI"
 # these are placeholders, which is deliberate — see functions/api/generate.ts.
 [[kv_namespaces]]
 binding = "RATE_LIMIT"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_KV_PREVIEW_NAMESPACE_ID"
+id = "371d840b077347b7aa0ed63fb7093d1e"
+preview_id = "a68ff76b94694435b5fc361d1de28f55"
 
 # ── Optional secrets for the availability checks ─────────────────────────────
 #

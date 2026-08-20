@@ -285,6 +285,40 @@ describe('extractJsonArray', () => {
 		expect(extractJsonArray(raw)).toEqual([{ name: 'Apex' }]);
 	});
 
+	it('salvages the complete objects from a reply truncated mid-array', () => {
+		// What a generation that hit max_tokens actually looks like: no closing
+		// brace on the last object, no closing bracket. Losing six good names over
+		// a seventh that never finished is the failure this prevents.
+		const truncated =
+			'[{"name":"Ardor","meaning":"A burning."},{"name":"Alba","meaning":"Dawn."},{"name":"Ember","dom';
+		expect(extractJsonArray(truncated)).toEqual([
+			{ name: 'Ardor', meaning: 'A burning.' },
+			{ name: 'Alba', meaning: 'Dawn.' }
+		]);
+	});
+
+	it('is not fooled by braces inside strings when salvaging', () => {
+		const truncated = '[{"name":"Ardor","meaning":"Uses a { brace } inside"},{"name":"Alb';
+		expect(extractJsonArray(truncated)).toEqual([
+			{ name: 'Ardor', meaning: 'Uses a { brace } inside' }
+		]);
+	});
+
+	it('is not fooled by an escaped quote when salvaging', () => {
+		const truncated = '[{"name":"Ardor","meaning":"They said \\"go\\" once"},{"name":"Al';
+		expect(extractJsonArray(truncated)).toEqual([
+			{ name: 'Ardor', meaning: 'They said "go" once' }
+		]);
+	});
+
+	it('returns null when not even one object completed', () => {
+		expect(extractJsonArray('[{"name":"Ard')).toBeNull();
+	});
+
+	it('returns null when the braces balance but the content is not JSON', () => {
+		expect(extractJsonArray('[{"name":"Ardor"} then some prose {"name":"Alba"}')).toBeNull();
+	});
+
 	it('returns null when there is no array to find', () => {
 		expect(extractJsonArray('I cannot help with that.')).toBeNull();
 		expect(extractJsonArray('')).toBeNull();

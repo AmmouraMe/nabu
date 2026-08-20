@@ -16,11 +16,26 @@ import { clientIp, consume, HOURLY_LIMIT, type RateLimitStore } from '../../src/
 /** Same model the app's content generator uses — free tier, good enough at JSON. */
 const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
-/** Long enough for six rationales, short of the model rambling into a timeout. */
-const MAX_TOKENS = 1400;
+/**
+ * Six names with five prose fields each runs to roughly 1,100–1,800 tokens, and
+ * 1,400 truncated it mid-array in production — the reply parsed as nothing and
+ * the endpoint 502'd. Raised with headroom; `parseNames` also salvages a
+ * truncated array now, so overrunning costs the last name rather than all six.
+ */
+const MAX_TOKENS = 2600;
+
+/**
+ * Workers AI does not answer in one shape. Llama 3.3 70B via the binding returns
+ * an OpenAI-style completion — `choices[0].message.content` — while other models
+ * and older versions return `{ response }`, and the types allow a bare string.
+ * All three are accepted; see `responseText`.
+ */
+export type AiResult =
+	| string
+	| { response?: string; choices?: { message?: { content?: string } }[] };
 
 export interface AiBinding {
-	run(model: string, inputs: Record<string, unknown>): Promise<{ response?: string } | string>;
+	run(model: string, inputs: Record<string, unknown>): Promise<AiResult>;
 }
 
 export interface Env {
@@ -37,13 +52,21 @@ function json(body: unknown, status: number, headers: Record<string, string> = {
 }
 
 /**
- * Workers AI returns `{ response }` for chat models, but the binding's own types
- * allow a bare string and some models have done exactly that. Normalising here
- * keeps the parser dealing with one shape.
+ * Pull the generated text out of whatever shape the binding returned.
+ *
+ * This cost a production 502: llama-3.3-70b-instruct-fp8-fast answers with an
+ * OpenAI-style `{ choices: [{ message: { content } }] }`, and reading only
+ * `.response` yielded an empty string on every call — so the parser saw nothing,
+ * and every request came back "unreadable". Checking all three shapes means a
+ * model that changes its envelope degrades to a 502 rather than doing so
+ * silently and permanently.
  */
-function responseText(result: { response?: string } | string): string {
+export function responseText(result: AiResult): string {
 	if (typeof result === 'string') return result;
-	return typeof result?.response === 'string' ? result.response : '';
+	if (typeof result?.response === 'string') return result.response;
+
+	const content = result?.choices?.[0]?.message?.content;
+	return typeof content === 'string' ? content : '';
 }
 
 export async function handleGenerate(request: Request, env: Env, now: number): Promise<Response> {

@@ -405,7 +405,66 @@ export function extractJsonArray(raw: string): unknown[] | null {
 		}
 	}
 
-	return null;
+	return salvageTruncatedArray(raw);
+}
+
+/**
+ * Recover the complete objects from an array the model ran out of tokens
+ * mid-way through.
+ *
+ * A generation cut off at the limit ends like `..."domain": "alba.co` — no
+ * closing brace, no closing bracket, so the whole reply parses as nothing and
+ * six good names are thrown away over a seventh that never finished. This walks
+ * back to the last `}` that closes a top-level object and parses the array up to
+ * there.
+ *
+ * Only ever called after the strict paths fail, so a well-formed reply never
+ * touches it.
+ */
+function salvageTruncatedArray(raw: string): unknown[] | null {
+	const start = raw.indexOf('[');
+	if (start === -1) return null;
+
+	// Walk forward tracking depth, remembering where each top-level object ends.
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+	let lastComplete = -1;
+
+	for (let i = start + 1; i < raw.length; i++) {
+		const ch = raw[i];
+
+		if (escaped) {
+			escaped = false;
+			continue;
+		}
+		if (ch === '\\') {
+			escaped = true;
+			continue;
+		}
+		if (ch === '"') {
+			inString = !inString;
+			continue;
+		}
+		if (inString) continue;
+
+		if (ch === '{') depth++;
+		else if (ch === '}') {
+			depth--;
+			if (depth === 0) lastComplete = i;
+		}
+	}
+
+	if (lastComplete === -1) return null;
+
+	try {
+		// The slice always opens at '[', so anything that parses is an array —
+		// no need to re-check the type.
+		return JSON.parse(raw.slice(start, lastComplete + 1) + ']') as unknown[];
+	} catch {
+		// Braces balanced but the content between them is not JSON.
+		return null;
+	}
 }
 
 /**

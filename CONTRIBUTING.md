@@ -35,13 +35,13 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:4277` to verify everything works.
+Visit `http://localhost:4239` to verify everything works.
 
 ## 🧪 Testing Requirements
 
 ### Coverage Requirements
 
-- **Minimum 90% code coverage** across all modules
+- **Minimum 95% code coverage** across all modules
 - **100% coverage** on critical paths (auth, payments, data mutations)
 - All tests must pass before submitting a PR
 
@@ -54,7 +54,7 @@ npm run test
 # Run tests in watch mode
 npm run test:watch
 
-# Check coverage (must be ≥90%)
+# Check coverage (must be ≥95%)
 npm run test:coverage
 
 # Run tests with UI
@@ -253,7 +253,7 @@ npm run dev
 
 - [ ] Tests written **before** implementation (TDD)
 - [ ] All tests passing (`npm run test:all`)
-- [ ] Coverage ≥ 90% (`npm run test:coverage`)
+- [ ] Coverage ≥ 95% (`npm run test:coverage`)
 - [ ] TypeScript checks pass (`npm run check`)
 - [ ] Dev environment works (`npm run dev`)
 - [ ] No new external dependencies (or justified in PR description)
@@ -294,7 +294,7 @@ Why is this change needed?
 - [ ] Integration tests added/updated
 - [ ] E2E tests added/updated
 - [ ] All tests passing
-- [ ] Coverage ≥ 90%
+- [ ] Coverage ≥ 95%
 
 ## Screenshots (if applicable)
 
@@ -309,7 +309,7 @@ Why is this change needed?
 4. ❌ **Not testing locally** - Always verify dev environment works
 5. ❌ **Hardcoding values** - Use environment variables
 6. ❌ **Using Node.js APIs** - Use Web APIs for Cloudflare Workers
-7. ❌ **Committing without coverage check** - Must maintain 90%+
+7. ❌ **Committing without coverage check** - Must maintain 95%+
 
 ## 🎨 UI/UX Standards
 

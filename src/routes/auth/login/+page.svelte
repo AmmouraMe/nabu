@@ -45,12 +45,27 @@
 		error = '';
 		isLoading = true;
 
-		// Simulate API call
-		setTimeout(() => {
+		try {
+			const response = await fetch('/api/auth/login', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email, password })
+			});
+			const result = await response.json().catch(() => ({}));
+
+			if (!response.ok) {
+				error = result?.message || 'Could not sign you in. Please try again.';
+				return;
+			}
+
+			// Full navigation, not goto(): the session cookie arrived on this response
+			// and the server hooks have to re-run for anything to see it.
+			window.location.href = result.redirect || '/';
+		} catch {
+			error = 'Could not reach the server. Check your connection and try again.';
+		} finally {
 			isLoading = false;
-			// In real implementation, this would call your auth API
-			console.log('Login attempt:', { email, password });
-		}, 1000);
+		}
 	}
 
 	function handleSSOLogin(provider: string) {

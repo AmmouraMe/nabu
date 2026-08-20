@@ -16,6 +16,12 @@ import { getEmptyTextFields, AI_FILLABLE_FIELDS } from '$lib/services/brand-ai-f
 import { buildBrandContextPrompt } from '$lib/services/ai-text-generation';
 import { getBrandTexts } from '$lib/services/brand-assets';
 import { getFirstEnabledAIKey, chatCompletionWithKey } from '$lib/services/openai-chat';
+import {
+	consumeUsage,
+	entitlementRefusal,
+	releaseUsage,
+	resolvePlan
+} from '$lib/server/entitlements';
 
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
@@ -85,18 +91,44 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const results: Array<{
 		field: string;
 		label: string;
-		status: 'success' | 'error';
+		status: 'success' | 'error' | 'skipped';
 		value?: string;
 		error?: string;
 	}> = [];
 	let totalFilled = 0;
 	let totalFailed = 0;
+	let totalSkipped = 0;
+
+	// Each field is a separate AI text generation and is charged as one. Metered per
+	// field inside the loop rather than as a batch up front, because a batch charge
+	// is all-or-nothing: an account with eight generations left and twenty empty
+	// fields would be refused outright instead of getting the eight it is owed.
+	const plan = await resolvePlan(platform.env.DB, locals.user.id);
+	let limitReached: string | null = null;
 
 	for (const fieldKey of emptyFieldKeys) {
 		const fieldDef = AI_FILLABLE_FIELDS.find((f) => f.fieldKey === fieldKey);
 		if (!fieldDef) continue;
 
 		const label = BRAND_FIELD_LABELS[fieldKey] || fieldDef.label;
+
+		if (limitReached) {
+			results.push({ field: fieldKey, label, status: 'skipped', error: limitReached });
+			totalSkipped++;
+			continue;
+		}
+
+		try {
+			await consumeUsage(platform.env.DB, locals.user.id, 'aiTextGenerations', plan);
+		} catch (err) {
+			const refusal = entitlementRefusal(err);
+			// Anything that is not a plan refusal is a real fault and still propagates.
+			if (!refusal) throw err;
+			limitReached = refusal.message;
+			results.push({ field: fieldKey, label, status: 'skipped', error: limitReached });
+			totalSkipped++;
+			continue;
+		}
 
 		try {
 			const userPrompt = `Generate a "${label}" for the brand.\n\n${fieldDef.promptTemplate}`;
@@ -111,6 +143,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			);
 
 			if (!generatedText) {
+				await releaseUsage(platform.env.DB, locals.user.id, 'aiTextGenerations');
 				results.push({ field: fieldKey, label, status: 'error', error: 'No text generated' });
 				totalFailed++;
 				continue;
@@ -130,11 +163,15 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			results.push({ field: fieldKey, label, status: 'success', value: generatedText });
 			totalFilled++;
 		} catch (err) {
+			await releaseUsage(platform.env.DB, locals.user.id, 'aiTextGenerations');
 			const errMsg = err instanceof Error ? err.message : 'Generation failed';
 			results.push({ field: fieldKey, label, status: 'error', error: errMsg });
 			totalFailed++;
 		}
 	}
 
-	return json({ results, totalFilled, totalFailed });
+	// `limitReached` is what the UI turns into an upgrade prompt: the fields that were
+	// filled are still saved, and the rest are reported as skipped rather than failed,
+	// because nothing went wrong — the plan simply ran out.
+	return json({ results, totalFilled, totalFailed, totalSkipped, limitReached });
 };

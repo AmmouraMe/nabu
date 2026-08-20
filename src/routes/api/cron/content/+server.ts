@@ -10,6 +10,12 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { generateContentCalendar, type ContentBrand } from '$lib/services/content-generator';
+import {
+	consumeUsage,
+	entitlementRefusal,
+	hasFeature,
+	resolvePlan
+} from '$lib/server/entitlements';
 
 interface BrandRow {
 	id: string;
@@ -47,11 +53,59 @@ export const GET: RequestHandler = async ({ platform, request }) => {
 		.prepare('SELECT * FROM brands WHERE auto_schedule = 1')
 		.all<BrandRow>();
 
-	const summary: { brandId: string; brandName: string; generated: number; failed: number }[] = [];
+	const summary: {
+		brandId: string;
+		brandName: string;
+		generated: number;
+		failed: number;
+		skipped?: string;
+	}[] = [];
+
+	// Plans are resolved per brand owner, not per request: this endpoint runs on a
+	// schedule with a shared secret and no session, so it is the one place where AI
+	// spending is not already attached to somebody's request. Left ungated it would
+	// generate a four-week calendar for every free account that ever ticked
+	// auto-schedule — which is exactly the "Content calendar ✗" row on the free tier.
+	const planCache = new Map<string, Awaited<ReturnType<typeof resolvePlan>>>();
+	async function planFor(userId: string) {
+		const cached = planCache.get(userId);
+		if (cached) return cached;
+		const resolved = await resolvePlan(db, userId);
+		planCache.set(userId, resolved);
+		return resolved;
+	}
 
 	for (const brand of brands ?? []) {
 		let generated = 0;
 		let failed = 0;
+
+		const plan = await planFor(brand.user_id);
+		if (!hasFeature(plan, 'contentCalendar')) {
+			summary.push({
+				brandId: brand.id,
+				brandName: brand.name,
+				generated: 0,
+				failed: 0,
+				skipped: 'plan_feature_locked'
+			});
+			continue;
+		}
+
+		// The calendar is one AI call, charged as one text generation. An owner who has
+		// spent the month's allowance is skipped rather than failed — nothing is wrong.
+		try {
+			await consumeUsage(db, brand.user_id, 'aiTextGenerations', plan);
+		} catch (err) {
+			if (!entitlementRefusal(err)) throw err;
+			summary.push({
+				brandId: brand.id,
+				brandName: brand.name,
+				generated: 0,
+				failed: 0,
+				skipped: 'plan_limit_reached'
+			});
+			continue;
+		}
 
 		try {
 			const contentBrand: ContentBrand = {

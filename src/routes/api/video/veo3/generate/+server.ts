@@ -8,6 +8,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { generateVideo, googleKvKey, type Veo3Options } from '$lib/services/video/veo3';
+import { consumeUsage, releaseUsage, resolvePlan } from '$lib/server/entitlements';
 
 interface RequestBody {
 	brandId: string;
@@ -48,7 +49,19 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		fps: body.fps ?? 24
 	};
 
-	const result = await generateVideo(apiKey, prompt.trim(), opts);
+	// Veo 3 is a second door onto the same allowance as /api/video/generate. Gating
+	// only the other one would leave this as a way around the free tier's two videos
+	// a month, so it is charged here too.
+	const plan = await resolvePlan(db, locals.user.id);
+	await consumeUsage(db, locals.user.id, 'aiVideoGenerations', plan);
+
+	let result;
+	try {
+		result = await generateVideo(apiKey, prompt.trim(), opts);
+	} catch (err) {
+		await releaseUsage(db, locals.user.id, 'aiVideoGenerations');
+		throw err;
+	}
 
 	const itemId = crypto.randomUUID();
 	await db

@@ -1,4 +1,5 @@
 import { createRealtimeSession, getEnabledOpenAIKey } from '$lib/services/openai-chat';
+import { requireFeature, resolvePlan } from '$lib/server/entitlements';
 import type { RequestEvent } from '@sveltejs/kit';
 import { error, json } from '@sveltejs/kit';
 
@@ -11,6 +12,14 @@ export async function POST({ request, platform, locals }: RequestEvent) {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
 	}
+
+	// Realtime voice is a Pro capability ("Voice chat (realtime): ✗" on Starter), and
+	// it is the one AI surface with no natural unit to meter — a session bills for as
+	// long as it stays open, so it has to be refused at the door rather than counted.
+	// Read from the row rather than the session cookie: this mints a token that talks
+	// to OpenAI directly, so a week-stale "Pro" claim would be worth real money.
+	const plan = await resolvePlan(platform!.env.DB, locals.user.id);
+	requireFeature(plan, 'voiceChat');
 
 	try {
 		// Get enabled OpenAI key

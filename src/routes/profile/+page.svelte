@@ -9,6 +9,76 @@
 	let linkError = '';
 	let linkSuccess = '';
 
+	type Usage = NonNullable<PageData['usage']>;
+
+	/** Human labels for the metered allowances, in the order they matter to a user. */
+	const METER_LABELS: Array<[keyof Usage['metrics'], string]> = [
+		['aiTextGenerations', 'AI text'],
+		['aiImageGenerations', 'AI images'],
+		['aiAudioGenerations', 'AI audio'],
+		['aiVideoGenerations', 'AI video'],
+		['scheduledPosts', 'Scheduled posts']
+	];
+
+	/** Labels for capabilities a plan can withhold, shown only when withheld. */
+	const FEATURE_LABELS: Array<[keyof Usage['features'], string]> = [
+		['aiLogoGeneration', 'AI logo generation'],
+		['brandExport', 'brand export'],
+		['voiceChat', 'voice chat'],
+		['modelSelection', 'model selection'],
+		['autoPublish', 'auto-publishing'],
+		['contentCalendar', 'the content calendar'],
+		['analytics', 'analytics']
+	];
+
+	function formatBytes(bytes: number): string {
+		if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+		if (bytes >= 1024 ** 2) return `${Math.round(bytes / 1024 ** 2)} MB`;
+		if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+		return `${bytes} B`;
+	}
+
+	function percent(used: number, limit: number): number {
+		if (limit <= 0) return 100;
+		return Math.min(100, Math.round((used / limit) * 100));
+	}
+
+	/** One row per allowance, with storage and seats folded in as the same shape. */
+	function meterRows(usage: Usage) {
+		const rows = METER_LABELS.map(([key, label]) => {
+			const metric = usage.metrics[key];
+			return {
+				label,
+				used: metric.used,
+				limit: metric.limit,
+				display: `${metric.used} / ${metric.limit}`,
+				percent: percent(metric.used, metric.limit)
+			};
+		});
+
+		rows.push({
+			label: 'Storage',
+			used: usage.storage.usedBytes,
+			limit: usage.storage.limitBytes,
+			display: `${formatBytes(usage.storage.usedBytes)} / ${formatBytes(usage.storage.limitBytes)}`,
+			percent: percent(usage.storage.usedBytes, usage.storage.limitBytes)
+		});
+
+		rows.push({
+			label: 'Team members',
+			used: usage.seats.used,
+			limit: usage.seats.limit,
+			display: `${usage.seats.used} / ${usage.seats.limit}`,
+			percent: percent(usage.seats.used, usage.seats.limit)
+		});
+
+		return rows;
+	}
+
+	function lockedFeatures(usage: Usage): string[] {
+		return FEATURE_LABELS.filter(([key]) => !usage.features[key]).map(([, label]) => label);
+	}
+
 	// Reactive connected accounts - needed for UI to update after disconnect
 	$: connectedAccounts = data.connectedAccounts || [];
 	// Reactive Set for O(1) lookup in template - triggers re-render when connectedAccounts changes
@@ -189,6 +259,46 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Plan & usage -->
+		{#if data.usage}
+			<div class="plan-section">
+				<div class="plan-heading">
+					<h2>Plan &amp; usage</h2>
+					<span class="plan-badge">{data.planName}</span>
+				</div>
+				<p class="section-description">
+					Monthly allowances reset on the 1st. You are in {data.usage.period}.
+				</p>
+
+				<div class="meters">
+					{#each meterRows(data.usage) as row (row.label)}
+						<div class="meter">
+							<div class="meter-top">
+								<span class="meter-label">{row.label}</span>
+								<span class="meter-count" class:exhausted={row.used >= row.limit}>
+									{row.display}
+								</span>
+							</div>
+							<div class="meter-track">
+								<div
+									class="meter-fill"
+									class:exhausted={row.used >= row.limit}
+									style="width: {row.percent}%"
+								></div>
+							</div>
+						</div>
+					{/each}
+				</div>
+
+				{#if lockedFeatures(data.usage).length > 0}
+					<p class="plan-locked">
+						Not on {data.planName}: {lockedFeatures(data.usage).join(', ')}.
+						<a href="/pricing">Compare plans</a>
+					</p>
+				{/if}
+			</div>
+		{/if}
 
 		<!-- Connected Accounts Section -->
 		<div class="connected-accounts-section">
@@ -382,6 +492,96 @@
 	.link:hover {
 		color: var(--color-primary-hover);
 		text-decoration: underline;
+	}
+
+	/* Plan & usage */
+	.plan-section {
+		margin-top: var(--spacing-xl);
+		padding-top: var(--spacing-xl);
+		border-top: 1px solid var(--color-border);
+	}
+
+	.plan-heading {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		margin-bottom: var(--spacing-xs);
+	}
+
+	.plan-heading h2 {
+		margin: 0;
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--color-text);
+	}
+
+	.plan-badge {
+		padding: 0.125rem var(--spacing-sm);
+		border: 1px solid var(--color-primary);
+		border-radius: var(--radius-sm, 4px);
+		color: var(--color-primary);
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.meters {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+		gap: var(--spacing-md);
+	}
+
+	.meter-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: var(--spacing-sm);
+		margin-bottom: 0.375rem;
+	}
+
+	.meter-label {
+		font-size: 0.875rem;
+		color: var(--color-text);
+	}
+
+	.meter-count {
+		font-size: 0.8125rem;
+		color: var(--color-text-secondary);
+		font-variant-numeric: tabular-nums;
+	}
+
+	.meter-count.exhausted {
+		color: var(--color-error);
+	}
+
+	.meter-track {
+		height: 6px;
+		background: var(--color-background);
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		overflow: hidden;
+	}
+
+	.meter-fill {
+		height: 100%;
+		background: var(--color-primary);
+		transition: width var(--transition-fast);
+	}
+
+	.meter-fill.exhausted {
+		background: var(--color-error);
+	}
+
+	.plan-locked {
+		margin: var(--spacing-lg) 0 0 0;
+		font-size: 0.875rem;
+		color: var(--color-text-secondary);
+	}
+
+	.plan-locked a {
+		color: var(--color-primary);
+		font-weight: 500;
 	}
 
 	/* Connected Accounts Section */

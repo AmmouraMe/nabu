@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
 /**
  * Tests for Chat API Endpoints
  * Following TDD: Write tests first, then implement the endpoints

@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { requireBrandAccess } from '$lib/server/brand-access';
+import { requireStorage, resolvePlan } from '$lib/server/entitlements';
 
 /**
  * POST /api/brand/assets/upload
@@ -29,6 +30,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	// Before the object is written: the R2 key is built from `brandProfileId`, so an
 	// unauthorised call would plant a file inside another brand's namespace.
 	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
+
+	// Storage is a ceiling on what is currently held, not a monthly spend, so it is
+	// measured against the live total and checked before the `put` — R2 has no undo
+	// that leaves the quota consistent, and a rejected upload that already landed
+	// would count against the user until something else deleted it.
+	const plan = await resolvePlan(platform.env.DB, locals.user.id);
+	await requireStorage(platform.env.DB, locals.user.id, plan, file.size);
 
 	const assetName = name || file.name;
 

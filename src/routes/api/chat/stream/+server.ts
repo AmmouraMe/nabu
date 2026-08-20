@@ -4,6 +4,8 @@ import {
 	streamChatCompletionWithFallback
 } from '$lib/services/openai-chat';
 import { calculateCost, getModelDisplayName } from '$lib/utils/cost';
+import { defaultModelFor, FALLBACK_CHAT_MODEL } from '$lib/server/chat-models';
+import { hasFeature, resolvePlan } from '$lib/server/entitlements';
 import type { RequestEvent } from '@sveltejs/kit';
 import { error } from '@sveltejs/kit';
 
@@ -86,7 +88,19 @@ export async function POST({ request, platform, locals }: RequestEvent) {
 		}
 
 		// Use requested model or default to gpt-4o
-		const model = requestedModel || 'gpt-4o';
+		//
+		// "Custom AI model selection" is a Pro feature, but chatting is not — the free
+		// tier keeps the assistant, it just does not get to pick what is behind it. So
+		// a locked plan silently falls back to the default rather than being refused:
+		// the chat UI sends its selected model on every message, and rejecting the
+		// request would break conversation entirely for free accounts over a control
+		// they should not have been shown. The client is told, via `meta.modelLocked`,
+		// so it can explain the downgrade instead of misreporting which model replied.
+		const plan = await resolvePlan(platform!.env.DB, locals.user.id);
+		const modelLocked = !hasFeature(plan, 'modelSelection');
+		const model = modelLocked
+			? await defaultModelFor(platform)
+			: requestedModel || FALLBACK_CHAT_MODEL;
 
 		// Format messages for OpenAI
 		const formattedMessages = formatMessagesForOpenAI(messages);
@@ -110,7 +124,9 @@ export async function POST({ request, platform, locals }: RequestEvent) {
 
 				try {
 					// Send the assistant message ID so client can track it
-					const metaData = `data: ${JSON.stringify({ meta: { assistantMessageId } })}\n\n`;
+					const metaData = `data: ${JSON.stringify({
+						meta: { assistantMessageId, model, modelLocked }
+					})}\n\n`;
 					controller.enqueue(encoder.encode(metaData));
 
 					// Stream with fallback across all AI keys

@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { getEnabledVideoKey, getVideoProvider } from '$lib/services/video-registry';
 import { calculateVideoCostFromPricing } from '$lib/utils/cost';
+import { consumeUsage, releaseUsage, resolvePlan } from '$lib/server/entitlements';
 
 /**
  * POST /api/video/generate
@@ -65,6 +66,11 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	const validDurations = [4, 5, 8, 10, 12];
 	const videoDuration = duration && validDurations.includes(duration) ? duration : undefined;
 
+	// The most expensive thing a free account can ask for — two a month on Starter.
+	// Spent before the provider is called and handed back if the call errors.
+	const plan = await resolvePlan(platform.env.DB, locals.user.id);
+	await consumeUsage(platform.env.DB, locals.user.id, 'aiVideoGenerations', plan);
+
 	// Start video generation
 	const result = await provider.generateVideo(videoKey.apiKey, {
 		prompt: prompt.trim(),
@@ -75,6 +81,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	});
 
 	if (result.status === 'error') {
+		// No video, no charge.
+		await releaseUsage(platform.env.DB, locals.user.id, 'aiVideoGenerations');
+
 		// Store the failed generation record
 		try {
 			await platform.env.DB.prepare(

@@ -6,6 +6,7 @@ import {
 	updateBrandAccess,
 	revokeBrandAccess
 } from '$lib/services/brand-admin';
+import { requireSeat, resolvePlan } from '$lib/server/entitlements';
 
 const VALID_ROLES = ['viewer', 'editor', 'manager'] as const;
 
@@ -58,6 +59,20 @@ export const POST: RequestHandler = async ({ platform, locals, params, request }
 		if (role && !VALID_ROLES.includes(role)) {
 			throw error(400, 'Invalid role. Must be viewer, editor, or manager');
 		}
+
+		// Seats are counted against the brand *owner's* plan, not the admin doing the
+		// granting: the owner is who the "1 team member" on Starter describes, and an
+		// admin-only route would otherwise be a way to hand out seats nobody paid for.
+		const brand = await db
+			.prepare('SELECT user_id FROM brand_profiles WHERE id = ?')
+			.bind(params.id)
+			.first<{ user_id: string }>();
+		if (!brand) {
+			throw error(404, 'Brand not found');
+		}
+
+		const ownerPlan = await resolvePlan(db, brand.user_id);
+		await requireSeat(db, brand.user_id, ownerPlan, userId);
 
 		const accessId = await grantBrandAccess(
 			db,

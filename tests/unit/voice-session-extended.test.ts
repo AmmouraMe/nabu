@@ -12,6 +12,11 @@ vi.mock('$lib/services/openai-chat', () => ({
 import { createRealtimeSession, getEnabledOpenAIKey } from '$lib/services/openai-chat';
 import { POST } from '../../src/routes/api/chat/voice/session/+server';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
 describe('Voice Session API - Extended Coverage', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

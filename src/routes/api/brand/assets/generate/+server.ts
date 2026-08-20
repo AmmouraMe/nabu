@@ -17,7 +17,16 @@ import { logMediaActivity, createMediaRevision } from '$lib/services/media-histo
 import { getEnabledVideoKey } from '$lib/services/video-registry';
 import { getBrandProfile, buildBrandContextString } from '$lib/services/onboarding';
 import { requireBrandAccess, resolveUserBrandRole } from '$lib/server/brand-access';
+import { consumeUsage, releaseUsage, requireFeature, resolvePlan } from '$lib/server/entitlements';
+import type { MeteredMetric } from '$lib/utils/pricing';
 import type { AIGenerationProvider } from '$lib/types/brand-assets';
+
+/** Which monthly allowance a generation of this kind spends. */
+const METRIC_FOR_TYPE: Record<'image' | 'audio' | 'video', MeteredMetric> = {
+	image: 'aiImageGenerations',
+	audio: 'aiAudioGenerations',
+	video: 'aiVideoGenerations'
+};
 
 /**
  * GET /api/brand/assets/generate
@@ -82,6 +91,20 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	// AI budget, so it needs write access, not merely a session.
 	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
 
+	// …and having write access to a brand is still not the same as having the plan
+	// that pays for the model behind it. Charged to the caller, not the brand owner:
+	// an editor invited to someone else's brand spends their own allowance, which is
+	// also what stops a shared brand being used to pool free tiers.
+	const plan = await resolvePlan(platform.env.DB, locals.user.id);
+	const generationType = type as 'image' | 'audio' | 'video';
+	const metric = METRIC_FOR_TYPE[generationType];
+
+	// "Logo management: Upload only" on the free tier — a logo may be uploaded, not
+	// conjured. Checked before the allowance is spent so a refusal costs nothing.
+	if (generationType === 'image' && body.category === 'logo') {
+		requireFeature(plan, 'aiLogoGeneration');
+	}
+
 	// Audio is text-to-speech — the prompt IS the content, so it's always required
 	if (type === 'audio' && !prompt.trim()) {
 		throw error(400, 'prompt required');
@@ -115,6 +138,13 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		}
 	}
 
+	// Taken here: after every check that can reject the request for being malformed,
+	// and before anything that costs money. Earlier and a missing prompt would burn a
+	// unit; later and the provider has already been paid by the time we find out the
+	// allowance was gone. Released again on each failure path below.
+	await consumeUsage(platform.env.DB, locals.user.id, metric, plan);
+	const refund = () => releaseUsage(platform.env.DB!, locals.user!.id, metric);
+
 	let generation;
 
 	if (type === 'image') {
@@ -124,6 +154,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 		const apiKey = useWorkersAI ? null : await getOpenAIKey(platform);
 		if (!useWorkersAI && !apiKey) {
+			// A missing provider key is our misconfiguration, not the user's spend — hand the unit back before refusing.
+			await refund();
 			throw error(400, 'No OpenAI API key configured. Add one in Admin → AI Keys.');
 		}
 
@@ -154,6 +186,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 				if (!result?.image) {
 					const errMsg = 'Workers AI returned no image';
+					await refund();
 					await updateAIGenerationStatus(platform.env.DB, generation.id, {
 						status: 'failed',
 						errorMessage: errMsg
@@ -237,6 +270,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			} catch (err) {
 				const errMsg = err instanceof Error ? err.message : 'Workers AI generation failed';
 				console.error('Workers AI image generation failed:', err);
+				await refund();
 				await updateAIGenerationStatus(platform.env.DB, generation.id, {
 					status: 'failed',
 					errorMessage: errMsg
@@ -273,6 +307,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				const errMsg =
 					(err as Record<string, Record<string, string>>)?.error?.message ||
 					`API error: ${response.status}`;
+				await refund();
 				await updateAIGenerationStatus(platform.env.DB, generation.id, {
 					status: 'failed',
 					errorMessage: errMsg
@@ -289,6 +324,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 
 			const imageUrl = data.data[0]?.url;
 			if (!imageUrl) {
+				await refund();
 				await updateAIGenerationStatus(platform.env.DB, generation.id, {
 					status: 'failed',
 					errorMessage: 'No image URL in response'
@@ -367,6 +403,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			);
 		} catch (err) {
 			const errMsg = err instanceof Error ? err.message : 'Unknown error';
+			await refund();
 			await updateAIGenerationStatus(platform.env.DB, generation.id, {
 				status: 'failed',
 				errorMessage: errMsg
@@ -377,6 +414,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		// Audio generation requires an OpenAI key
 		const apiKey = await getOpenAIKey(platform);
 		if (!apiKey) {
+			// A missing provider key is our misconfiguration, not the user's spend — hand the unit back before refusing.
+			await refund();
 			throw error(400, 'No OpenAI API key configured. Add one in Admin → AI Keys.');
 		}
 
@@ -417,6 +456,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 				const errMsg =
 					(err as Record<string, Record<string, string>>)?.error?.message ||
 					`API error: ${response.status}`;
+				await refund();
 				await updateAIGenerationStatus(platform.env.DB, generation.id, {
 					status: 'failed',
 					errorMessage: errMsg
@@ -496,6 +536,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 			);
 		} catch (err) {
 			const errMsg = err instanceof Error ? err.message : 'Unknown error';
+			await refund();
 			await updateAIGenerationStatus(platform.env.DB, generation.id, {
 				status: 'failed',
 				errorMessage: errMsg
@@ -506,6 +547,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		// Video — validate that a video-capable key exists for the requested provider
 		const videoKey = await getEnabledVideoKey(platform, body.provider || undefined);
 		if (!videoKey) {
+			// A missing provider key is our misconfiguration, not the user's spend — hand the unit back before refusing.
+			await refund();
 			throw error(
 				400,
 				'No video API key configured. Add one in Admin → AI Keys and enable Video Generation.'

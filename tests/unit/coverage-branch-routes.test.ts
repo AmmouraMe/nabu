@@ -520,7 +520,9 @@ describe('Chat Models — catch branch variants', () => {
 			locals: authedLocals
 		} as any);
 
-		expect(await res.json()).toEqual({ models: [], defaultModel: null });
+		// `modelSelection` rides along on every response so a client can tell an empty
+		// list caused by configuration from one trimmed by the caller's plan.
+		expect(await res.json()).toEqual({ models: [], defaultModel: null, modelSelection: true });
 	});
 });
 

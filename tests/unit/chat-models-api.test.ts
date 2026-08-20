@@ -6,6 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GET } from '../../src/routes/api/chat/models/+server';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
 describe('Chat Models API', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

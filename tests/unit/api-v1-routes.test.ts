@@ -24,6 +24,11 @@ import {
 import { createBrandMedia } from '$lib/services/brand-assets';
 import { hashApiKey, mintApiKey } from '../../src/lib/server/api-keys';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
 // ─── Helpers ─────────────────────────────────────────────────────
 
 /**

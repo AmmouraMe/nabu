@@ -9,6 +9,13 @@ import {
 	updateAIGenerationStatus
 } from '$lib/services/ai-media-generation';
 import { createBrandMedia } from '$lib/services/brand-assets';
+import {
+	consumeUsage,
+	entitlementRefusal,
+	hasFeature,
+	releaseUsage,
+	resolvePlan
+} from '$lib/server/entitlements';
 
 /** Keyless default: Workers AI needs no provider key, so the API works out of the box. */
 const DEFAULT_MODEL = '@cf/black-forest-labs/flux-1-schnell';
@@ -116,6 +123,30 @@ export const POST: RequestHandler = async (event) => {
 		return apiError(503, 'storage_unavailable', 'Asset storage is not available.');
 	}
 
+	// The plan belongs to the key's owner, so the public API is bound by exactly the
+	// same limits as the UI. Without this it would be the way around them: an API key
+	// is free to mint and this endpoint generates images.
+	//
+	// Answers in the v1 envelope rather than throwing, like every other refusal here —
+	// clients branch on `error.code`, and a SvelteKit HTML error page would break them.
+	const plan = await resolvePlan(db, principal.userId);
+	if (!hasFeature(plan, 'aiLogoGeneration')) {
+		return apiError(
+			402,
+			'plan_feature_locked',
+			'AI logo generation is not included on this plan. Logos can still be uploaded.'
+		);
+	}
+
+	try {
+		await consumeUsage(db, principal.userId, 'aiImageGenerations', plan);
+	} catch (err) {
+		const refusal = entitlementRefusal(err);
+		if (!refusal) throw err;
+		return apiError(402, refusal.code, refusal.message);
+	}
+	const refundImage = () => releaseUsage(db, principal.userId, 'aiImageGenerations');
+
 	const brand = await db
 		.prepare(
 			`SELECT brand_name, industry, brand_personality_traits,
@@ -150,6 +181,7 @@ export const POST: RequestHandler = async (event) => {
 	try {
 		const result = await runWorkersAIImage(event.platform.env.AI, model, { prompt, steps: 4 });
 		if (!result?.image) {
+			await refundImage();
 			await updateAIGenerationStatus(db, generation.id, {
 				status: 'failed',
 				errorMessage: 'Model returned no image'
@@ -213,6 +245,7 @@ export const POST: RequestHandler = async (event) => {
 			201
 		);
 	} catch (err) {
+		await refundImage();
 		await updateAIGenerationStatus(db, generation.id, {
 			status: 'failed',
 			errorMessage: err instanceof Error ? err.message : 'Unknown error'

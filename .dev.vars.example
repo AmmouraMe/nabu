@@ -35,3 +35,11 @@ DISCORD_OWNER_ID=your_discord_user_id_here
 # fails with "More than one account available...". Set this to the account_id
 # whose Workers AI quota you want to use.
 CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id_here
+
+# PBKDF2 work factor for email/password hashing (src/lib/server/password.ts).
+# Unset uses the built-in 100,000, chosen for the Workers CPU budget rather than
+# for OWASP's recommendation of 600,000 — hashing runs inside the request, and a
+# Worker gets 10ms of CPU on the free plan against 30s on paid. Raise it once the
+# deployment's plan is known; the count is stored inside every hash, so existing
+# logins keep working and are re-hashed at the new factor next time someone signs in.
+PASSWORD_ITERATIONS=100000

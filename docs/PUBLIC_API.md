@@ -42,3 +42,25 @@ pick it up with no further work.
 Meta endpoints that describe the API rather than operating on data go in
 `META_ENDPOINTS`, which is exempt from the scope requirement. Session-authenticated
 key management goes in `KEY_ENDPOINTS`.
+
+## Plan limits apply here too
+
+A key acts as its owner, so `/api/v1` is bound by exactly the same allowances as the
+UI — gating only the app would make minting a key the way around them. An endpoint
+that generates or stores anything must check the owner's plan; see
+[PLANS_AND_LIMITS.md](./PLANS_AND_LIMITS.md).
+
+Refusals keep the v1 envelope rather than throwing, because clients branch on
+`error.code` and a SvelteKit error page would break them:
+
+```json
+{
+	"error": {
+		"code": "plan_limit_reached",
+		"message": "The Starter plan includes 10 AI image generations per month, and this month's are used up."
+	}
+}
+```
+
+Status is **402**. Codes are `plan_feature_locked`, `plan_limit_reached`,
+`plan_storage_exceeded` and `plan_seats_exceeded`.

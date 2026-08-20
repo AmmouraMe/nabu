@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
+import { consumeUsage, resolvePlan } from '$lib/server/entitlements';
 
 const VALID_FREQUENCIES = ['hourly', 'daily', 'weekly', 'monthly'];
 
@@ -112,6 +113,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!VALID_FREQUENCIES.includes(freq)) {
 		throw error(400, `Invalid frequency. Must be one of: ${VALID_FREQUENCIES.join(', ')}`);
 	}
+
+	// A recurring schedule is the "scheduled posts" allowance: 20 a month on Starter.
+	// Charged when the schedule is created, since that is the act the plan sells —
+	// each individual run then pays for its own video out of the video allowance.
+	const plan = await resolvePlan(platform.env.DB, locals.user.id);
+	await consumeUsage(platform.env.DB, locals.user.id, 'scheduledPosts', plan);
 
 	const scheduleId = crypto.randomUUID();
 	const nextRunAt = computeNextRun(freq);

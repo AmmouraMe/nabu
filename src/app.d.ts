@@ -4,6 +4,25 @@ import type { D1Database, KVNamespace, Queue, R2Bucket } from '@cloudflare/worke
 
 declare global {
 	namespace App {
+		/**
+		 * Shape of a thrown `error()` body.
+		 *
+		 * Extended beyond `{ message }` so a plan refusal is machine-readable: the
+		 * client needs to tell "you are out of AI videos this month" (show the counter,
+		 * offer an upgrade) apart from "something broke", and a prose message alone
+		 * cannot carry that. Populated by `src/lib/server/entitlements.ts`; every other
+		 * `error()` call still passes a bare string.
+		 */
+		interface Error {
+			message: string;
+			code?: string;
+			plan?: string;
+			feature?: string;
+			metric?: string;
+			limit?: number;
+			used?: number;
+			upgradeUrl?: string;
+		}
 		interface Locals {
 			user?: {
 				id: string;
@@ -13,6 +32,13 @@ declare global {
 				avatarUrl?: string;
 				isOwner: boolean;
 				isAdmin?: boolean;
+				/**
+				 * Pricing tier for this account, re-read from the users row on every
+				 * request (see hooks.server.ts). Absent means the lookup did not run or
+				 * failed, which callers must treat as the free tier — `planOf()` in
+				 * `$lib/server/entitlements` does exactly that.
+				 */
+				plan?: string;
 			};
 		}
 		interface Platform {
@@ -55,6 +81,10 @@ declare global {
 				// Opt-in flag to enable the dev-only virtual login on a deployed
 				// dev/staging Worker. Never set this in production.
 				ALLOW_DEV_LOGIN?: string;
+				// PBKDF2 work factor for password hashing (see src/lib/server/password.ts).
+				// Unset uses the built-in default, which is tuned for the Workers CPU
+				// budget rather than for OWASP's recommendation — raise it on a paid plan.
+				PASSWORD_ITERATIONS?: string;
 			};
 			context: {
 				waitUntil(promise: Promise<any>): void;

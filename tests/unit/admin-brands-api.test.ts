@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Plans are not what this suite is about; see tests/fixtures/entitlements.ts.
+vi.mock('$lib/server/entitlements', async () =>
+	(await import('../fixtures/entitlements')).permissiveEntitlements()
+);
+
 describe('Brand Admin API', () => {
 	let mockPlatform: any;
 	let mockLocals: any;
@@ -180,6 +185,9 @@ describe('Brand Access API', () => {
 	describe('POST /api/admin/brands/[id]/access', () => {
 		it('should grant access to a user', async () => {
 			mockPlatform.env.DB.run.mockResolvedValue({ success: true });
+			// The route now looks the brand's owner up first, so seats are counted against
+			// the owner's plan rather than the admin's. Without a row it answers 404.
+			mockPlatform.env.DB.first.mockResolvedValueOnce({ user_id: 'owner-1' });
 
 			const { POST } = await import('../../src/routes/api/admin/brands/[id]/access/+server.js');
 			const response = await POST({

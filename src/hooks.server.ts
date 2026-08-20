@@ -3,6 +3,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { findValidSession } from '$lib/utils/db';
 import { decodeDatabaseSessionCookie } from '$lib/server/session';
 import { resolveOwnerStatus } from '$lib/server/auth-identity';
+import { normalizeTier } from '$lib/utils/pricing';
 
 // Auth handling hook
 export const authHandler: Handle = async ({ event, resolve }) => {
@@ -21,7 +22,7 @@ export const authHandler: Handle = async ({ event, resolve }) => {
 			if (!session) throw new Error('Session expired or revoked');
 			const user = await db
 				.prepare(
-					'SELECT id, email, name, github_login, github_avatar_url, is_admin FROM users WHERE id = ?'
+					'SELECT id, email, name, github_login, github_avatar_url, is_admin, plan FROM users WHERE id = ?'
 				)
 				.bind(session.user_id)
 				.first<{
@@ -31,6 +32,7 @@ export const authHandler: Handle = async ({ event, resolve }) => {
 					github_login: string | null;
 					github_avatar_url: string | null;
 					is_admin: number;
+					plan: string | null;
 				}>();
 			if (!user) throw new Error('Session user missing');
 			const isOwner = await resolveOwnerStatus(event.platform, user);
@@ -41,7 +43,18 @@ export const authHandler: Handle = async ({ event, resolve }) => {
 				name: user.name || undefined,
 				avatarUrl: user.github_avatar_url || undefined,
 				isOwner,
-				isAdmin: user.is_admin === 1 || isOwner
+				// The owner is always an admin. Without `|| isOwner` a freshly created
+				// owner — identified by GITHUB_OWNER_ID / DISCORD_OWNER_ID rather than by
+				// is_admin = 1 — would be refused by every route that gates on isAdmin,
+				// and an accidental demote in Admin → Users could lock them out.
+				isAdmin: user.is_admin === 1 || isOwner,
+				// Read from the row, every request. Under the database-backed session
+				// the cookie carries nothing but an opaque token, so a stale paid plan
+				// cannot survive a downgrade the way it could when the cookie held the
+				// identity — the invariant the previous hook had to enforce by hand is
+				// now structural. Undefined when the column is empty, which entitlements
+				// treats as the free tier.
+				plan: normalizeTier(user.plan)
 			};
 		} catch {
 			delete event.locals.user;

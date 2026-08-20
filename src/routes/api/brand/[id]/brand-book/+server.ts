@@ -7,6 +7,7 @@
  * Generates brand book HTML, stores it in R2, and updates brand_book_generated_at.
  */
 import { error } from '@sveltejs/kit';
+import { requireFeature, resolvePlan } from '$lib/server/entitlements';
 import type { RequestHandler } from './$types';
 import {
 	generateBrandBookHtml,
@@ -74,6 +75,13 @@ export const POST: RequestHandler = async ({ locals, platform, params, request }
 		.first<BrandBookProfile>();
 
 	if (!profile) throw error(404, 'Brand not found');
+
+	// "Brand export & guidelines PDF" — Pro and above. Checked on generation only:
+	// the GET below still serves a brand book generated while the account was on a
+	// paid plan, because taking away something already produced is a different and
+	// much ruder thing than declining to produce a new one.
+	const plan = await resolvePlan(db, locals.user.id);
+	requireFeature(plan, 'brandExport');
 
 	const html = generateBrandBookHtml(profile, mode);
 	const key = brandBookR2Key(params.id, mode);

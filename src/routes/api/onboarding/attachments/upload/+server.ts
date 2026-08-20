@@ -7,6 +7,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { createFileArchiveEntry } from '$lib/services/file-archive';
+import { requireStorage, resolvePlan } from '$lib/server/entitlements';
 import { getAttachmentType } from '$lib/utils/attachments';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -31,6 +32,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!fileType) {
 		throw error(400, `Unsupported file type: ${file.type}`);
 	}
+
+	// Same storage ceiling as /api/brand/assets/upload. Both doors have to be locked:
+	// a 100MB-per-file limit with no total means a free account on 1 GB can walk past
+	// it ten times, and chat attachments are the easier of the two to loop.
+	const plan = await resolvePlan(platform.env.DB, locals.user.id);
+	await requireStorage(platform.env.DB, locals.user.id, plan, file.size);
 
 	// Generate R2 key with smart path
 	const ext = file.name.split('.').pop() || 'bin';

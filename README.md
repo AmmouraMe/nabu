@@ -65,6 +65,17 @@ matured (noted inline).
 - [x] Publish management (draft → publish through the publishers above)
 - [ ] Unified review dashboard across all content types
 
+### Phase 6: Accounts & Plans ◐
+
+- [x] Sign up with email and password, or GitHub/Discord OAuth
+- [x] Free (Starter) plan enforced server-side: monthly AI allowances, storage,
+      seats, and the capabilities the pricing page reserves for paid tiers
+- [x] Usage visible on the profile page and at `GET /api/account/usage`
+- [ ] Billing — a plan is currently changed by writing `users.plan`
+
+See [docs/PLANS_AND_LIMITS.md](docs/PLANS_AND_LIMITS.md) before touching anything
+that spends money on a user's behalf.
+
 ---
 
 ## 🛠️ Tech Stack

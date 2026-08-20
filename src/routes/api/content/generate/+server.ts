@@ -15,6 +15,12 @@ import {
 	type ContentBrand
 } from '$lib/services/content-generator';
 import { generateVideo, googleKvKey } from '$lib/services/video/veo3';
+import {
+	consumeUsage,
+	entitlementRefusal,
+	releaseUsage,
+	resolvePlan
+} from '$lib/server/entitlements';
 
 interface RequestBody {
 	brandId: string;
@@ -55,8 +61,30 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 
 	const created: { id: string; platform: string; status: string }[] = [];
 	const failures: { platform: string; error: string }[] = [];
+	const skipped: { platform: string; reason: string }[] = [];
+
+	// Every platform in the list is its own AI call, so each costs one text
+	// generation. Metered per platform rather than per request: asking for three
+	// platforms with two generations left should produce two, not nothing.
+	const plan = await resolvePlan(db, locals.user.id);
+	let limitReached: string | null = null;
 
 	for (const plt of platforms) {
+		if (limitReached) {
+			skipped.push({ platform: plt, reason: limitReached });
+			continue;
+		}
+
+		try {
+			await consumeUsage(db, locals.user.id, 'aiTextGenerations', plan);
+		} catch (err) {
+			const refusal = entitlementRefusal(err);
+			if (!refusal) throw err;
+			limitReached = refusal.message;
+			skipped.push({ platform: plt, reason: limitReached });
+			continue;
+		}
+
 		try {
 			let title: string | null = null;
 			let body_text: string | null = null;
@@ -91,6 +119,8 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 					}
 				}
 			} else {
+				// Nothing was generated, so nothing should have been charged.
+				await releaseUsage(db, locals.user.id, 'aiTextGenerations');
 				failures.push({ platform: plt, error: 'Unsupported platform' });
 				continue;
 			}
@@ -106,6 +136,7 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 
 			created.push({ id, platform: plt, status: 'draft' });
 		} catch (err) {
+			await releaseUsage(db, locals.user.id, 'aiTextGenerations');
 			failures.push({
 				platform: plt,
 				error: err instanceof Error ? err.message : String(err)
@@ -113,5 +144,5 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		}
 	}
 
-	return json({ created, failures });
+	return json({ created, failures, skipped, limitReached });
 };

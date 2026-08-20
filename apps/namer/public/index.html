@@ -1,0 +1,1186 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Name your brand — Nabu</title>
+		<meta
+			name="description"
+			content="Generate brand names against a real set of naming heuristics: few syllables, early in the alphabet, passes the radio test, means something. Free, by Nabu."
+		/>
+		<meta property="og:title" content="Name your brand — Nabu" />
+		<meta
+			property="og:description"
+			content="Brand names generated against nine naming heuristics, with the arithmetic ones checked rather than claimed."
+		/>
+		<meta property="og:type" content="website" />
+		<link
+			rel="icon"
+			href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='M330 36 L436 36 L436 476 L330 476 L330 270 L182 476 L76 476 Z' fill='%233BA99F'/%3E%3Cpath d='M76 36 L182 36 L182 242 L330 36 L436 36 L76 476 L76 36 Z' fill='%231E7D72'/%3E%3C/svg%3E"
+		/>
+
+		<style>
+			/* Nabu's two brand tones, same hexes as the app's --color-brand tokens
+			   and static/logo.svg. Everything else derives from them. */
+			:root {
+				--brand: #3ba99f;
+				--brand-strong: #1e7d72;
+
+				--bg: #ffffff;
+				--surface: #f8f9fa;
+				--surface-2: #e9ecef;
+				--text: #1a1a1a;
+				--text-dim: #5a6169;
+				--border: #dee2e6;
+				--accent: var(--brand-strong); /* 4.93:1 on white */
+
+				--radius: 10px;
+				--maxw: 60rem;
+			}
+
+			@media (prefers-color-scheme: dark) {
+				:root:not([data-theme='light']) {
+					--bg: #0a0a0a;
+					--surface: #1a1a1a;
+					--surface-2: #2a2a2a;
+					--text: #f8f9fa;
+					--text-dim: #adb5bd;
+					--border: #3a3a3a;
+					--accent: var(--brand); /* 7.17:1 on #0a0a0a */
+				}
+			}
+
+			:root[data-theme='dark'] {
+				--bg: #0a0a0a;
+				--surface: #1a1a1a;
+				--surface-2: #2a2a2a;
+				--text: #f8f9fa;
+				--text-dim: #adb5bd;
+				--border: #3a3a3a;
+				--accent: var(--brand);
+			}
+
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+			}
+
+			body {
+				margin: 0;
+				background: var(--bg);
+				color: var(--text);
+				font-family:
+					system-ui,
+					-apple-system,
+					'Segoe UI',
+					Roboto,
+					sans-serif;
+				line-height: 1.6;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			.wrap {
+				max-width: var(--maxw);
+				margin: 0 auto;
+				padding: 2.5rem 1.25rem 5rem;
+			}
+
+			/* ── Header ─────────────────────────────────────────────── */
+
+			header {
+				display: flex;
+				align-items: center;
+				gap: 0.6rem;
+				margin-bottom: 2.25rem;
+			}
+
+			header svg {
+				width: 26px;
+				height: 26px;
+				flex-shrink: 0;
+			}
+
+			.wordmark {
+				font-size: 1.05rem;
+				font-weight: 700;
+				letter-spacing: -0.01em;
+			}
+
+			.byline {
+				margin-left: auto;
+				font-size: 0.78rem;
+				color: var(--text-dim);
+			}
+
+			.byline a {
+				color: var(--accent);
+				text-decoration: none;
+			}
+
+			.byline a:hover {
+				text-decoration: underline;
+			}
+
+			/* ── Account ────────────────────────────────────────────── */
+
+			.account {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				font-size: 0.76rem;
+				color: var(--text-dim);
+			}
+
+			.signin {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.4rem;
+				padding: 0.34rem 0.7rem;
+				border: 1px solid var(--border);
+				border-radius: 7px;
+				background: none;
+				color: var(--text);
+				font: inherit;
+				font-size: 0.76rem;
+				font-weight: 600;
+				text-decoration: none;
+				cursor: pointer;
+			}
+
+			.signin:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+
+			.signin svg {
+				width: 15px;
+				height: 15px;
+				flex-shrink: 0;
+			}
+
+			.signout {
+				border: none;
+				background: none;
+				padding: 0;
+				font: inherit;
+				font-size: 0.74rem;
+				color: var(--text-dim);
+				text-decoration: underline;
+				cursor: pointer;
+			}
+
+			.signout:hover {
+				color: var(--text);
+			}
+
+			h1 {
+				font-size: clamp(1.9rem, 5vw, 2.9rem);
+				line-height: 1.12;
+				letter-spacing: -0.03em;
+				margin: 0 0 0.6rem;
+			}
+
+			.lede {
+				font-size: 1.02rem;
+				color: var(--text-dim);
+				margin: 0 0 2rem;
+				max-width: 44rem;
+			}
+
+			/* ── Form ───────────────────────────────────────────────── */
+
+			form {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				padding: 1.5rem;
+			}
+
+			.field + .field {
+				margin-top: 1.1rem;
+			}
+
+			label {
+				display: block;
+				font-size: 0.82rem;
+				font-weight: 600;
+				margin-bottom: 0.35rem;
+			}
+
+			.hint {
+				font-weight: 400;
+				color: var(--text-dim);
+			}
+
+			textarea,
+			input[type='text'],
+			select {
+				width: 100%;
+				padding: 0.6rem 0.7rem;
+				background: var(--bg);
+				color: var(--text);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				font: inherit;
+				font-size: 0.92rem;
+			}
+
+			textarea {
+				resize: vertical;
+				min-height: 5.5rem;
+			}
+
+			textarea:focus,
+			input[type='text']:focus,
+			select:focus {
+				outline: 2px solid var(--accent);
+				outline-offset: 1px;
+				border-color: transparent;
+			}
+
+			.row {
+				display: grid;
+				gap: 1.1rem;
+				grid-template-columns: 1fr;
+			}
+
+			@media (min-width: 640px) {
+				.row {
+					grid-template-columns: 1fr 1fr;
+				}
+
+				.row .field + .field {
+					margin-top: 0;
+				}
+			}
+
+			.actions {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				margin-top: 1.4rem;
+				flex-wrap: wrap;
+			}
+
+			button[type='submit'] {
+				background: var(--accent);
+				color: var(--bg);
+				border: none;
+				border-radius: 8px;
+				padding: 0.65rem 1.35rem;
+				font: inherit;
+				font-weight: 650;
+				font-size: 0.92rem;
+				cursor: pointer;
+				transition: opacity 0.15s ease;
+			}
+
+			button[type='submit']:hover:not(:disabled) {
+				opacity: 0.88;
+			}
+
+			button[type='submit']:disabled {
+				opacity: 0.5;
+				cursor: progress;
+			}
+
+			button[type='submit']:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: 3px;
+			}
+
+			.counter {
+				font-size: 0.78rem;
+				color: var(--text-dim);
+				font-variant-numeric: tabular-nums;
+			}
+
+			/* ── Field counter and check selection ──────────────────── */
+
+			/* Silent until it matters: a counter sitting at 38/4000 is noise, and the
+			   point of the bigger limit is that you should stop thinking about it. */
+			.field-count {
+				margin: 0.3rem 0 0;
+				font-size: 0.72rem;
+				color: var(--text-dim);
+				font-variant-numeric: tabular-nums;
+				min-height: 1em;
+			}
+
+			.field-count.near {
+				color: var(--accent);
+			}
+
+			.checks {
+				margin: 1.4rem 0 0;
+				padding: 1rem 1.1rem 1.1rem;
+				border: 1px solid var(--border);
+				border-radius: 8px;
+			}
+
+			.checks legend {
+				padding: 0 0.4rem;
+				font-size: 0.82rem;
+				font-weight: 600;
+			}
+
+			.checks-hint {
+				margin: 0 0 0.75rem;
+				font-size: 0.76rem;
+				color: var(--text-dim);
+			}
+
+			.check {
+				display: flex;
+				align-items: flex-start;
+				gap: 0.55rem;
+				padding: 0.4rem 0;
+				font-weight: 400;
+				margin: 0;
+				cursor: pointer;
+			}
+
+			.check input {
+				margin: 0.15rem 0 0;
+				width: 1rem;
+				height: 1rem;
+				accent-color: var(--accent);
+				flex-shrink: 0;
+				cursor: pointer;
+			}
+
+			.check strong {
+				display: block;
+				font-size: 0.85rem;
+				font-weight: 600;
+			}
+
+			.check em {
+				display: block;
+				font-size: 0.74rem;
+				font-style: normal;
+				color: var(--text-dim);
+				line-height: 1.45;
+			}
+
+			/* Dimmed rather than hidden — you can still see what you turned off. */
+			.check:has(input:not(:checked)) strong,
+			.check:has(input:not(:checked)) em {
+				opacity: 0.55;
+			}
+
+			.check input:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: 2px;
+			}
+
+			/* ── Status ─────────────────────────────────────────────── */
+
+			.status {
+				margin-top: 1.75rem;
+				font-size: 0.9rem;
+				color: var(--text-dim);
+			}
+
+			.status.error {
+				color: var(--text);
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-left: 3px solid #dc3545;
+				border-radius: 8px;
+				padding: 0.8rem 1rem;
+			}
+
+			/* ── Results ────────────────────────────────────────────── */
+
+			/* A shortlist first, detail on demand. Closed cards tile at their natural
+			   width; an open one takes the full row so its prose is not squeezed into a
+			   column. */
+			.results {
+				display: grid;
+				gap: 0.7rem;
+				margin-top: 1.75rem;
+				grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+				align-items: start;
+			}
+
+			.card {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				overflow: hidden;
+			}
+
+			.card[open] {
+				grid-column: 1 / -1;
+				border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+			}
+
+			.card-summary {
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 0.6rem;
+				padding: 0.95rem 1.1rem;
+				cursor: pointer;
+				list-style: none;
+			}
+
+			/* Safari draws its own triangle without this. */
+			.card-summary::-webkit-details-marker {
+				display: none;
+			}
+
+			.card-summary:focus-visible {
+				outline: 2px solid var(--accent);
+				outline-offset: -2px;
+			}
+
+			.card-name {
+				font-size: 1.3rem;
+				font-weight: 650;
+				letter-spacing: -0.02em;
+				color: var(--accent);
+				line-height: 1.2;
+			}
+
+			/* The affordance. Quiet until you are on the card, because six of these
+			   shouting "Why this one" would compete with the names themselves. */
+			.card-more {
+				flex-shrink: 0;
+				font-size: 0.68rem;
+				color: var(--text-dim);
+				opacity: 0;
+				transition: opacity var(--transition-fast, 150ms) ease;
+			}
+
+			.card:hover .card-more,
+			.card-summary:focus-visible .card-more {
+				opacity: 1;
+			}
+
+			.card[open] .card-more {
+				opacity: 1;
+			}
+
+			.card[open] .card-more::after {
+				content: ' — close';
+			}
+
+			.card-body {
+				padding: 0 1.15rem 1.25rem;
+			}
+
+			.chips {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.35rem;
+				margin-bottom: 0.85rem;
+			}
+
+			.chip {
+				font-size: 0.7rem;
+				font-weight: 600;
+				padding: 0.15rem 0.5rem;
+				border-radius: 999px;
+				background: var(--surface-2);
+				color: var(--text-dim);
+				white-space: nowrap;
+			}
+
+			.chip.good {
+				background: color-mix(in srgb, var(--accent) 18%, transparent);
+				color: var(--accent);
+			}
+
+			.card dl {
+				margin: 0;
+				display: grid;
+				gap: 0.55rem;
+			}
+
+			.card dt {
+				font-size: 0.68rem;
+				text-transform: uppercase;
+				letter-spacing: 0.07em;
+				color: var(--text-dim);
+				margin-bottom: 0.1rem;
+			}
+
+			.card dd {
+				margin: 0;
+				font-size: 0.88rem;
+			}
+
+			/* ── Availability ───────────────────────────────────────── */
+
+			.avail {
+				margin-top: 0.9rem;
+				padding-top: 0.85rem;
+				border-top: 1px solid var(--border);
+			}
+
+			.avail-group + .avail-group {
+				margin-top: 0.7rem;
+			}
+
+			.avail-head {
+				font-size: 0.68rem;
+				text-transform: uppercase;
+				letter-spacing: 0.07em;
+				color: var(--text-dim);
+				margin-bottom: 0.3rem;
+			}
+
+			.avail-list {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.3rem;
+			}
+
+			/* Three states, three weights — never a bare green/red binary, because
+			   "we could not check" must not look like either answer. */
+			.slot {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.28rem;
+				font-size: 0.72rem;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				padding: 0.16rem 0.45rem;
+				border-radius: 6px;
+				border: 1px solid var(--border);
+				background: var(--surface-2);
+				color: var(--text-dim);
+				text-decoration: none;
+			}
+
+			a.slot:hover {
+				border-color: var(--accent);
+			}
+
+			.slot::before {
+				content: '';
+				width: 6px;
+				height: 6px;
+				border-radius: 50%;
+				flex-shrink: 0;
+				background: var(--text-dim);
+			}
+
+			.slot.available {
+				color: var(--accent);
+				border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+			}
+
+			.slot.available::before {
+				background: var(--accent);
+			}
+
+			.slot.taken {
+				color: var(--text-dim);
+				opacity: 0.72;
+			}
+
+			.slot.taken::before {
+				background: transparent;
+				box-shadow: inset 0 0 0 1px var(--text-dim);
+			}
+
+			/* Deliberately neither colour. An unchecked slot is a question, not a result. */
+			.slot.unchecked {
+				border-style: dashed;
+			}
+
+			.slot.unchecked::before {
+				background: transparent;
+				box-shadow: inset 0 0 0 1px var(--border);
+			}
+
+			.avail-pending {
+				font-size: 0.72rem;
+				color: var(--text-dim);
+			}
+
+			/* The trademark caveat is not a footnote. It sits with the result. */
+			.tm-caveat {
+				display: block;
+				font-size: 0.71rem;
+				line-height: 1.45;
+				color: var(--text-dim);
+				margin-top: 0.35rem;
+				padding-left: 0.6rem;
+				border-left: 2px solid var(--border);
+			}
+
+			.avail-note {
+				font-size: 0.7rem;
+				color: var(--text-dim);
+				margin-top: 0.4rem;
+			}
+
+			/* ── Guidelines ─────────────────────────────────────────── */
+
+			.guidelines {
+				margin-top: 3.5rem;
+				border-top: 1px solid var(--border);
+				padding-top: 1.75rem;
+			}
+
+			.guidelines h2 {
+				font-size: 0.72rem;
+				text-transform: uppercase;
+				letter-spacing: 0.09em;
+				color: var(--text-dim);
+				margin: 0 0 0.9rem;
+			}
+
+			.guidelines ul {
+				margin: 0;
+				padding-left: 1.1rem;
+				columns: 2;
+				column-gap: 2.5rem;
+				font-size: 0.86rem;
+				color: var(--text-dim);
+			}
+
+			.guidelines li {
+				margin-bottom: 0.4rem;
+				break-inside: avoid;
+			}
+
+			.guidelines strong {
+				color: var(--text);
+				font-weight: 600;
+			}
+
+			@media (max-width: 620px) {
+				.guidelines ul {
+					columns: 1;
+				}
+			}
+
+			footer {
+				margin-top: 2.5rem;
+				font-size: 0.8rem;
+				color: var(--text-dim);
+			}
+
+			footer a {
+				color: var(--accent);
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+				* {
+					transition: none !important;
+				}
+			}
+
+			.sr-only {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				padding: 0;
+				margin: -1px;
+				overflow: hidden;
+				clip: rect(0, 0, 0, 0);
+				white-space: nowrap;
+				border: 0;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="wrap">
+			<header>
+				<svg viewBox="0 0 512 512" fill="none" aria-hidden="true">
+					<path d="M330 36 L436 36 L436 476 L330 476 L330 270 L182 476 L76 476 Z" fill="#3BA99F" />
+					<path d="M76 36 L182 36 L182 242 L330 36 L436 36 L76 476 L76 36 Z" fill="#1E7D72" />
+				</svg>
+				<span class="wordmark">Nabu</span>
+				<span class="byline">A free tool from <a href="https://nabu.ammoura.me">Nabu</a></span>
+				<div class="account" id="account"></div>
+			</header>
+
+			<h1>Name your brand.</h1>
+			<p class="lede">
+				Six names, generated against the same nine heuristics we use ourselves — short, early in the
+				alphabet, survives being heard once aloud, and actually means something. Then we check the
+				domains, the handles and the trademark register — and say plainly which ones we could not
+				check.
+			</p>
+
+			<form id="form">
+				<div class="field">
+					<label for="description">
+						What are you building?
+						<span class="hint">— the more specific, the better the names</span>
+					</label>
+					<textarea
+						id="description"
+						name="description"
+						maxlength="4000"
+						required
+						placeholder="A subscription box of single-origin coffee for people who grind at home but don't want to think about it. Roasted to order, three origins rotating monthly, shipped the day after roasting. The people buying it own a grinder and care about freshness, but don't want to research farms every month."
+					></textarea>
+					<p class="field-count" id="descriptionCount" aria-live="polite"></p>
+				</div>
+
+				<div class="row">
+					<div class="field">
+						<label for="audience">Who is it for? <span class="hint">— optional</span></label>
+						<input
+							type="text"
+							id="audience"
+							name="audience"
+							maxlength="1000"
+							placeholder="Home baristas, 25–45, city dwellers"
+						/>
+					</div>
+
+					<div class="field">
+						<label for="archetype">Brand archetype <span class="hint">— optional</span></label>
+						<select id="archetype" name="archetype">
+							<option value="">Not sure yet — pick one for me</option>
+							<option value="innocent">The Innocent — optimism, simplicity, trust</option>
+							<option value="sage">The Sage — wisdom, knowledge, expertise</option>
+							<option value="explorer">The Explorer — freedom, adventure, discovery</option>
+							<option value="outlaw">The Outlaw — revolution, breaking rules</option>
+							<option value="magician">The Magician — transformation, innovation</option>
+							<option value="hero">The Hero — achievement, courage, mastery</option>
+							<option value="lover">The Lover — passion, intimacy, elegance</option>
+							<option value="jester">The Jester — joy, humour, entertainment</option>
+							<option value="everyman">The Everyman — belonging, authenticity</option>
+							<option value="caregiver">The Caregiver — nurturing, protection, service</option>
+							<option value="ruler">The Ruler — control, prestige, leadership</option>
+							<option value="creator">The Creator — innovation, self-expression</option>
+						</select>
+					</div>
+				</div>
+
+				<fieldset class="checks">
+					<legend>What should we check each name against?</legend>
+					<p class="checks-hint">
+						Each one is a live lookup. Turn off what you don't need and we'll skip it entirely
+						rather than making you wait for it.
+					</p>
+
+					<label class="check">
+						<input type="checkbox" id="checkDomains" checked />
+						<span>
+							<strong>Domains</strong>
+							<em>.com, .net, .org, .app, .dev, .ai — checked against each registry</em>
+						</span>
+					</label>
+
+					<label class="check">
+						<input type="checkbox" id="checkHandles" checked />
+						<span>
+							<strong>Handles</strong>
+							<em>GitHub, Bluesky and npm</em>
+						</span>
+					</label>
+
+					<label class="check">
+						<input type="checkbox" id="checkTrademark" checked />
+						<span>
+							<strong>Trademarks</strong>
+							<em
+								>Exact matches on the US register, plus a prefilled search link. Never a clearance
+								search.</em
+							>
+						</span>
+					</label>
+				</fieldset>
+
+				<div class="actions">
+					<button type="submit" id="submit">Generate names</button>
+					<span class="counter" id="counter"></span>
+				</div>
+			</form>
+
+			<div class="status" id="status" role="status" aria-live="polite"></div>
+			<div class="results" id="results"></div>
+
+			<section class="guidelines">
+				<h2>The heuristics</h2>
+				<ul>
+					<li><strong>Fewer syllables</strong> the better.</li>
+					<li><strong>First letter close to A</strong> — alphabetical-sort advantage.</li>
+					<li><strong>Passes the radio test</strong> — heard once, a listener can spell it.</li>
+					<li><strong>Represents what you do</strong>, at least metaphorically.</li>
+					<li><strong>Unique in spelling</strong> — ownable in search results.</li>
+					<li><strong>Meaning tied to its origin</strong> is a plus.</li>
+					<li><strong>Available as a .com</strong> or another TLD.</li>
+					<li><strong>Easy to type</strong> — no punctuation, numerals or accents.</li>
+					<li><strong>Travels well</strong> — doesn't mean something bad elsewhere.</li>
+				</ul>
+			</section>
+
+			<footer>
+				<p>
+					Availability is not clearance. Domain and handle checks are live lookups that can go stale
+					within the hour, and the trademark check finds exact matches only — a name with no exact
+					match can still infringe a similar mark in the same class. Confirm anything you intend to
+					rely on.
+					<a href="https://nabu.ammoura.me">Nabu</a> builds the rest of the brand.
+				</p>
+			</footer>
+		</div>
+
+		<script>
+			(function () {
+				const form = document.getElementById('form');
+				const submit = document.getElementById('submit');
+				const status = document.getElementById('status');
+				const results = document.getElementById('results');
+				const counter = document.getElementById('counter');
+				const description = document.getElementById('description');
+				const descriptionCount = document.getElementById('descriptionCount');
+
+				const MAX_DESCRIPTION = 4000;
+
+				// Stays blank until the last quarter. Showing "38 / 4000" from the first
+				// keystroke would reintroduce exactly the pressure the bigger cap removes.
+				function updateCount() {
+					const used = description.value.length;
+					const showFrom = MAX_DESCRIPTION * 0.75;
+					if (used < showFrom) {
+						descriptionCount.textContent = '';
+						descriptionCount.className = 'field-count';
+						return;
+					}
+					const left = MAX_DESCRIPTION - used;
+					descriptionCount.textContent =
+						left === 0 ? 'Character limit reached' : left + ' characters left';
+					descriptionCount.className = 'field-count' + (left < 200 ? ' near' : '');
+				}
+
+				description.addEventListener('input', updateCount);
+
+				// ── Account ──────────────────────────────────────────────────────
+				const account = document.getElementById('account');
+				const DISCORD_MARK =
+					'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>';
+
+				let hourlyLimit = null;
+
+				function renderAccount(info) {
+					account.replaceChildren();
+					hourlyLimit = info.limit;
+
+					if (info.signedIn) {
+						account.appendChild(el('span', null, info.username + ' — ' + info.limit + '/hour'));
+						const out = el('button', 'signout', 'Sign out');
+						out.type = 'button';
+						out.addEventListener('click', async function () {
+							await fetch('/api/auth/logout', { method: 'POST' }).catch(function () {});
+							loadAccount();
+						});
+						account.appendChild(out);
+						return;
+					}
+
+					// No offer at all when the app has no Discord credentials configured —
+					// better than a button that leads to a 503.
+					if (!info.signInAvailable) return;
+
+					const link = document.createElement('a');
+					link.className = 'signin';
+					link.href = '/api/auth/discord';
+					link.innerHTML = DISCORD_MARK;
+					link.appendChild(document.createTextNode('Sign in for ' + info.signedInLimit + '/hour'));
+					link.title =
+						'Anonymous: ' +
+						info.anonLimit +
+						' generations an hour, shared with everyone on your IP. Signed in: ' +
+						info.signedInLimit +
+						', counted against your Discord account.';
+					account.appendChild(link);
+				}
+
+				async function loadAccount() {
+					try {
+						const response = await fetch('/api/session', { cache: 'no-store' });
+						if (response.ok) renderAccount(await response.json());
+					} catch {
+						// Sign-in is optional; a failed probe just leaves the header empty.
+					}
+				}
+
+				loadAccount();
+
+				// Callback lands on /?signin=…; report it once, then tidy the URL so a
+				// refresh does not repeat the message.
+				(function reportSignIn() {
+					const outcome = new URLSearchParams(location.search).get('signin');
+					if (!outcome) return;
+					const messages = {
+						ok: '',
+						failed: 'Discord sign-in did not complete. You can still use the tool anonymously.',
+						expired: 'That sign-in link expired. Try again.',
+						unavailable: 'Discord sign-in is not configured on this deployment.'
+					};
+					const message = messages[outcome];
+					if (message) setStatus(message, true);
+					history.replaceState({}, '', location.pathname);
+				})();
+
+				/** Text nodes only — nothing from the model is ever parsed as HTML. */
+				function el(tag, className, text) {
+					const node = document.createElement(tag);
+					if (className) node.className = className;
+					if (text) node.textContent = text;
+					return node;
+				}
+
+				function setStatus(message, isError) {
+					status.textContent = message || '';
+					status.className = 'status' + (isError ? ' error' : '');
+				}
+
+				function chip(text, good) {
+					return el('span', 'chip' + (good ? ' good' : ''), text);
+				}
+
+				function detail(term, value) {
+					const wrap = document.createDocumentFragment();
+					wrap.appendChild(el('dt', null, term));
+					wrap.appendChild(el('dd', null, value));
+					return wrap;
+				}
+
+				/** What the user asked us to look up, read fresh at submit time. */
+				function selectedChecks() {
+					return {
+						domains: document.getElementById('checkDomains').checked,
+						handles: document.getElementById('checkHandles').checked,
+						trademark: document.getElementById('checkTrademark').checked
+					};
+				}
+
+				let activeChecks = selectedChecks();
+
+				/**
+				 * A name, closed. Everything else waits behind a click.
+				 *
+				 * A <details> rather than a div and a handler: it opens on Enter and Space,
+				 * announces its expanded state, and is findable by the browser's own
+				 * in-page search, all without any code here.
+				 */
+				function card(name) {
+					const details = el('details', 'card');
+					const summary = document.createElement('summary');
+					summary.className = 'card-summary';
+					summary.appendChild(el('span', 'card-name', name.name));
+					summary.appendChild(el('span', 'card-more', 'Why this one'));
+					details.appendChild(summary);
+
+					const body = el('div', 'card-body');
+
+					const chips = el('div', 'chips');
+					const c = name.checks || {};
+					const syl = c.syllables;
+					chips.appendChild(chip(syl + (syl === 1 ? ' syllable' : ' syllables'), syl <= 2));
+					// Rank is 1 (A) to 26 (Z); "early" is the first third of the alphabet.
+					chips.appendChild(chip('Starts ' + c.initial, c.alphabeticalRank <= 9));
+					chips.appendChild(chip(c.typable ? 'Easy to type' : 'Awkward to type', !!c.typable));
+					body.appendChild(chips);
+
+					const dl = el('dl');
+					if (name.meaning) dl.appendChild(detail('Meaning', name.meaning));
+					if (name.sound) dl.appendChild(detail('Sound', name.sound));
+					if (name.radio) dl.appendChild(detail('Radio test', name.radio));
+					if (name.translation) dl.appendChild(detail('Travels well', name.translation));
+					body.appendChild(dl);
+
+					details.appendChild(body);
+
+					// Availability is fetched the first time a card is opened, not when the
+					// six arrive. Nobody reads ten lookups for a name they rejected on sight,
+					// and spending them up front is what made registries rate-limit us — the
+					// .app and .dev slots were coming back unchecked purely from the burst.
+					const wanted = Object.keys(activeChecks).filter(function (k) {
+						return activeChecks[k];
+					});
+
+					if (wanted.length) {
+						const avail = el('div', 'avail');
+						const labels = { domains: 'domains', handles: 'handles', trademark: 'trademarks' };
+						avail.appendChild(
+							el(
+								'p',
+								'avail-pending',
+								'Checking ' +
+									wanted
+										.map(function (k) {
+											return labels[k];
+										})
+										.join(', ') +
+									'…'
+							)
+						);
+						body.appendChild(avail);
+
+						let requested = false;
+						details.addEventListener('toggle', function () {
+							if (!details.open || requested) return;
+							requested = true;
+							loadAvailability(name.name, avail);
+						});
+					}
+
+					return details;
+				}
+
+				/** One slot: a dot, a label, and a link to confirm it yourself. */
+				function slot(check) {
+					const node = check.url
+						? el('a', 'slot ' + check.state)
+						: el('span', 'slot ' + check.state);
+					if (check.url) {
+						node.href = check.url;
+						node.rel = 'noopener noreferrer';
+						node.target = '_blank';
+					}
+					node.appendChild(document.createTextNode(check.label));
+					// The note is the whole reason a slot may be unchecked — never drop it.
+					node.title = check.note
+						? check.label + ' — ' + check.state + '. ' + check.note
+						: check.label + ' — ' + check.state;
+					return node;
+				}
+
+				function group(heading, checks) {
+					const wrap = el('div', 'avail-group');
+					wrap.appendChild(el('p', 'avail-head', heading));
+					const list = el('div', 'avail-list');
+					checks.forEach(function (c) {
+						list.appendChild(slot(c));
+					});
+					wrap.appendChild(list);
+					return wrap;
+				}
+
+				function renderAvailability(data, container) {
+					container.replaceChildren();
+					// Only what was asked for comes back. A group the user declined is
+					// absent rather than empty — rendering it would read as "we checked
+					// and found nothing", which is the one thing it does not mean.
+					if (data.domains) container.appendChild(group('Domains', data.domains));
+					if (data.handles) container.appendChild(group('Handles', data.handles));
+
+					if (data.trademark) {
+						const tm = el('div', 'avail-group');
+						tm.appendChild(el('p', 'avail-head', 'Trademark'));
+						const list = el('div', 'avail-list');
+						// Relabelled per state: "available" from an exact-match search means
+						// "no exact match", which is a much weaker claim than "free to use".
+						const tmState = data.trademark.state;
+						const label =
+							tmState === 'taken'
+								? 'Exact match on file'
+								: tmState === 'available'
+									? 'No exact match'
+									: 'Not checked';
+						list.appendChild(slot({ ...data.trademark, label: label }));
+						tm.appendChild(list);
+						if (data.trademark.note) {
+							tm.appendChild(el('span', 'tm-caveat', data.trademark.note));
+						}
+						container.appendChild(tm);
+					}
+
+					if (data.domains && (data.unverifiableTlds || []).length) {
+						container.appendChild(
+							el(
+								'p',
+								'avail-note',
+								'Not checked: ' +
+									data.unverifiableTlds
+										.map(function (t) {
+											return '.' + t;
+										})
+										.join(', ') +
+									' — these registries publish no lookup service, so we cannot tell free from taken.'
+							)
+						);
+					}
+				}
+
+				async function loadAvailability(name, container) {
+					// No stagger any more. It existed because six cards fired 36 RDAP
+					// lookups at once and tripped Verisign's rate limit; now a card only
+					// looks anything up when someone opens it, so the burst cannot form.
+					try {
+						const response = await fetch('/api/check', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ name: name, checks: activeChecks })
+						});
+						if (!response.ok) throw new Error('check failed');
+						renderAvailability(await response.json(), container);
+					} catch (error) {
+						container.replaceChildren(
+							el('p', 'avail-note', 'Could not check availability for this name.')
+						);
+					}
+				}
+
+				form.addEventListener('submit', async function (event) {
+					event.preventDefault();
+
+					const payload = {
+						description: document.getElementById('description').value,
+						audience: document.getElementById('audience').value,
+						archetype: document.getElementById('archetype').value
+					};
+
+					// Frozen at submit, so toggling while results stream in cannot leave
+					// half the cards checked one way and half the other.
+					activeChecks = selectedChecks();
+
+					submit.disabled = true;
+					submit.textContent = 'Naming…';
+					setStatus('Working through the heuristics…', false);
+					results.replaceChildren();
+
+					try {
+						const response = await fetch('/api/generate', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(payload)
+						});
+						const data = await response.json().catch(function () {
+							return {};
+						});
+
+						if (!response.ok) {
+							setStatus(data.error || 'Something went wrong. Try again.', true);
+							// A rate-limited anonymous caller is exactly who the sign-in offer
+							// is for, so make sure it is on screen.
+							if (data.signInHelps) loadAccount();
+							return;
+						}
+
+						setStatus('', false);
+						results.replaceChildren.apply(results, (data.names || []).map(card));
+
+						if (typeof data.remaining === 'number') {
+							counter.textContent =
+								data.remaining +
+								(data.remaining === 1 ? ' generation' : ' generations') +
+								' left this hour' +
+								(hourlyLimit ? ' of ' + hourlyLimit : '');
+						}
+					} catch (error) {
+						setStatus('Could not reach the generator. Check your connection and try again.', true);
+					} finally {
+						submit.disabled = false;
+						submit.textContent = 'Generate names';
+					}
+				});
+			})();
+		</script>
+	</body>
+</html>

@@ -9,6 +9,7 @@ import {
 import { getBrandTexts } from '$lib/services/brand-assets';
 import { getBrandProfileForUser } from '$lib/services/brand';
 import { getFirstEnabledAIKey, chatCompletionWithKey } from '$lib/services/openai-chat';
+import { consumeUsage, releaseUsage, resolvePlan } from '$lib/server/entitlements';
 
 /**
  * GET /api/brand/assets/generate-text
@@ -101,6 +102,12 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	};
 	const userPrompt = buildTextGenerationPrompt(params);
 
+	// One text generation, charged to the caller's monthly allowance. Taken after the
+	// prompts are built — so a malformed request costs nothing — and immediately
+	// before the provider call, then handed back if that call produces no text.
+	const plan = await resolvePlan(platform.env.DB, locals.user.id);
+	await consumeUsage(platform.env.DB, locals.user.id, 'aiTextGenerations', plan);
+
 	// Call AI via the shared helper (supports OpenAI, Anthropic, etc.)
 	try {
 		const generatedText = await chatCompletionWithKey(
@@ -113,6 +120,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		);
 
 		if (!generatedText) {
+			await releaseUsage(platform.env.DB, locals.user.id, 'aiTextGenerations');
 			throw error(502, 'No text generated from AI');
 		}
 
@@ -125,6 +133,8 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		if (err && typeof err === 'object' && 'status' in err) {
 			throw err;
 		}
+		// The provider failed, so the user got nothing — do not charge them for it.
+		await releaseUsage(platform.env.DB, locals.user.id, 'aiTextGenerations');
 		const errMsg = err instanceof Error ? err.message : 'Failed to generate text';
 		throw error(502, errMsg);
 	}

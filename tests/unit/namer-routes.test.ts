@@ -11,6 +11,7 @@ import type { KVNamespace } from '@cloudflare/workers-types';
 import { POST as generate } from '../../src/routes/api/namer/generate/+server';
 import { POST as check } from '../../src/routes/api/namer/check/+server';
 import { responseText } from '../../src/lib/server/namer/ai';
+import { streamNameEvents, type NamerEvent } from '../../src/lib/server/namer/stream';
 import {
 	ANON_HOURLY_LIMIT,
 	SIGNED_IN_HOURLY_LIMIT,
@@ -44,9 +45,59 @@ function fakeKv(initial: Record<string, string> = {}) {
 	};
 }
 
-/** Workers AI's real shape for this model: an OpenAI-style completion. */
+/**
+ * Workers AI's real shape for this model: an OpenAI-style completion.
+ *
+ * Returned whole rather than streamed — the endpoint accepts both, because a
+ * model that ignores `stream: true` still has to work, and the non-streaming
+ * path runs through the same accumulator.
+ */
 function fakeAi(content: string) {
 	return { run: vi.fn(async () => ({ choices: [{ message: { content } }] })) };
+}
+
+/**
+ * Collect everything a generation yields.
+ *
+ * Driven through `streamNameEvents` rather than the route's Response, because
+ * happy-dom's Response does not consume a web ReadableStream — it stringifies it
+ * to "[object ReadableStream]". The route around this generator is a wrapper
+ * with no logic in it; the logic is all here.
+ */
+async function events(
+	source: string | ReadableStream<Uint8Array>,
+	options: Partial<{ requireTlds: string[]; remaining: number; limit: number }> = {},
+	fetchFn: typeof fetch = vi.fn(async () => new Response(null, { status: 404 })) as never
+): Promise<NamerEvent[]> {
+	const out: NamerEvent[] = [];
+	for await (const event of streamNameEvents({ fetch: fetchFn }, source, {
+		requireTlds: options.requireTlds ?? [],
+		remaining: options.remaining ?? 11,
+		limit: options.limit ?? 12
+	})) {
+		out.push(event);
+	}
+	return out;
+}
+
+/** SSE frames, one per chunk, as production sends them. */
+function sseStream(chunks: string[]): ReadableStream<Uint8Array> {
+	return new ReadableStream<Uint8Array>({
+		start(controller) {
+			const encoder = new TextEncoder();
+			for (const chunk of chunks) {
+				controller.enqueue(encoder.encode(`data: ${JSON.stringify({ response: chunk })}\n`));
+			}
+			controller.close();
+		}
+	});
+}
+
+/** Just the names, in the order they were streamed. */
+function streamedNames(list: NamerEvent[]): string[] {
+	return list
+		.filter((e) => e.type === 'name')
+		.map((e) => (e as { name: { name: string } }).name.name);
 }
 
 function event(body: unknown, over: Record<string, unknown> = {}) {
@@ -147,20 +198,30 @@ describe('responseText', () => {
 });
 
 describe('POST /api/namer/generate', () => {
-	it('names a brand for a visitor with no account', async () => {
+	it('answers with a stream, not a buffered body', async () => {
 		const response = (await generate(event(VALID) as never)) as Response;
-		expect(response.status).toBe(200);
 
-		const body = await response.json();
-		expect(body.names[0].name).toBe('Apex');
-		// Computed here, not taken from the model.
-		expect(body.names[0].checks).toEqual({
-			syllables: 2,
-			alphabeticalRank: 1,
-			initial: 'A',
-			typable: true
-		});
-		expect(body.remaining).toBe(ANON_HOURLY_LIMIT - 1);
+		expect(response.status).toBe(200);
+		expect(response.headers.get('Content-Type')).toContain('application/x-ndjson');
+		// Some proxies will buffer the whole body and hand it over at the end,
+		// which would undo the point of streaming entirely.
+		expect(response.headers.get('X-Accel-Buffering')).toBe('no');
+	});
+
+	it("passes the model's stream straight through when it streams", async () => {
+		const { kv } = fakeKv();
+		// Parameters declared so `mock.calls` stays typed as a real two-argument run.
+		const streaming = {
+			run: vi.fn(async (_model: string, _inputs: Record<string, unknown>) =>
+				sseStream(['[{"name":"Apex","meaning":"The summit."}]'])
+			)
+		};
+		const response = (await generate(
+			event(VALID, { platform: { env: { KV: kv, AI: streaming } } }) as never
+		)) as Response;
+
+		expect(response.status).toBe(200);
+		expect(streaming.run.mock.calls[0][1]).toMatchObject({ stream: true });
 	});
 
 	it('never touches the metered allowance', async () => {
@@ -178,15 +239,16 @@ describe('POST /api/namer/generate', () => {
 		expect(keys.some((k) => k.includes('usage'))).toBe(false);
 	});
 
-	it('gives a signed-in user the larger ceiling, keyed by id', async () => {
+	it('counts a signed-in user against their own key', async () => {
 		const { kv, map } = fakeKv();
 		const ev = event(VALID, {
 			platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } },
 			locals: { user: { id: 'user-1' } }
 		});
-		const response = (await generate(ev as never)) as Response;
+		await generate(ev as never);
 
-		expect((await response.json()).remaining).toBe(SIGNED_IN_HOURLY_LIMIT - 1);
+		// The allowance follows the account rather than the address. What that
+		// allowance *is* rides on the closing `done` event, covered below.
 		expect([...map.keys()][0]).toContain('u:user-1');
 	});
 
@@ -251,14 +313,6 @@ describe('POST /api/namer/generate', () => {
 			event(VALID, { platform: { env: { KV: kv } } }) as never
 		)) as Response;
 		expect(response.status).toBe(503);
-	});
-
-	it('502s when the model answers with prose', async () => {
-		const { kv } = fakeKv();
-		const response = (await generate(
-			event(VALID, { platform: { env: { KV: kv, AI: fakeAi('I cannot help.') } } }) as never
-		)) as Response;
-		expect(response.status).toBe(502);
 	});
 
 	it('502s when the model throws', async () => {
@@ -436,5 +490,91 @@ describe('POST /api/namer/check', () => {
 
 		expect(response.status).toBe(429);
 		vi.restoreAllMocks();
+	});
+});
+
+describe('streamNameEvents', () => {
+	const APEX = '{"name":"Apex","meaning":"The summit."}';
+	const BASIL = '{"name":"Basil","meaning":"A herb."}';
+
+	it('yields each name, then a done carrying the allowance', async () => {
+		const list = await events(`[${APEX}]`, { remaining: 11, limit: 12 });
+
+		expect(streamedNames(list)).toEqual(['Apex']);
+		expect(list.at(-1)).toEqual({ type: 'done', total: 1, remaining: 11, limit: 12 });
+	});
+
+	it('computes the checks itself rather than trusting the model', async () => {
+		const [first] = await events(`[${APEX}]`);
+		expect((first as { name: { checks: unknown } }).name.checks).toEqual({
+			syllables: 2,
+			alphabeticalRank: 1,
+			initial: 'A',
+			typable: true
+		});
+	});
+
+	it('emits a name as its object closes, not once the reply ends', async () => {
+		// Split so the first name closes in chunk two and the second in chunk four.
+		const stream = sseStream([
+			'[{"name":"Apex","meaning":"The summ',
+			'it."}',
+			',{"name":"Basil","meaning":"A herb',
+			'."}]'
+		]);
+		expect(streamedNames(await events(stream))).toEqual(['Apex', 'Basil']);
+	});
+
+	it('reports an unreadable reply as an error event', async () => {
+		// Once streaming has begun there is no status code left to change.
+		const last = (await events('I cannot help with that.')).at(-1) as {
+			type: string;
+			error: string;
+		};
+		expect(last.type).toBe('error');
+		expect(last.error).toMatch(/unreadable/);
+	});
+
+	it('strikes off a name whose required domain is taken, and says so', async () => {
+		const taken = vi.fn(async () => new Response(null, { status: 200 })) as never;
+		const list = await events(`[${APEX},${BASIL}]`, { requireTlds: ['com'] }, taken);
+
+		expect(streamedNames(list)).toEqual([]);
+		expect(list.filter((e) => e.type === 'rejected')).toHaveLength(2);
+		expect((list[0] as { reason: string }).reason).toContain('already registered');
+	});
+
+	it('distinguishes "all taken" from "unreadable"', async () => {
+		const taken = vi.fn(async () => new Response(null, { status: 200 })) as never;
+		const last = (await events(`[${APEX},${BASIL}]`, { requireTlds: ['com'] }, taken)).at(-1) as {
+			error: string;
+		};
+		expect(last.error).toMatch(/All 2 names were already taken/);
+	});
+
+	it('never lets an unverifiable domain pass the requirement', async () => {
+		// A registry that did not answer tells us nothing, and showing a name under
+		// a promise its .com is free is the one thing this must not do.
+		const flaky = vi.fn(async () => new Response(null, { status: 429 })) as never;
+		const list = await events(`[${APEX}]`, { requireTlds: ['com'] }, flaky);
+
+		expect(streamedNames(list)).toEqual([]);
+		expect((list[0] as { reason: string }).reason).toMatch(/could not verify/);
+	});
+
+	it('keeps every name when nothing is required', async () => {
+		const list = await events(`[${APEX},${BASIL}]`);
+		expect(streamedNames(list)).toEqual(['Apex', 'Basil']);
+	});
+
+	it('reports a stream that fails part-way rather than hanging', async () => {
+		const broken = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.error(new Error('connection reset'));
+			}
+		});
+		const last = (await events(broken)).at(-1) as { type: string; error: string };
+		expect(last.type).toBe('error');
+		expect(last.error).toMatch(/stopped part-way/);
 	});
 });

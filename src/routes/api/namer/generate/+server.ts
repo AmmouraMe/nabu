@@ -1,30 +1,35 @@
 /**
- * POST /api/namer/generate — six brand names, from the public generator.
+ * POST /api/namer/generate — six brand names, streamed as they are written.
  *
- * Deliberately reachable without an account: the generator is a way in, and
- * putting a login in front of it would defeat the point. That makes it the one
- * AI endpoint here not covered by the entitlements gate, which has no plan to
- * consult for a stranger — so it carries its own hourly ceiling instead, and
- * never touches `usage_counters`. A visitor cannot spend a paying user's
- * allowance, and a signed-in user cannot lose their AI text generations to an
- * afternoon of naming things.
+ * Deliberately reachable without an account: the generator is a way in, and a
+ * login in front of it would defeat the point. That makes it the one AI endpoint
+ * here outside the entitlements gate, which has no plan to consult for a
+ * stranger — so it carries its own hourly ceiling and never touches
+ * `usage_counters`. A visitor cannot spend a paying user's allowance, and a
+ * signed-in user cannot lose AI text generations to an afternoon of naming
+ * things.
+ *
+ * The response is NDJSON, one event per line, because generation takes fifteen
+ * to twenty seconds and holding the whole reply back leaves the page looking
+ * dead for all of it. Each name is forwarded the moment its JSON object closes.
  */
 
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { buildNamingPrompt, parseNames, validateInput } from '$lib/server/namer/naming';
-import type { GeneratedName } from '$lib/server/namer/naming';
-import { consume, rateLimitIdentity } from '$lib/server/namer/rate-limit';
+import { buildNamingPrompt, validateInput } from '$lib/server/namer/naming';
 import { AI_MODEL, MAX_TOKENS, TEMPERATURE, responseText } from '$lib/server/namer/ai';
 import type { AiResult } from '$lib/server/namer/ai';
+import { consume, rateLimitIdentity } from '$lib/server/namer/rate-limit';
+import { encodeEvent, streamNameEvents } from '$lib/server/namer/stream';
 
 export const POST: RequestHandler = async ({ request, platform, locals, getClientAddress }) => {
 	const kv = platform?.env?.KV;
 	const ai = platform?.env?.AI;
 
 	// Fails closed rather than serving an unmetered public AI endpoint.
-	if (!kv) return json({ error: 'The name generator is unavailable right now.' }, { status: 503 });
-	if (!ai) return json({ error: 'The name generator is unavailable right now.' }, { status: 503 });
+	if (!kv || !ai) {
+		return json({ error: 'The name generator is unavailable right now.' }, { status: 503 });
+	}
 
 	let body: unknown;
 	try {
@@ -52,29 +57,61 @@ export const POST: RequestHandler = async ({ request, platform, locals, getClien
 		);
 	}
 
-	const { system, user } = buildNamingPrompt(validated.value);
+	const requireTlds = validated.value.requireTlds ?? [];
+	const checkDeps = {
+		// Bound, not passed bare: a detached `fetch` called as `deps.fetch(...)`
+		// takes `deps` as its `this` and throws on the Workers runtime.
+		fetch: globalThis.fetch.bind(globalThis),
+		cache: kv
+	};
 
-	let names: GeneratedName[] = [];
+	const { system, user } = buildNamingPrompt(validated.value);
+	const messages = [
+		{ role: 'system', content: system },
+		{ role: 'user', content: user }
+	];
+
+	// Cast rather than widening the platform binding's declared type: three other
+	// call sites take the narrow object-returning shape, and loosening it globally
+	// to satisfy this one broke all of them.
+	let result: AiResult | ReadableStream;
 	try {
-		const result = (await ai.run(AI_MODEL, {
-			messages: [
-				{ role: 'system', content: system },
-				{ role: 'user', content: user }
-			],
+		result = (await ai.run(AI_MODEL, {
+			messages,
 			max_tokens: MAX_TOKENS,
-			temperature: TEMPERATURE
-		})) as AiResult;
-		names = parseNames(responseText(result));
+			temperature: TEMPERATURE,
+			stream: true
+		})) as unknown as AiResult | ReadableStream;
 	} catch {
 		return json({ error: 'The model did not answer. Try again in a moment.' }, { status: 502 });
 	}
 
-	if (names.length === 0) {
-		return json(
-			{ error: 'That came back unreadable — try rephrasing what you are building.' },
-			{ status: 502 }
-		);
-	}
+	// Once the first byte is out the headers are gone, so a later failure cannot
+	// change the status code — it travels as an `error` event instead, and the
+	// page reports it exactly as it would a 502.
+	const stream = new ReadableStream<Uint8Array>({
+		async start(controller) {
+			const encoder = new TextEncoder();
+			const source = result instanceof ReadableStream ? result : responseText(result as AiResult);
 
-	return json({ names, remaining: limit.remaining, limit: identity.limit });
+			for await (const event of streamNameEvents(checkDeps, source, {
+				requireTlds,
+				remaining: limit.remaining,
+				limit: identity.limit
+			})) {
+				controller.enqueue(encoder.encode(encodeEvent(event)));
+			}
+			controller.close();
+		}
+	});
+
+	return new Response(stream, {
+		headers: {
+			'Content-Type': 'application/x-ndjson; charset=utf-8',
+			'Cache-Control': 'no-store',
+			// Without this some proxies buffer the whole body and hand it over at the
+			// end, which would undo the entire point of streaming.
+			'X-Accel-Buffering': 'no'
+		}
+	});
 };

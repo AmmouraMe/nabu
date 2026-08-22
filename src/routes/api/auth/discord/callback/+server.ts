@@ -126,7 +126,11 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 					)
 					.run();
 			},
-			updateUser: async (id) => {
+			updateUser: async (id, match) => {
+				// Linking Discord into an account that already has an identity must not
+				// rename it, replace its avatar, or move its email onto the Discord one.
+				// The link itself is the whole change; `reconcileOAuthAccount` made it.
+				if (match === 'link') return;
 				await db
 					.prepare(
 						`UPDATE users SET name = ?, profile_login = ?, profile_avatar_url = ?,

@@ -126,17 +126,26 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 					.run();
 			},
 			updateUser: async (id, match) => {
+				// `github_login` is this provider's own column, and owner resolution
+				// reads it, so every path refreshes it. The provider-neutral profile is
+				// different: on `link` the account already has an identity of its own,
+				// and adding a second provider must not rename it or change its avatar.
+				const assignments = ['github_login = ?', 'github_avatar_url = ?'];
+				const values: unknown[] = [githubUser.login, avatarUrl];
+				if (match !== 'link') {
+					assignments.push('profile_login = ?', 'profile_avatar_url = ?');
+					values.push(githubUser.login, avatarUrl);
+				}
+				if (match === 'legacy') {
+					assignments.push('name = ?');
+					values.push(githubUser.name);
+				}
 				await db
 					.prepare(
-						`UPDATE users SET profile_login = ?, profile_avatar_url = ?,
-						github_login = ?, github_avatar_url = ?,
-					${match === 'legacy' ? 'name = ?,' : ''} updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+						`UPDATE users SET ${assignments.join(', ')},
+					updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 					)
-					.bind(
-						...(match === 'legacy'
-							? [githubUser.login, avatarUrl, githubUser.login, avatarUrl, githubUser.name, id]
-							: [githubUser.login, avatarUrl, githubUser.login, avatarUrl, id])
-					)
+					.bind(...values, id)
 					.run();
 			}
 		});

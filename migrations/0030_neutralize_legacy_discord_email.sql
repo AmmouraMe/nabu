@@ -5,8 +5,16 @@
 -- Neutralize every legacy Discord-origin account that has no password or other
 -- provider identity. A subsequent Discord login can restore a currently
 -- verified, non-conflicting email through the hardened callback.
+--
+-- The address itself is kept in `legacy_email`. Neutralizing is a security
+-- action, not a reason to lose the only contact address on record: support
+-- still needs to answer "who was this account?", and the value is what a
+-- later verified login is expected to reproduce.
+ALTER TABLE users ADD COLUMN legacy_email TEXT;
+
 UPDATE users
-SET email = id || '@discord.local',
+SET legacy_email = email,
+    email = id || '@discord.invalid',
     updated_at = CURRENT_TIMESTAMP
 WHERE password_hash IS NULL
   AND EXISTS (

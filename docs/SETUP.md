@@ -147,10 +147,26 @@ npm run preview   # Preview the production build (also port 4239)
 ## Deployment to Cloudflare Pages
 
 1. Authenticate: `wrangler login`
-2. Deploy: `npm run deploy` (`vite build && wrangler pages deploy .svelte-kit/cloudflare`)
+2. Deploy: `npm run deploy` (`db:migrate && vite build && wrangler pages deploy
+.svelte-kit/cloudflare`)
 
-Or connect the GitHub repository to Cloudflare Pages for automatic
-deployments.
+Migrations run first, and deliberately. The server reads columns the migrations
+add — `hooks.server.ts` selects `profile_login` and `profile_avatar_url`, and
+the OAuth callbacks write them — so code deployed ahead of its schema does not
+fail loudly. The hook treats any error as a bad session, clears the cookie and
+carries on, and the callbacks that would let you back in write the same columns.
+The symptom is every user logged out and unable to log back in, with nothing in
+the logs that looks like an outage.
+
+**This is the caveat for the Pages GitHub integration.** Connecting the
+repository gives you automatic deployments that never run `npm run deploy`, so
+they never run migrations. If you deploy that way, apply migrations yourself
+before merging anything that adds one:
+
+```bash
+npm run db:migrate:list   # confirm what is pending
+npm run db:migrate
+```
 
 Account quirks (details in `AGENTS.md`):
 

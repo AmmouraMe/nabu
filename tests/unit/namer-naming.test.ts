@@ -1,5 +1,5 @@
 /**
- * The naming logic behind apps/namer — the public brand-name generator.
+ * The naming logic behind the public name generator — the public brand-name generator.
  *
  * Lives in this repo's test suite rather than beside the app because the root
  * vitest config measures coverage across the whole project (workers/ and apps/
@@ -14,6 +14,8 @@
 import { describe, it, expect } from 'vitest';
 import {
 	ARCHETYPES,
+	nameList,
+	tldList,
 	MAX_AUDIENCE_LENGTH,
 	MAX_DESCRIPTION_LENGTH,
 	NAMING_HEURISTICS,
@@ -29,7 +31,7 @@ import {
 	normalizeArchetype,
 	parseNames,
 	validateInput
-} from '../../apps/namer/src/naming';
+} from '../../src/lib/server/namer/naming';
 
 describe('countSyllables', () => {
 	it('counts vowel groups as one nucleus each', () => {
@@ -435,5 +437,100 @@ describe('the guideline data itself', () => {
 	it('marks exactly the three heuristics this repo checks arithmetically', () => {
 		const computed = NAMING_HEURISTICS.filter((h) => h.computed).map((h) => h.key);
 		expect(computed).toEqual(['syllables', 'alphabetical', 'typable']);
+	});
+});
+
+describe('nameList', () => {
+	it('keeps order, trims, and drops non-strings', () => {
+		expect(nameList([' Ardor ', 7, 'Alba', null], 10)).toEqual(['Ardor', 'Alba']);
+	});
+
+	it('deduplicates case-insensitively, keeping the first spelling', () => {
+		expect(nameList(['Ardor', 'ARDOR', 'Alba'], 10)).toEqual(['Ardor', 'Alba']);
+	});
+
+	it('caps the list, because it all goes into the prompt', () => {
+		expect(
+			nameList(
+				Array.from({ length: 40 }, (_, i) => `N${i}`),
+				5
+			)
+		).toHaveLength(5);
+	});
+
+	it('is undefined rather than empty, so the prompt can just test presence', () => {
+		expect(nameList([], 5)).toBeUndefined();
+		expect(nameList(['   '], 5)).toBeUndefined();
+		expect(nameList('not an array', 5)).toBeUndefined();
+		expect(nameList(undefined, 5)).toBeUndefined();
+	});
+});
+
+describe('tldList', () => {
+	it('normalises a leading dot and case', () => {
+		expect(tldList(['.COM', 'net'])).toEqual(['com', 'net']);
+	});
+
+	it('refuses TLDs this app cannot actually verify', () => {
+		// Promising to enforce .io when no registry will answer for it would mean
+		// silently dropping every name for a check that cannot be made.
+		expect(tldList(['io', 'co', 'me', 'sh'])).toBeUndefined();
+		expect(tldList(['com', 'io'])).toEqual(['com']);
+	});
+
+	it('deduplicates and returns undefined when nothing survives', () => {
+		expect(tldList(['com', '.com'])).toEqual(['com']);
+		expect(tldList(['nonsense'])).toBeUndefined();
+		expect(tldList('com')).toBeUndefined();
+	});
+});
+
+describe('buildNamingPrompt with preferences', () => {
+	const base = { description: 'A coffee subscription box' };
+
+	it('puts the ranking in, favourite first, and asks for the direction not the spelling', () => {
+		const { user } = buildNamingPrompt({ ...base, liked: ['Ardor', 'Alba'] });
+		expect(user).toContain('favourite first: Ardor, Alba');
+		expect(user).toMatch(/not simply return variations/i);
+	});
+
+	it('lists what not to repeat', () => {
+		const { user } = buildNamingPrompt({ ...base, avoid: ['Ardor', 'Alba'] });
+		expect(user).toMatch(/do not repeat any of these: Ardor, Alba/i);
+	});
+
+	it('states the domain requirement, and pushes away from dictionary words', () => {
+		const { user } = buildNamingPrompt({ ...base, requireTlds: ['com'] });
+		expect(user).toContain('.com domain must be unregistered');
+		expect(user).toMatch(/invented words/i);
+	});
+
+	it('says none of it when nothing was ranked or required', () => {
+		const { user } = buildNamingPrompt(base);
+		expect(user).not.toMatch(/favourite first|do not repeat|must be unregistered/i);
+	});
+});
+
+describe('validateInput with preferences', () => {
+	it('carries a sanitised ranking, avoid list and TLD requirement', () => {
+		const result = validateInput({
+			description: 'A coffee subscription box',
+			liked: ['Ardor', 'Ardor', 'Alba'],
+			avoid: ['Kafos'],
+			requireTlds: ['.COM', 'io']
+		});
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.liked).toEqual(['Ardor', 'Alba']);
+		expect(result.value.avoid).toEqual(['Kafos']);
+		expect(result.value.requireTlds).toEqual(['com']);
+	});
+
+	it('leaves them undefined when absent or unusable', () => {
+		const result = validateInput({ description: 'A coffee subscription box', liked: 'Ardor' });
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.liked).toBeUndefined();
+		expect(result.value.requireTlds).toBeUndefined();
 	});
 });

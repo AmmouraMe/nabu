@@ -34,3 +34,31 @@ Nabu is built on NebulaKit; this is a NebulaKit standard (see NebulaKit `AGENTS.
 - Tab favicon: `favicon.svg` stays the primary scalable icon; `favicon.ico` (16/32/48) is the legacy fallback; `favicon-light.png` / `favicon-dark.png` switch on `prefers-color-scheme` (dark brightens the darker teal shape so the N stays legible on a near-black tab strip).
 
 **Regenerate after any logo change:** `node scripts/generate-icons.mjs` (rasterizes `static/logo.svg`'s mark via `sharp`; packs the `.ico` via ImageMagick's `magick`). The script is the source of truth for backgrounds/sizes — edit it, don't hand-edit the PNGs. Tiles/installed-app icons are static and cannot switch on `prefers-color-scheme`; only the tab favicon can. Reference implementation this was modeled on: `davis9001.dev-sveltekit` `src/app.html` + `static/`.
+
+## Social Share Cards — Regenerate After Copy or Logo Changes
+
+A link with no `og:image` renders on every platform as a grey box with a URL in
+it, which is a worse advertisement than not being shared. `src/lib/components/Seo.svelte`
+emits the full set — Open Graph, Twitter, canonical — and every **public** page
+renders it.
+
+- **Images** live in `static/og/` (`default.png`, `name.png`, `pricing.png`) at
+  1200×630. Regenerate with `node scripts/generate-og-images.mjs` after changing
+  the logo or a card's copy. The script is the source of truth for layout and
+  wording — edit it, don't hand-edit the PNGs. Needs `sharp` installed ad hoc,
+  same as `generate-icons.mjs`; neither CI nor the deploy needs it, because the
+  output is committed.
+- **They are static on purpose.** Rendering per request means shipping satori +
+  resvg WASM into a Worker with no other image pipeline, for images that change
+  roughly never, while a crawler fetching a committed PNG from the CDN gets it in
+  one hop with no cold start.
+- **Private pages must not get a card.** `src/routes/+layout.svelte` emits
+  `noindex, nofollow` for everything under `PRIVATE_PREFIXES` (`/admin`, `/auth`,
+  `/brand`, `/chat`, `/onboarding`, `/profile`, `/reset`, `/setup`, `/videos`).
+  A link to somebody's brand dashboard should not unfurl into a rich preview in
+  whatever chat it lands in. Add new private routes to that list, or under an
+  existing prefix.
+- `og:image` **must be absolute** — crawlers drop relative paths and fall back to
+  the grey box. `Seo.svelte` builds it from `$page.url.origin`, so previews work
+  on production, preview deploys and localhost alike. `tests/unit/seo.test.ts`
+  pins this, along with the noindex behaviour.

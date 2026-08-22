@@ -21,6 +21,8 @@
  * needs language sense: meaning, sound, and translation risk.
  */
 
+import { CHECKED_TLDS } from './availability';
+
 // ─── The guidelines ───────────────────────────────────────────────────────────
 
 /** One heuristic from `design/brand/naming.md`. */
@@ -248,6 +250,25 @@ export interface NamingInput {
 	description: string;
 	audience?: string;
 	archetype?: ArchetypeId;
+	/**
+	 * Names the user ranked, best first.
+	 *
+	 * The strongest signal available: taste is far easier to demonstrate by
+	 * ordering six candidates than to describe in a brief. Order carries meaning,
+	 * so it is preserved rather than treated as a set.
+	 */
+	liked?: string[];
+	/**
+	 * Names already shown. Never suggested again — a refine round that returns
+	 * one of the names you just ranked has learned nothing.
+	 */
+	avoid?: string[];
+	/**
+	 * TLDs that must be free for a name to be worth showing, e.g. `['com']`.
+	 * Enforced by the endpoint, which checks before emitting; listed here so the
+	 * model can also be told to aim for unusual, ownable words.
+	 */
+	requireTlds?: string[];
 }
 
 /**
@@ -269,6 +290,19 @@ export const MAX_AUDIENCE_LENGTH = 1000;
 export const MAX_FIELD_LENGTH = 400;
 
 const MIN_DESCRIPTION_LENGTH = 8;
+
+/**
+ * Caps on the ranked and avoid lists.
+ *
+ * `avoid` grows by six with every refine round, and it all goes into the prompt,
+ * so it needs a ceiling or a long session quietly doubles the token bill. The
+ * most recent names are the ones worth not repeating, so the tail is what gets
+ * dropped at the call site.
+ */
+const MAX_LIKED = 12;
+const MAX_AVOID = 60;
+/** A single name, for the ranked/avoid lists. */
+const MAX_NAME_LENGTH = 60;
 
 export type ValidationResult = { ok: true; value: NamingInput } | { ok: false; error: string };
 
@@ -299,9 +333,52 @@ export function validateInput(body: unknown): ValidationResult {
 		value: {
 			description: description.slice(0, MAX_DESCRIPTION_LENGTH),
 			audience: audience ? audience.slice(0, MAX_AUDIENCE_LENGTH) : undefined,
-			archetype: normalizeArchetype(raw.archetype)
+			archetype: normalizeArchetype(raw.archetype),
+			liked: nameList(raw.liked, MAX_LIKED),
+			avoid: nameList(raw.avoid, MAX_AVOID),
+			requireTlds: tldList(raw.requireTlds)
 		}
 	};
+}
+
+/**
+ * A list of names off an untrusted body: strings only, trimmed, deduplicated
+ * case-insensitively, capped. Undefined rather than `[]` when nothing survives,
+ * so the prompt builder can simply test for presence.
+ */
+export function nameList(value: unknown, max: number): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+
+	const seen = new Set<string>();
+	const names: string[] = [];
+	for (const entry of value) {
+		if (typeof entry !== 'string') continue;
+		const name = entry.trim().slice(0, MAX_NAME_LENGTH);
+		if (!name) continue;
+		const key = name.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		names.push(name);
+		if (names.length >= max) break;
+	}
+	return names.length ? names : undefined;
+}
+
+/**
+ * TLDs a caller insists on. Only ones this app can actually verify are accepted
+ * — promising to enforce `.io` when no registry will answer for it would mean
+ * silently dropping every name for a check that cannot be made.
+ */
+export function tldList(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+
+	const tlds = value
+		.filter((t): t is string => typeof t === 'string')
+		.map((t) => t.trim().toLowerCase().replace(/^\./, ''))
+		.filter((t) => (CHECKED_TLDS as readonly string[]).includes(t));
+
+	const unique = [...new Set(tlds)];
+	return unique.length ? unique : undefined;
 }
 
 // ─── The prompt ───────────────────────────────────────────────────────────────
@@ -355,6 +432,27 @@ Prefer names that are genuinely ownable — invented words, unexpected compounds
 			'Brand archetype: not chosen yet. Infer the one that fits and name accordingly; do not ask.'
 		);
 	}
+	if (input.requireTlds?.length) {
+		// The endpoint enforces this by checking; saying it here too is what shifts
+		// the model off dictionary words, which are all long gone as domains.
+		lines.push(
+			`\nHard requirement: the .${input.requireTlds.join(' and .')} domain must be unregistered. Ordinary dictionary words and common compounds are all taken — favour invented words, unexpected borrowings and unusual spellings that could plausibly still be free.`
+		);
+	}
+
+	if (input.liked?.length) {
+		// Ranked, best first. Order is the signal: taste is far easier to show by
+		// arranging six candidates than to describe in a brief.
+		lines.push(
+			`\nThey ranked an earlier set, favourite first: ${input.liked.join(', ')}.`,
+			'Work out what those have in common — sound, length, register, the kind of idea they reach for — and push further in that direction. Weight the earlier ones more heavily. Do not simply return variations on the spelling; find new names that share whatever made those appealing.'
+		);
+	}
+
+	if (input.avoid?.length) {
+		lines.push(`\nAlready shown, do not repeat any of these: ${input.avoid.join(', ')}.`);
+	}
+
 	lines.push(`\nGive me ${NAMES_REQUESTED} names as the JSON array described.`);
 
 	return { system, user: lines.join('\n') };

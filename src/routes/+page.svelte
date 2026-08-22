@@ -1,4 +1,5 @@
 ﻿<script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
 	import { page } from '$app/stores';
 	import { openCommandPalette } from '$lib/stores/commandPalette';
 	import PricingSection from '$lib/components/PricingSection.svelte';
@@ -41,13 +42,12 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Nabu — Build Your Brand. Automate Your Marketing.</title>
-	<meta
-		name="description"
-		content="No brand? No problem. Nabu helps you create a complete brand identity from scratch — logo, colors, voice, typography — then turns it into automated social media marketing."
-	/>
-</svelte:head>
+<Seo
+	path="/"
+	title="Nabu — Build your brand. Automate your marketing."
+	description="No brand? No problem. Nabu builds a complete brand identity from scratch — name, voice, colours, typography — then turns it into marketing that runs itself."
+	image="default"
+/>
 
 <div class="landing" class:mounted>
 	<!-- ======== HERO ======== -->

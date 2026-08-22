@@ -16,6 +16,35 @@
 
 	export let data: PageData;
 
+	/**
+	 * Route prefixes that must never be indexed or previewed.
+	 *
+	 * Most of this app is somebody's private brand workspace. A link to a brand
+	 * dashboard pasted into a chat should not unfurl into a rich card showing the
+	 * page title, and should not appear in a search result at all. Handled here
+	 * rather than on twenty individual pages, so a new private route is covered
+	 * the moment it lands under an existing prefix rather than whenever someone
+	 * remembers.
+	 *
+	 * Public pages opt *in* to a share card by rendering <Seo>, which is mutually
+	 * exclusive with this.
+	 */
+	const PRIVATE_PREFIXES = [
+		'/admin',
+		'/auth',
+		'/brand',
+		'/chat',
+		'/onboarding',
+		'/profile',
+		'/reset',
+		'/setup',
+		'/videos'
+	];
+
+	$: isPrivateRoute = PRIVATE_PREFIXES.some(
+		(prefix) => $page.url.pathname === prefix || $page.url.pathname.startsWith(`${prefix}/`)
+	);
+
 	// Pages where we don't show the footer (full-screen experiences)
 	$: hideFooter =
 		$page.url.pathname.startsWith('/chat') ||
@@ -51,6 +80,12 @@
 		return () => window.removeEventListener('keydown', handleKeydown);
 	});
 </script>
+
+<svelte:head>
+	{#if isPrivateRoute}
+		<meta name="robots" content="noindex, nofollow" />
+	{/if}
+</svelte:head>
 
 <div class="app" class:full-screen={fullScreenPage}>
 	<Navigation user={data.user} onCommandPaletteClick={toggleCommandPalette} />

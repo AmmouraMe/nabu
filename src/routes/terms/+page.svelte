@@ -1,12 +1,15 @@
 <script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
 	const currentYear = new Date().getFullYear();
 	const lastUpdated = 'January 1, 2026';
 </script>
 
-<svelte:head>
-	<title>Terms of Service - Nabu</title>
-	<meta name="description" content="Terms of Service for Nabu" />
-</svelte:head>
+<Seo
+	path="/terms"
+	title="Terms of Service"
+	description="The terms you agree to when you use Nabu."
+	image="default"
+/>
 
 <main class="legal-page">
 	<div class="legal-container">

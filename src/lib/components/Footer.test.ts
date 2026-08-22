@@ -67,7 +67,7 @@ describe('Footer', () => {
 		const resourcesLink = githubLinks.find((link) =>
 			link.textContent?.toLowerCase().includes('github')
 		);
-		expect(resourcesLink).toHaveAttribute('href', 'https://github.com/starspacegroup/nabu');
+		expect(resourcesLink).toHaveAttribute('href', 'https://github.com/AmmouraMe/nabu');
 	});
 
 	it('should contain privacy policy link', () => {

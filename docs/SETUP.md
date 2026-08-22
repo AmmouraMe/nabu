@@ -13,7 +13,7 @@ old root `SETUP.md` and `docs/LOCAL_SETUP.md`.
 ## Installation
 
 ```bash
-git clone https://github.com/starspacegroup/nabu.git
+git clone https://github.com/AmmouraMe/nabu.git
 cd nabu
 npm install
 ```

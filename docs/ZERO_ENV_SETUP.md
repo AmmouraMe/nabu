@@ -259,8 +259,8 @@ Your credentials will persist across dev server restarts in the local KV preview
 1. **Configure required deployment secrets:**
 
    ```bash
-   wrangler secret put SESSION_SECRET
-   wrangler secret put SETUP_SECRET
+   wrangler pages secret put SESSION_SECRET
+   wrangler pages secret put SETUP_SECRET
    ```
 
 2. **Deploy to Cloudflare Pages.**

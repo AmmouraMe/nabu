@@ -150,8 +150,16 @@ describe('GitHub OAuth callback', () => {
 		const reconciliation = reconcileOAuthAccount.mock.calls[0][0];
 		await reconciliation.createUser('new-user');
 		await reconciliation.updateUser('legacy-user', 'legacy');
-		await reconciliation.updateUser('email-user', 'email');
-		expect(DB.calls.some((call) => call.query.includes('INSERT INTO users'))).toBe(true);
+		await reconciliation.updateUser('linked-user', 'linked');
+		const insert = DB.calls.find((call) => call.query.includes('INSERT INTO users'));
+		expect(insert?.query).toContain('NOT EXISTS');
+		expect(insert?.bindings.slice(0, 4)).toEqual([
+			'new-user',
+			'user@example.com',
+			'user@example.com',
+			'user@example.com'
+		]);
+		expect(insert?.bindings[4]).toMatch(/^new-user-[0-9a-f-]+@github\.invalid$/i);
 		expect(DB.calls.filter((call) => call.query.includes('github_login = ?'))).toHaveLength(2);
 	});
 

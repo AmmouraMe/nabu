@@ -110,9 +110,16 @@ describe('Discord OAuth callback boundaries', () => {
 		await reconciliation.updateUser('user-1', 'linked');
 		expect(DB.calls.some((call) => call.query.includes('INSERT INTO users'))).toBe(true);
 		expect(DB.calls.some((call) => call.query.includes('profile_login'))).toBe(true);
-		expect(DB.calls.find((call) => call.query.includes('INSERT INTO users'))?.bindings).toEqual([
+		const insert = DB.calls.find((call) => call.query.includes('INSERT INTO users'));
+		expect(insert?.query).toContain('NOT EXISTS');
+		expect(insert?.bindings.slice(0, 4)).toEqual([
 			'discord_123',
 			'tester@example.com',
+			'tester@example.com',
+			'tester@example.com'
+		]);
+		expect(insert?.bindings[4]).toMatch(/^discord_123-[0-9a-f-]+@discord\.invalid$/i);
+		expect(insert?.bindings.slice(5)).toEqual([
 			'Test User',
 			'tester',
 			'https://cdn.discordapp.com/avatars/123/avatar-hash.png'
@@ -149,13 +156,18 @@ describe('Discord OAuth callback boundaries', () => {
 			} as any);
 		const { GET } = await import('../../src/routes/api/auth/discord/callback/+server');
 		await GET(event() as any);
-		expect(reconcileOAuthAccount).toHaveBeenCalledWith(expect.objectContaining({ email }));
+		expect(reconcileOAuthAccount).toHaveBeenCalledWith(
+			expect.not.objectContaining({ email: expect.anything() })
+		);
 		const reconciliation = reconcileOAuthAccount.mock.calls[0][0];
 		await reconciliation.createUser('discord_123');
 		const inserted = DB.calls.find((call) => call.query.includes('INSERT INTO users'));
-		expect(inserted?.bindings[1]).toBe(
-			verified ? 'tester@example.com' : 'discord_123@discord.local'
+		expect(inserted?.bindings.slice(1, 4)).toEqual(
+			verified
+				? ['tester@example.com', 'tester@example.com', 'tester@example.com']
+				: [null, null, null]
 		);
+		expect(inserted?.bindings[4]).toMatch(/^discord_123-[0-9a-f-]+@discord\.invalid$/i);
 	});
 
 	it('maps unexpected provider reconciliation errors to a generic failure', async () => {

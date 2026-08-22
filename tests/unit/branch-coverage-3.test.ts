@@ -417,13 +417,13 @@ describe('Admin users search - items fallback', () => {
 	});
 });
 
-// ──── 8. discord/callback — existing user without oauth record + redirect re-throw ────
+// ──── 8. discord/callback — untrusted email collision + redirect re-throw ────
 describe('Discord callback - additional branches', () => {
 	beforeEach(() => {
 		vi.resetModules();
 	});
 
-	it('creates oauth_accounts record for existing user without one', async () => {
+	it('does not reuse an unrelated account with the same unverified email', async () => {
 		const originalFetch = globalThis.fetch;
 
 		// Mock Discord token exchange and user info
@@ -518,6 +518,7 @@ describe('Discord callback - additional branches', () => {
 			// Should succeed (302 redirect) and insert oauth record
 			expect(response.status).toBe(302);
 			expect(insertCalls).toContain('oauth_insert');
+			expect(mockDB.prepare).not.toHaveBeenCalledWith(expect.stringContaining('lower(email)'));
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

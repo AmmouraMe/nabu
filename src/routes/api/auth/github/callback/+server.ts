@@ -97,19 +97,25 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 			provider: 'github',
 			providerAccountId,
 			legacyUserId: providerAccountId,
-			email: verifiedEmail,
 			linkingUserId: transaction.intent === 'link' ? existingUser?.id : undefined,
 			createUser: async (id) => {
 				const isOwner = await resolveOwnerStatus(platform, { id, github_login: githubUser.login });
+				const providerLocalEmail = `${id}-${crypto.randomUUID()}@github.invalid`;
 				await db
 					.prepare(
 						`INSERT INTO users (id, email, name, profile_login, profile_avatar_url,
 						 github_login, github_avatar_url, is_admin, created_at)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+					VALUES (?, CASE
+						WHEN ? IS NOT NULL AND NOT EXISTS (
+							SELECT 1 FROM users AS other WHERE lower(other.email) = lower(?)
+						) THEN ? ELSE ? END, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
 					)
 					.bind(
 						id,
-						verifiedEmail || `${githubUser.login}@github.local`,
+						verifiedEmail,
+						verifiedEmail,
+						verifiedEmail,
+						providerLocalEmail,
 						githubUser.name,
 						githubUser.login,
 						avatarUrl,

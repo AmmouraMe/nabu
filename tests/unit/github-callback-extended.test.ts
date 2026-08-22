@@ -42,7 +42,6 @@ describe('canonical OAuth account reconciliation', () => {
 				provider: 'github',
 				providerAccountId: 'github-1',
 				legacyUserId: 'github-1',
-				email: 'new@example.com',
 				createUser,
 				updateUser: vi.fn()
 			})
@@ -53,10 +52,11 @@ describe('canonical OAuth account reconciliation', () => {
 		expect(insert?.query).not.toMatch(/access_token|refresh_token/);
 	});
 
-	it('reuses an email-matched user and updates provider profile fields', async () => {
+	it('does not attach OAuth to a password signup with the same unverified email', async () => {
+		const createUser = vi.fn().mockResolvedValue(undefined);
 		const updateUser = vi.fn().mockResolvedValue(undefined);
 		const db = createOAuthDb((query) => ({
-			first: query.includes('lower(email)') ? { id: 'email-user' } : null
+			first: query.includes('lower(email)') ? { id: 'attacker-password-user' } : null
 		}));
 		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
 		await expect(
@@ -65,12 +65,16 @@ describe('canonical OAuth account reconciliation', () => {
 				provider: 'github',
 				providerAccountId: 'github-1',
 				legacyUserId: 'github-1',
-				email: ' User@Example.com ',
-				createUser: vi.fn(),
+				createUser,
 				updateUser
 			})
-		).resolves.toEqual({ userId: 'email-user' });
-		expect(updateUser).toHaveBeenCalledWith('email-user', 'email');
+		).resolves.toEqual({ userId: 'github-1' });
+		expect(createUser).toHaveBeenCalledWith('github-1');
+		expect(updateUser).not.toHaveBeenCalled();
+		expect(db.calls.some((call) => call.query.includes('lower(email)'))).toBe(false);
+		expect(
+			db.calls.find((call) => call.query.includes('INSERT INTO oauth_accounts'))?.bindings
+		).toEqual(['oauth-link-id', 'github-1', 'github', 'github-1']);
 	});
 
 	it('links to the authenticated user and merges a conflicting account', async () => {
@@ -137,12 +141,13 @@ describe('canonical OAuth account reconciliation', () => {
 		expect(db.calls.some((call) => call.query.includes('INSERT INTO oauth_accounts'))).toBe(false);
 	});
 
-	it('merges a distinct legacy account into an email-matched canonical user', async () => {
+	it('keeps a provider-specific legacy account instead of matching by email', async () => {
+		const updateUser = vi.fn().mockResolvedValue(undefined);
 		const db = createOAuthDb((query) => ({
-			first: query.includes('lower(email)')
-				? { id: 'email-user' }
-				: query.includes('SELECT id FROM users WHERE id')
-					? { id: 'legacy-user' }
+			first: query.includes('SELECT id FROM users WHERE id')
+				? { id: 'legacy-user' }
+				: query.includes('lower(email)')
+					? { id: 'attacker-password-user' }
 					: null
 		}));
 		const { reconcileOAuthAccount } = await import('../../src/lib/server/oauth-account');
@@ -151,10 +156,11 @@ describe('canonical OAuth account reconciliation', () => {
 			provider: 'github',
 			providerAccountId: 'github-1',
 			legacyUserId: 'legacy-user',
-			email: 'same@example.com',
 			createUser: vi.fn(),
-			updateUser: vi.fn()
+			updateUser
 		});
-		expect(mergeAccounts).toHaveBeenCalledWith(db, 'legacy-user', 'email-user');
+		expect(updateUser).toHaveBeenCalledWith('legacy-user', 'legacy');
+		expect(mergeAccounts).not.toHaveBeenCalled();
+		expect(db.calls.some((call) => call.query.includes('lower(email)'))).toBe(false);
 	});
 });

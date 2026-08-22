@@ -103,17 +103,23 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 			provider: 'discord',
 			providerAccountId: String(discordUser.id),
 			legacyUserId: `discord_${discordUser.id}`,
-			email: verifiedEmail,
 			linkingUserId: transaction.intent === 'link' ? existingUser?.id : undefined,
 			createUser: async (id) => {
+				const providerLocalEmail = `${id}-${crypto.randomUUID()}@discord.invalid`;
 				await db
 					.prepare(
 						`INSERT INTO users (id, email, name, profile_login, profile_avatar_url, created_at)
-						 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+						 VALUES (?, CASE
+							WHEN ? IS NOT NULL AND NOT EXISTS (
+								SELECT 1 FROM users AS other WHERE lower(other.email) = lower(?)
+							) THEN ? ELSE ? END, ?, ?, ?, CURRENT_TIMESTAMP)`
 					)
 					.bind(
 						id,
-						verifiedEmail || `${id}@discord.local`,
+						verifiedEmail,
+						verifiedEmail,
+						verifiedEmail,
+						providerLocalEmail,
 						displayName,
 						discordUser.username,
 						avatarUrl

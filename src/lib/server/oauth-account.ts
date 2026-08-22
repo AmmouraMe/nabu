@@ -28,12 +28,11 @@ export async function reconcileOAuthAccount(options: {
 	provider: OAuthProvider;
 	providerAccountId: string;
 	legacyUserId: string;
-	email?: string | null;
 	linkingUserId?: string;
 	createUser(userId: string): Promise<void>;
-	updateUser(userId: string, match: 'link' | 'linked' | 'email' | 'legacy'): Promise<void>;
+	updateUser(userId: string, match: 'link' | 'linked' | 'legacy'): Promise<void>;
 }): Promise<{ userId: string; linkedProvider?: OAuthProvider }> {
-	const { db, provider, providerAccountId, legacyUserId, email, linkingUserId } = options;
+	const { db, provider, providerAccountId, legacyUserId, linkingUserId } = options;
 	const linked = await db
 		.prepare('SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_account_id = ?')
 		.bind(provider, providerAccountId)
@@ -58,23 +57,14 @@ export async function reconcileOAuthAccount(options: {
 			return { userId: user.id };
 		}
 	}
-	const normalizedEmail = email?.trim().toLowerCase();
-	const emailUser = normalizedEmail
-		? await db
-				.prepare('SELECT id FROM users WHERE lower(email) = lower(?) LIMIT 2')
-				.bind(normalizedEmail)
-				.first<{ id: string }>()
-		: null;
+	// Never infer account ownership from email alone. Password signup does not
+	// verify email ownership, so automatic email matching would let an attacker
+	// pre-register a victim's address and capture the victim's OAuth identity.
+	// Cross-provider consolidation must use the authenticated linking flow above.
 	const legacy = await db
 		.prepare('SELECT id FROM users WHERE id = ?')
 		.bind(legacyUserId)
 		.first<{ id: string }>();
-	if (emailUser) {
-		if (legacy && legacy.id !== emailUser.id) await mergeAccounts(db, legacy.id, emailUser.id);
-		await ensureOAuthAccount(db, emailUser.id, provider, providerAccountId);
-		await options.updateUser(emailUser.id, 'email');
-		return { userId: emailUser.id };
-	}
 	if (legacy) {
 		await ensureOAuthAccount(db, legacy.id, provider, providerAccountId);
 		await options.updateUser(legacy.id, 'legacy');

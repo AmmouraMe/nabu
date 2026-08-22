@@ -65,6 +65,18 @@ describe('CommandPalette', () => {
 		expect(commandLabels.some((label) => label?.includes('Chat'))).toBe(false);
 	});
 
+	it('should offer the name builder without AI providers configured', () => {
+		// The namer is deliberately reachable without an account or a provider key —
+		// it is a way into the product. It must not be gated behind hasAIProviders
+		// the way Chat and Brand Architect are.
+		const { container } = render(CommandPalette, { props: { show: true, hasAIProviders: false } });
+		const commandLabels = Array.from(container.querySelectorAll('.command-label')).map(
+			(el) => el.textContent
+		);
+
+		expect(commandLabels.some((label) => label?.includes('Name Builder'))).toBe(true);
+	});
+
 	it('should filter commands based on search query', async () => {
 		const { container } = render(CommandPalette, { props: { show: true, hasAIProviders: true } });
 		const input = container.querySelector('.search-input') as HTMLInputElement;

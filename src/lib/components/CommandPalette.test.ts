@@ -77,6 +77,30 @@ describe('CommandPalette', () => {
 		expect(commandLabels.some((label) => label?.includes('Name Builder'))).toBe(true);
 	});
 
+	it('should still offer the name builder when AI providers are configured', () => {
+		const { container } = render(CommandPalette, { props: { show: true, hasAIProviders: true } });
+		const commandLabels = Array.from(container.querySelectorAll('.command-label')).map(
+			(el) => el.textContent
+		);
+
+		expect(commandLabels.some((label) => label?.includes('Name Builder'))).toBe(true);
+	});
+
+	it('should navigate to /name when Name Builder is clicked', async () => {
+		const { goto } = await import('$app/navigation');
+		vi.clearAllMocks();
+		const { container } = render(CommandPalette, { props: { show: true, hasAIProviders: false } });
+		const commands = Array.from(container.querySelectorAll('.command'));
+		const nameCommand = commands.find((cmd) =>
+			cmd.querySelector('.command-label')?.textContent?.includes('Name Builder')
+		) as HTMLElement;
+
+		expect(nameCommand).toBeTruthy();
+		await fireEvent.click(nameCommand);
+
+		expect(goto).toHaveBeenCalledWith('/name');
+	});
+
 	it('should filter commands based on search query', async () => {
 		const { container } = render(CommandPalette, { props: { show: true, hasAIProviders: true } });
 		const input = container.querySelector('.search-input') as HTMLInputElement;

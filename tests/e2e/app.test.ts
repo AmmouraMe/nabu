@@ -18,6 +18,20 @@ test.describe('Homepage', () => {
 		const palette = page.locator('[role="dialog"][aria-label="Command palette"]');
 		await expect(palette).toBeVisible();
 	});
+
+	test('should expose Name Builder in the nav and command palette', async ({ page }) => {
+		await page.goto('/');
+		await page.waitForLoadState('networkidle');
+
+		const nameLink = page.locator('nav.nav a[href="/name"]');
+		await expect(nameLink).toBeVisible();
+		await expect(nameLink).toHaveText('Name Builder');
+
+		await page.locator('button.command-palette-btn').click();
+		const palette = page.locator('[role="dialog"][aria-label="Command palette"]');
+		await expect(palette).toBeVisible();
+		await expect(palette.getByText('Name Builder', { exact: true })).toBeVisible();
+	});
 });
 
 test.describe('Theme System', () => {

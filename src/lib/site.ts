@@ -8,9 +8,8 @@
  * shared from a preview unfurls with a preview URL on it.
  *
  * It also keeps the tags out of `$app/stores`, which cannot be subscribed to
- * outside a SvelteKit request context and so makes any component that reads it
- * untestable in isolation. See the note in `Navigation.test.ts`, which skips
- * rendering for exactly that reason.
+ * outside a SvelteKit request context. Components that do read `$page` mock the
+ * store in unit tests (see `Navigation.test.ts` and `home-page.test.ts`).
  */
 export const SITE_URL = 'https://nabu.ammoura.me';
 

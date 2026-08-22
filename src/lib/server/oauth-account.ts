@@ -31,7 +31,7 @@ export async function reconcileOAuthAccount(options: {
 	email?: string | null;
 	linkingUserId?: string;
 	createUser(userId: string): Promise<void>;
-	updateUser(userId: string, match: 'link' | 'email' | 'legacy'): Promise<void>;
+	updateUser(userId: string, match: 'link' | 'linked' | 'email' | 'legacy'): Promise<void>;
 }): Promise<{ userId: string; linkedProvider?: OAuthProvider }> {
 	const { db, provider, providerAccountId, legacyUserId, email, linkingUserId } = options;
 	const linked = await db
@@ -50,7 +50,13 @@ export async function reconcileOAuthAccount(options: {
 			.prepare('SELECT id FROM users WHERE id = ?')
 			.bind(linked.user_id)
 			.first<{ id: string }>();
-		if (user) return { userId: user.id };
+		if (user) {
+			// Provider profile data can change independently of the canonical link.
+			// Refresh it on every login, including accounts created before the
+			// provider-neutral profile columns were introduced.
+			await options.updateUser(user.id, 'linked');
+			return { userId: user.id };
+		}
 	}
 	const normalizedEmail = email?.trim().toLowerCase();
 	const emailUser = normalizedEmail

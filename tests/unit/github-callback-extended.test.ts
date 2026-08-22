@@ -11,6 +11,7 @@ describe('canonical OAuth account reconciliation', () => {
 	});
 
 	it('uses an existing linked canonical user', async () => {
+		const updateUser = vi.fn().mockResolvedValue(undefined);
 		const db = createOAuthDb((query) => ({
 			first: query.includes('provider_account_id')
 				? { user_id: 'canonical-user' }
@@ -25,9 +26,10 @@ describe('canonical OAuth account reconciliation', () => {
 			providerAccountId: 'github-1',
 			legacyUserId: 'github-1',
 			createUser: vi.fn(),
-			updateUser: vi.fn()
+			updateUser
 		});
 		expect(result).toEqual({ userId: 'canonical-user' });
+		expect(updateUser).toHaveBeenCalledWith('canonical-user', 'linked');
 	});
 
 	it('creates a canonical user and token-free provider link', async () => {

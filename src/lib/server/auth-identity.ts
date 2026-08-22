@@ -18,23 +18,25 @@ export async function resolveOwnerStatus(
 	let githubOwnerUsername = githubOwnerId ? null : githubOwnerSetting || null;
 	let discordOwnerId = platform.env.DISCORD_OWNER_ID?.trim() || undefined;
 	if (platform.env.KV) {
-		try {
-			const githubOwnerConfigured = Boolean(githubOwnerId || githubOwnerUsername);
-			const values = await Promise.all([
-				githubOwnerConfigured ? null : platform.env.KV.get('github_owner_id'),
-				githubOwnerConfigured ? null : platform.env.KV.get('github_owner_username'),
-				discordOwnerId ? null : platform.env.KV.get('discord_owner_id')
-			]);
-			if (!githubOwnerConfigured) {
-				const storedId = values[0]?.trim();
-				githubOwnerId = storedId && /^\d+$/.test(storedId) ? storedId : undefined;
-				githubOwnerUsername = githubOwnerId ? null : values[1]?.trim() || null;
+		const readFallback = async (key: string, enabled: boolean): Promise<string | null> => {
+			if (!enabled) return null;
+			try {
+				return await platform.env.KV!.get(key);
+			} catch {
+				return null;
 			}
-			discordOwnerId ||= values[2]?.trim() || undefined;
-		} catch {
-			// KV is only a fallback. Definitive environment IDs remain usable during
-			// a transient KV outage; missing fallback configuration still fails closed.
-		}
+		};
+		const values = await Promise.all([
+			readFallback('github_owner_id', !githubOwnerId),
+			readFallback('github_owner_username', !githubOwnerId && !githubOwnerUsername),
+			readFallback('discord_owner_id', !discordOwnerId)
+		]);
+		const storedId = values[0]?.trim();
+		if (storedId && /^\d+$/.test(storedId)) {
+			githubOwnerId = storedId;
+			githubOwnerUsername = null;
+		} else if (!githubOwnerUsername) githubOwnerUsername = values[1]?.trim() || null;
+		discordOwnerId ||= values[2]?.trim() || undefined;
 	}
 	if (githubOwnerId && user.id === githubOwnerId) return true;
 	const ownerLinks = [

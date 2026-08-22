@@ -107,6 +107,7 @@ describe('Discord OAuth callback boundaries', () => {
 		await reconciliation.createUser('discord_123');
 		await reconciliation.updateUser('discord_123', 'legacy');
 		await reconciliation.updateUser('user-1', 'link');
+		await reconciliation.updateUser('user-1', 'linked');
 		expect(DB.calls.some((call) => call.query.includes('INSERT INTO users'))).toBe(true);
 		expect(DB.calls.some((call) => call.query.includes('profile_login'))).toBe(true);
 		expect(DB.calls.find((call) => call.query.includes('INSERT INTO users'))?.bindings).toEqual([
@@ -115,6 +116,16 @@ describe('Discord OAuth callback boundaries', () => {
 			'Test User',
 			'tester',
 			'https://cdn.discordapp.com/avatars/123/avatar-hash.png'
+		]);
+		expect(DB.calls.at(-1)?.bindings).toEqual([
+			'Test User',
+			'tester',
+			'https://cdn.discordapp.com/avatars/123/avatar-hash.png',
+			'tester@example.com',
+			'tester@example.com',
+			'user-1',
+			'tester@example.com',
+			'user-1'
 		]);
 	});
 

@@ -124,9 +124,23 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 				await db
 					.prepare(
 						`UPDATE users SET name = ?, profile_login = ?, profile_avatar_url = ?,
+						 email = CASE
+							WHEN ? IS NOT NULL AND NOT EXISTS (
+								SELECT 1 FROM users AS other
+								WHERE lower(other.email) = lower(?) AND other.id <> ?
+							) THEN ? ELSE email END,
 						 updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 					)
-					.bind(displayName, discordUser.username, avatarUrl, id)
+					.bind(
+						displayName,
+						discordUser.username,
+						avatarUrl,
+						verifiedEmail,
+						verifiedEmail,
+						id,
+						verifiedEmail,
+						id
+					)
 					.run();
 			}
 		});

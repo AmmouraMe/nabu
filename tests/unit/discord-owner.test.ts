@@ -94,6 +94,24 @@ describe('OAuth owner identity', () => {
 		).resolves.toBe(false);
 	});
 
+	it('lets an immutable KV ID override a legacy environment username', async () => {
+		const db = createOAuthDb();
+		const KV = {
+			get: vi.fn((key: string) =>
+				key === 'discord_owner_id'
+					? Promise.reject(new Error('unrelated KV read failed'))
+					: Promise.resolve(key === 'github_owner_id' ? '98765' : null)
+			)
+		};
+		await expect(
+			resolveOwnerStatus({ env: { DB: db, KV, GITHUB_OWNER_ID: 'recycled-owner' } } as any, {
+				id: 'different-user',
+				github_login: 'recycled-owner'
+			})
+		).resolves.toBe(false);
+		expect(KV.get).toHaveBeenCalledWith('github_owner_id');
+	});
+
 	it('returns false without a database binding', async () => {
 		await expect(resolveOwnerStatus(undefined, { id: 'user-1', github_login: null })).resolves.toBe(
 			false

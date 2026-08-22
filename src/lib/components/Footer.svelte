@@ -48,11 +48,7 @@
 					<h3 class="footer-heading">Resources</h3>
 					<ul class="footer-links">
 						<li>
-							<a
-								href="https://github.com/starspacegroup/nabu"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
+							<a href="https://github.com/AmmouraMe/nabu" target="_blank" rel="noopener noreferrer">
 								GitHub
 							</a>
 						</li>
@@ -96,7 +92,7 @@
 			</p>
 			<div class="footer-social">
 				<a
-					href="https://github.com/starspacegroup/nabu"
+					href="https://github.com/AmmouraMe/nabu"
 					target="_blank"
 					rel="noopener noreferrer"
 					aria-label="GitHub Repository"

@@ -1,6 +1,14 @@
-# Contributing to NebulaKit
+# Contributing to Nabu
 
-Thank you for your interest in contributing to NebulaKit! This guide will help you understand our development process and standards.
+Thank you for your interest in contributing to Nabu! This guide will help you
+understand our development process and standards.
+
+**Read [`CLAUDE.md`](CLAUDE.md) first for the contribution workflow** — claim the
+issue, branch, open a draft PR early, mark it ready when done. That workflow is
+org-wide across **AmmouraMe** and applies to every change; this file covers the
+standards a change has to meet. Nabu is built on
+[NebulaKit](https://github.com/starspacegroup/NebulaKit), and much of what
+follows is inherited from it.
 
 ## 🎯 Development Philosophy
 
@@ -25,8 +33,8 @@ Thank you for your interest in contributing to NebulaKit! This guide will help y
 
 ```bash
 # Clone the repository
-git clone https://github.com/starspacegroup/NebulaKit.git
-cd NebulaKit
+git clone https://github.com/AmmouraMe/nabu.git
+cd nabu
 
 # Install dependencies
 npm install
@@ -199,6 +207,10 @@ await platform.env.DB.prepare(`SELECT * FROM users WHERE id = ${userId}`).first(
 ```
 
 ## 🔄 Git Workflow
+
+The four steps — claim the issue, branch, draft PR early, mark ready — live in
+[`CLAUDE.md`](CLAUDE.md) and are not repeated here. What follows is the naming
+and message convention a branch and its commits must follow.
 
 ### Branch Naming
 

@@ -17,7 +17,8 @@
  */
 
 import { error, json } from '@sveltejs/kit';
-import { buildSessionCookie } from '$lib/server/auth-cookie';
+import { createSession } from '$lib/utils/db';
+import { buildDatabaseSessionCookieHeader } from '$lib/server/session';
 import { hashPassword, passwordProblem, resolveIterations } from '$lib/server/password';
 import { FREE_TIER } from '$lib/utils/pricing';
 import type { RequestHandler } from './$types';
@@ -95,18 +96,17 @@ export const POST: RequestHandler = async ({ request, platform, url }) => {
 		throw err;
 	}
 
-	const cookie = await buildSessionCookie(
-		{
-			id,
-			login: email.split('@')[0],
-			name,
-			email,
-			isOwner: false,
-			isAdmin: false,
-			plan: FREE_TIER
-		},
-		platform?.env?.SESSION_SECRET,
-		url
+	// Session issuance goes through the database, not the cookie. Before the
+	// database-backed session landed, this route signed the whole identity into the
+	// cookie — which the hook no longer accepts, so leaving it would have handed out
+	// a cookie the app immediately refuses and dropped every new account straight
+	// back to logged-out. Nothing in git flags that: this file simply predates the
+	// change.
+	const session = await createSession(platform!.env.DB, id, 7);
+	const cookie = await buildDatabaseSessionCookieHeader(
+		session.token,
+		url,
+		platform?.env?.SESSION_SECRET
 	);
 
 	return json(

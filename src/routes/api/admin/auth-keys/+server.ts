@@ -1,53 +1,49 @@
 import { error, json } from '@sveltejs/kit';
+import { requireOwner } from '$lib/server/auth-guards';
+import { AUTH_PROVIDERS, isAuthProvider } from '$lib/server/auth-provider-config';
 import type { RequestHandler } from './$types';
+
+interface AuthKeySummary {
+	id: string;
+	name: string;
+	provider: (typeof AUTH_PROVIDERS)[number];
+	type: 'oauth';
+	clientId: string;
+	createdAt: string;
+	isSetupKey: boolean;
+}
 
 // GET - List all auth keys
 export const GET: RequestHandler = async ({ platform, locals }) => {
-	if (!locals.user?.isOwner && !locals.user?.isAdmin) {
-		throw error(403, 'Admin access required');
-	}
+	requireOwner(locals);
 
 	try {
-		const keys: any[] = [];
+		const keys: AuthKeySummary[] = [];
 
 		// Fetch GitHub OAuth configuration from KV (saved during setup)
 		if (platform?.env?.KV) {
-			try {
-				const authConfigStr = await platform.env.KV.get('auth_config:github');
-				if (authConfigStr) {
-					const authConfig = JSON.parse(authConfigStr);
-					// Add GitHub OAuth as a key in the list
-					keys.push({
-						id: authConfig.id,
-						name: 'GitHub OAuth (Setup)',
-						provider: authConfig.provider,
-						type: 'oauth',
-						clientId: authConfig.clientId,
-						createdAt: authConfig.createdAt,
-						isSetupKey: true // Mark as setup key (read-only)
-					});
+			for (const provider of AUTH_PROVIDERS) {
+				const configString = await platform.env.KV.get(`auth_config:${provider}`);
+				if (!configString) continue;
+				const config = JSON.parse(configString) as Partial<
+					Pick<AuthKeySummary, 'id' | 'clientId' | 'createdAt'>
+				>;
+				if (
+					typeof config.id !== 'string' ||
+					typeof config.clientId !== 'string' ||
+					typeof config.createdAt !== 'string'
+				) {
+					throw new Error(`Invalid stored ${provider} OAuth configuration`);
 				}
-			} catch (err) {
-				console.error('Failed to parse GitHub OAuth config:', err);
-			}
-
-			// Fetch Discord OAuth configuration from KV
-			try {
-				const discordConfigStr = await platform.env.KV.get('auth_config:discord');
-				if (discordConfigStr) {
-					const discordConfig = JSON.parse(discordConfigStr);
-					keys.push({
-						id: discordConfig.id,
-						name: 'Discord OAuth (Setup)',
-						provider: discordConfig.provider,
-						type: 'oauth',
-						clientId: discordConfig.clientId,
-						createdAt: discordConfig.createdAt,
-						isSetupKey: true
-					});
-				}
-			} catch (err) {
-				console.error('Failed to parse Discord OAuth config:', err);
+				keys.push({
+					id: config.id,
+					name: `${provider === 'github' ? 'GitHub' : 'Discord'} OAuth`,
+					provider,
+					type: 'oauth',
+					clientId: config.clientId,
+					createdAt: config.createdAt,
+					isSetupKey: provider === 'github'
+				});
 			}
 		}
 
@@ -60,17 +56,16 @@ export const GET: RequestHandler = async ({ platform, locals }) => {
 
 // POST - Create new auth key
 export const POST: RequestHandler = async ({ request, platform, locals }) => {
-	if (!locals.user?.isOwner && !locals.user?.isAdmin) {
-		throw error(403, 'Admin access required');
-	}
+	requireOwner(locals);
 
 	try {
 		const data = await request.json();
 
 		// Validate required fields
-		if (!data.name || !data.clientId || !data.clientSecret) {
+		if (!data.name || !data.provider || !data.clientId || !data.clientSecret) {
 			throw error(400, 'Missing required fields');
 		}
+		if (!isAuthProvider(data.provider)) throw error(400, 'Unsupported authentication provider');
 
 		// Generate unique ID
 		const id = crypto.randomUUID();

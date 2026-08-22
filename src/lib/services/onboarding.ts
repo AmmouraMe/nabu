@@ -608,6 +608,20 @@ function jsonToReadableString(raw: string): string {
 }
 
 /**
+ * Parse a JSON-encoded DB value, degrading to `undefined` when the stored text
+ * is not valid JSON instead of throwing. The write path (`updateBrandField`)
+ * stores string values verbatim, so a malformed value must not permanently
+ * break every subsequent profile/message load.
+ */
+function safeJsonParse<T>(raw: string): T | undefined {
+	try {
+		return JSON.parse(raw) as T;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
  * Map a database row to a BrandProfile object
  */
 export function mapRowToProfile(row: Record<string, unknown>): BrandProfile {
@@ -647,7 +661,9 @@ export function mapRowToProfile(row: Record<string, unknown>): BrandProfile {
 		successColor: (row.success_color as string) || undefined,
 		warningColor: (row.warning_color as string) || undefined,
 		errorColor: (row.error_color as string) || undefined,
-		colorPalette: row.color_palette ? JSON.parse(row.color_palette as string) : undefined,
+		colorPalette: row.color_palette
+			? safeJsonParse<BrandProfile['colorPalette']>(row.color_palette as string)
+			: undefined,
 		typographyLogo: (row.typography_logo as string) || undefined,
 		typographyHeading: (row.typography_heading as string) || undefined,
 		typographyBody: (row.typography_body as string) || undefined,
@@ -664,7 +680,9 @@ export function mapRowToProfile(row: Record<string, unknown>): BrandProfile {
 		originStory: (row.origin_story as string) || undefined,
 		brandValues: row.brand_values ? jsonToReadableString(row.brand_values as string) : undefined,
 		brandPromise: (row.brand_promise as string) || undefined,
-		styleGuide: row.style_guide ? JSON.parse(row.style_guide as string) : undefined,
+		styleGuide: row.style_guide
+			? safeJsonParse<BrandProfile['styleGuide']>(row.style_guide as string)
+			: undefined,
 		sortOrder: (row.sort_order as number) ?? 0,
 		onboardingStep: row.onboarding_step as OnboardingStep,
 		conversationId: (row.conversation_id as string) || undefined,
@@ -692,7 +710,9 @@ function mapRowToMessage(row: Record<string, unknown>): OnboardingMessage {
 		role: row.role as OnboardingMessage['role'],
 		content: row.content as string,
 		step: (row.step as OnboardingStep) || undefined,
-		metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
+		metadata: row.metadata
+			? safeJsonParse<OnboardingMessage['metadata']>(row.metadata as string)
+			: undefined,
 		attachments,
 		createdAt: row.created_at as string
 	};

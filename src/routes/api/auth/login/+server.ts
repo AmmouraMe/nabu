@@ -13,7 +13,8 @@
  */
 
 import { error, json } from '@sveltejs/kit';
-import { buildSessionCookie } from '$lib/server/auth-cookie';
+import { createSession } from '$lib/utils/db';
+import { buildDatabaseSessionCookieHeader } from '$lib/server/session';
 import {
 	clearFailures,
 	clientAddress,
@@ -108,21 +109,21 @@ export const POST: RequestHandler = async ({ request, platform, url }) => {
 	const plan = normalizeTier(row.plan);
 	const isAdmin = row.is_admin === 1;
 
-	const cookie = await buildSessionCookie(
-		{
-			id: row.id,
-			login: row.email.split('@')[0],
-			name: row.name ?? undefined,
-			email: row.email,
-			// Owner is an OAuth-identity fact (GITHUB_OWNER_ID / DISCORD_OWNER_ID), so a
-			// password login never claims it. An owner who is also an admin in the row
-			// still gets isAdmin, which is what the admin routes actually check.
-			isOwner: false,
-			isAdmin,
-			plan
-		},
-		platform?.env?.SESSION_SECRET,
-		url
+	// Session issuance goes through the database, not the cookie. This route
+	// predates the database-backed session, and the identity payload it used to
+	// sign is one the hook now rejects outright — so every successful login would
+	// have set a cookie the very next request discards. Git shows no conflict
+	// here, because the file simply never existed on the branch that changed the
+	// rules.
+	//
+	// isOwner and isAdmin are no longer written into the cookie at all: the hook
+	// re-derives both from the users row and GITHUB_OWNER_ID / DISCORD_OWNER_ID on
+	// every request, which is where they were already being corrected anyway.
+	const session = await createSession(platform!.env.DB, row.id, 7);
+	const cookie = await buildDatabaseSessionCookieHeader(
+		session.token,
+		url,
+		platform?.env?.SESSION_SECRET
 	);
 
 	return json(

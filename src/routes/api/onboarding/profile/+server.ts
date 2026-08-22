@@ -13,6 +13,7 @@ import {
 	getBrandProfileByUser,
 	updateBrandProfile
 } from '$lib/services/onboarding';
+import { requireBrandAccess } from '$lib/server/brand-access';
 
 export const GET: RequestHandler = async ({ locals, platform, url }) => {
 	if (!locals.user) {
@@ -57,11 +58,11 @@ export const PATCH: RequestHandler = async ({ locals, platform, request }) => {
 		throw error(400, 'profileId and updates are required');
 	}
 
+	await requireBrandAccess(platform!.env.DB, locals.user.id, profileId, 'write');
 	// When brand name is explicitly set, auto-confirm it
 	if (updates.brandName !== undefined && updates.brandNameConfirmed === undefined) {
 		updates.brandNameConfirmed = true;
 	}
-
 	await updateBrandProfile(platform!.env.DB, profileId, updates);
 	const profile = await getBrandProfile(platform!.env.DB, profileId);
 

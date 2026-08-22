@@ -172,7 +172,7 @@ async function getLocalUsage(db: any, provider: string): Promise<UsageResult> {
 	try {
 		const results = await db
 			.prepare(
-				`SELECT 
+				`SELECT
 					date(created_at) as day,
 					COALESCE(SUM(cost), 0) as total_cost,
 					COUNT(*) as request_count

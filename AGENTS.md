@@ -3,6 +3,9 @@
 SvelteKit 2 marketing automation platform on Cloudflare Workers/Pages. Built on
 [NebulaKit](https://github.com/starspacegroup/NebulaKit).
 
+**Canonical agent guidance for this repo lives in [CLAUDE.md](CLAUDE.md)** —
+read it first. It contains the mandatory D1 migration and icon rules.
+
 ## Quick commands
 
 | Command                     | What it does                                                 |
@@ -36,7 +39,7 @@ threshold cannot be skipped through the aggregate script.
 - E2E: first `npx playwright install chromium` (or full `npx playwright install`).
 - This machine's Playwright cache is partially corrupted (missing Framework dylibs for headless_shell). Workaround (no source change): set env var before running E2E:
   ```
-  PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Users/donaldfilimon/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' npm run test:e2e
+  PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Users/donaldfilimon/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' npm run test:e2e
   ```
 - Alternative: `rm -rf ~/Library/Caches/ms-playwright && npx playwright install` (re-downloads; may require network + time).
 - **Never** commit machine-specific paths, symlinks, or `launchOptions`/`executablePath` to `playwright.config.ts`. Use `PLAYWRIGHT_*_EXECUTABLE_PATH` env vars or external symlinks for local dev only.
@@ -91,20 +94,8 @@ Don't hand-edit PNGs. See `CLAUDE.md` for the full set in `static/`.
 
 ## Key env vars
 
-`.env.example` lists all required vars. `AUTH_SECRET` (openssl rand -base64 32) and
-OAuth keys are the main ones for local dev.
-
-## Local testing & package manager notes
-
-- Use **npm** (package-lock.json committed and canonical). bun/yarn/pnpm locks are gitignored (see `.gitignore`).
-- E2E browser setup: `npx playwright install chromium` (or full `npx playwright install`).
-- This machine's Playwright cache is partially corrupted (missing Framework dylibs for headless_shell). Workaround (no source change):
-  ```
-  PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Users/donaldfilimon/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' npm run test:e2e
-  ```
-- Alternative: `rm -rf ~/Library/Caches/ms-playwright && npx playwright install` (re-downloads; may require network + time).
-- **Never** commit machine-specific paths, symlinks, or `launchOptions`/`executablePath` to `playwright.config.ts`. Use `PLAYWRIGHT_*_EXECUTABLE_PATH` env vars or external symlinks for local dev only.
-- `npm run test:e2e` may fail locally due to browser setup; acceptable if documented. CI uses clean Linux images (see `.github/workflows/ci.yml`).
+`.env.example` lists all required vars. `SESSION_SECRET` (openssl rand -base64 32),
+the separate one-time `SETUP_SECRET`, and OAuth keys are the main ones for local dev.
 
 ## Key files
 
@@ -113,3 +104,12 @@ OAuth keys are the main ones for local dev.
 - `wrangler.toml` — Cloudflare bindings (DB, KV, R2, AI)
 - `workers/content-cron/wrangler.toml` — cron scheduler config
 - `vite.config.ts` — test config (coverage, pool, setup)
+
+## Related projects
+
+This repo is part of the multi-repo workspace at the parent directory (each
+sibling is its own git repo):
+
+- [../CLAUDE.md](../CLAUDE.md) — workspace map of all sibling projects
+- [../NebulaKit/AGENTS.md](../NebulaKit/AGENTS.md) — the starter template Nabu derives from
+- [../Guides/AGENTS.md](../Guides/AGENTS.md) and [../sortalizer/AGENTS.md](../sortalizer/AGENTS.md) — sibling NebulaKit-derived apps

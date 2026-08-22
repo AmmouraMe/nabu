@@ -41,7 +41,7 @@ Visit `http://localhost:4239` to verify everything works.
 
 ### Coverage Requirements
 
-- **Minimum 95% code coverage** across all modules
+- **Minimum 95% code coverage** for lines, branches, functions, and statements
 - **100% coverage** on critical paths (auth, payments, data mutations)
 - All tests must pass before submitting a PR
 

@@ -100,7 +100,7 @@ const ANTHROPIC_MODEL_ALIASES: Record<string, string> = {
 function getEffectiveModel(key: AIKey, requestedModel?: string): string {
 	let model: string;
 	if (key.models && key.models.length > 0) {
-		model = key.models[0];
+		model = requestedModel && key.models.includes(requestedModel) ? requestedModel : key.models[0];
 	} else if (key.model) {
 		model = key.model;
 	} else {
@@ -110,7 +110,7 @@ function getEffectiveModel(key: AIKey, requestedModel?: string): string {
 			case 'workers-ai':
 				return WORKERS_AI_DEFAULT_TEXT_MODEL;
 			default:
-				return requestedModel || 'gpt-4o';
+				return 'gpt-4o';
 		}
 	}
 	// A workers-ai record also carries image models; never chat with one.
@@ -834,8 +834,6 @@ export async function createRealtimeSession(
 	apiKey: string,
 	model: string = 'gpt-4o-realtime-preview-2024-12-17'
 ): Promise<RealtimeSessionResponse> {
-	console.log('Creating realtime session for model:', model);
-
 	const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
 		method: 'POST',
 		headers: {
@@ -849,23 +847,16 @@ export async function createRealtimeSession(
 	});
 
 	if (!response.ok) {
-		const errorText = await response.text().catch(() => 'Unknown error');
-		console.error('Failed to create realtime session:', response.status, errorText);
-		throw new Error(`Failed to create realtime session: ${response.status} - ${errorText}`);
+		console.error('Failed to create realtime session:', response.status);
+		throw new Error(`Failed to create realtime session: ${response.status}`);
 	}
 
 	const data = await response.json();
-	console.log('Realtime session API response keys:', Object.keys(data));
-	console.log('Full response data:', JSON.stringify(data, null, 2));
 
 	if (!data.client_secret?.value) {
-		console.error('Invalid response from realtime sessions API:', data);
+		console.error('Invalid response from realtime sessions API');
 		throw new Error('Invalid response: missing client_secret');
 	}
-
-	console.log('Successfully got client_secret, length:', data.client_secret.value.length);
-	console.log('Session ID:', data.id);
-	console.log('Expires at:', data.client_secret.expires_at);
 
 	return {
 		token: data.client_secret.value

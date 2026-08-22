@@ -332,8 +332,8 @@ export async function addFieldVersion(
 	// Get the current max version number for this field
 	const maxVersionRow = await db
 		.prepare(
-			`SELECT COALESCE(MAX(version_number), 0) as max_version 
-       FROM brand_field_versions 
+			`SELECT COALESCE(MAX(version_number), 0) as max_version
+		   FROM brand_field_versions
        WHERE brand_profile_id = ? AND field_name = ?`
 		)
 		.bind(params.brandProfileId, params.fieldName)
@@ -357,7 +357,7 @@ export async function addFieldVersion(
 
 	await db
 		.prepare(
-			`INSERT INTO brand_field_versions 
+			`INSERT INTO brand_field_versions
        (id, brand_profile_id, user_id, field_name, old_value, new_value, change_source, change_reason, version_number, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		)
@@ -399,7 +399,7 @@ export async function getFieldHistory(
 ): Promise<BrandFieldVersion[]> {
 	const result = await db
 		.prepare(
-			`SELECT * FROM brand_field_versions 
+			`SELECT * FROM brand_field_versions
        WHERE brand_profile_id = ? AND field_name = ?
        ORDER BY version_number ASC`
 		)
@@ -418,7 +418,7 @@ export async function getAllFieldHistory(
 ): Promise<BrandFieldVersion[]> {
 	const result = await db
 		.prepare(
-			`SELECT * FROM brand_field_versions 
+			`SELECT * FROM brand_field_versions
        WHERE brand_profile_id = ?
        ORDER BY created_at DESC`
 		)
@@ -735,7 +735,7 @@ export async function getAllBrandProfilesByUser(
 ): Promise<BrandProfile[]> {
 	const result = await db
 		.prepare(
-			`SELECT * FROM brand_profiles 
+			`SELECT * FROM brand_profiles
        WHERE user_id = ? AND status IN ('in_progress', 'completed')
        ORDER BY sort_order ASC, updated_at DESC`
 		)
@@ -754,7 +754,7 @@ export async function getArchivedBrandProfilesByUser(
 ): Promise<BrandProfile[]> {
 	const result = await db
 		.prepare(
-			`SELECT * FROM brand_profiles 
+			`SELECT * FROM brand_profiles
        WHERE user_id = ? AND status = 'archived'
        ORDER BY updated_at DESC`
 		)

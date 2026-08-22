@@ -402,6 +402,8 @@ describe('CMS API - Content Items', () => {
 				created_at: '2024-01-01',
 				updated_at: '2024-01-01'
 			});
+			// updateContentItem: field definitions used by the sanitizer
+			mockDB.first.mockResolvedValueOnce({ id: 'ct-1', fields: '[]' });
 			// updateContentItem: update result
 			mockDB.first.mockResolvedValueOnce({
 				id: 'ci-1',

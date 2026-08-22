@@ -42,8 +42,7 @@ describe('Auth Keys [id] API - Extended Branch Coverage', () => {
 							}
 						}
 					: overrides.platform,
-			// These routes gate on isOwner/isAdmin.
-			locals: { user: { id: 'admin-1', isAdmin: true } }
+			locals: { user: { id: 'owner-1', isAdmin: true, isOwner: true } }
 		};
 	};
 
@@ -55,10 +54,10 @@ describe('Auth Keys [id] API - Extended Branch Coverage', () => {
 			});
 		});
 
-		it('DELETE: throws 403 without an admin user', async () => {
+		it('DELETE: throws 401 without an authenticated user', async () => {
 			const event = { ...createMockEvent(), locals: { user: null } };
 			await expect(DELETE(event as unknown as Parameters<typeof DELETE>[0])).rejects.toMatchObject({
-				status: 403
+				status: 401
 			});
 		});
 	});

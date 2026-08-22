@@ -16,6 +16,25 @@ export interface Session {
 	expires_at: Date;
 }
 
+export interface CreatedSession extends Session {
+	token: string;
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+	let binary = '';
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function createSessionToken(): string {
+	return bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+}
+
+export async function hashSessionToken(token: string): Promise<string> {
+	const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+	return bytesToBase64Url(new Uint8Array(digest));
+}
+
 export interface SessionUserRecord {
 	id: string;
 	email?: string | null;
@@ -91,36 +110,60 @@ export async function createSession(
 	db: D1Database,
 	userId: string,
 	expiresInDays: number = 30
-): Promise<Session> {
-	// Generate UUID (Cloudflare Workers supports crypto.randomUUID)
-	const id = crypto.randomUUID();
+): Promise<CreatedSession> {
+	const token = createSessionToken();
+	const id = await hashSessionToken(token);
 	const expiresAt = new Date();
 	expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-	const stmt = db.prepare(
-		'INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?) RETURNING *'
-	);
-	const result = await stmt.bind(id, userId, expiresAt.toISOString()).first<Session>();
+	await db
+		.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)')
+		.bind(id, userId, expiresAt.toISOString())
+		.run();
+	return { id, token, user_id: userId, expires_at: expiresAt };
+}
 
-	if (!result) {
-		throw new Error('Failed to create session');
-	}
-
-	return result;
+export async function replaceSession(
+	db: D1Database,
+	userId: string,
+	previousToken: string,
+	expiresInDays: number = 30
+): Promise<CreatedSession> {
+	const token = createSessionToken();
+	const [id, previousId] = await Promise.all([
+		hashSessionToken(token),
+		hashSessionToken(previousToken)
+	]);
+	const expiresAt = new Date();
+	expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+	await db.batch([
+		db
+			.prepare('INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)')
+			.bind(id, userId, expiresAt.toISOString()),
+		db.prepare('DELETE FROM sessions WHERE id = ?').bind(previousId)
+	]);
+	return { id, token, user_id: userId, expires_at: expiresAt };
 }
 
 /**
  * Find session by ID and check if it's valid
  */
-export async function findValidSession(db: D1Database, sessionId: string): Promise<Session | null> {
-	const stmt = db.prepare('SELECT * FROM sessions WHERE id = ? AND expires_at > datetime("now")');
+export async function findValidSession(
+	db: D1Database,
+	sessionToken: string
+): Promise<Session | null> {
+	const sessionId = await hashSessionToken(sessionToken);
+	const stmt = db.prepare(
+		'SELECT * FROM sessions WHERE id = ? AND datetime(expires_at) > datetime("now")'
+	);
 	return await stmt.bind(sessionId).first<Session>();
 }
 
 /**
  * Delete session (logout)
  */
-export async function deleteSession(db: D1Database, sessionId: string): Promise<void> {
+export async function deleteSession(db: D1Database, sessionToken: string): Promise<void> {
+	const sessionId = await hashSessionToken(sessionToken);
 	const stmt = db.prepare('DELETE FROM sessions WHERE id = ?');
 	await stmt.bind(sessionId).run();
 }
@@ -129,6 +172,6 @@ export async function deleteSession(db: D1Database, sessionId: string): Promise<
  * Clean up expired sessions
  */
 export async function cleanupExpiredSessions(db: D1Database): Promise<void> {
-	const stmt = db.prepare('DELETE FROM sessions WHERE expires_at < datetime("now")');
+	const stmt = db.prepare('DELETE FROM sessions WHERE datetime(expires_at) < datetime("now")');
 	await stmt.run();
 }

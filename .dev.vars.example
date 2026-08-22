@@ -9,6 +9,13 @@
 # Set in production with: wrangler pages secret put SESSION_SECRET
 SESSION_SECRET=generate_a_random_value_here
 
+# One-time initial setup authorization. Required until the owner is established.
+SETUP_SECRET=generate_a_different_random_value_here
+
+# Optional bot protection. Configure both values or neither; partial configuration fails closed.
+TURNSTILE_SITE_KEY=your_turnstile_site_key
+TURNSTILE_SECRET_KEY=your_turnstile_secret_key
+
 # GitHub OAuth Configuration
 # Get these from https://github.com/settings/developers
 GITHUB_CLIENT_ID=your_github_client_id_here

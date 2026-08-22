@@ -417,13 +417,13 @@ describe('Admin users search - items fallback', () => {
 	});
 });
 
-// ──── 8. discord/callback — existing user without oauth record + redirect re-throw ────
+// ──── 8. discord/callback — untrusted email collision + redirect re-throw ────
 describe('Discord callback - additional branches', () => {
 	beforeEach(() => {
 		vi.resetModules();
 	});
 
-	it('creates oauth_accounts record for existing user without one', async () => {
+	it('does not reuse an unrelated account with the same unverified email', async () => {
 		const originalFetch = globalThis.fetch;
 
 		// Mock Discord token exchange and user info
@@ -436,9 +436,10 @@ describe('Discord callback - additional branches', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => ({
-					id: 'discord-123',
+					id: '123',
 					username: 'testuser',
 					email: 'test@discord.com',
+					verified: true,
 					global_name: 'Test User',
 					avatar: null
 				})
@@ -449,8 +450,20 @@ describe('Discord callback - additional branches', () => {
 			prepare: vi.fn().mockImplementation((sql: string) => ({
 				bind: vi.fn().mockReturnValue({
 					first: vi.fn().mockImplementation(() => {
-						if (sql.includes('FROM users WHERE email')) {
-							return Promise.resolve({ id: 'existing-user-1', is_admin: 0 });
+						if (sql.includes('oauth_transactions')) {
+							return Promise.resolve({ intent: 'login', user_id: null, session_id: null });
+						}
+						if (sql.includes('lower(email)')) return Promise.resolve({ id: 'existing-user-1' });
+						if (sql.includes('SELECT id FROM users WHERE id')) return Promise.resolve(null);
+						if (sql.includes('SELECT id, email, name, github_login')) {
+							return Promise.resolve({
+								id: 'existing-user-1',
+								email: 'test@discord.com',
+								name: 'Test User',
+								github_login: null,
+								github_avatar_url: null,
+								is_admin: 0
+							});
 						}
 						if (sql.includes('FROM oauth_accounts WHERE user_id')) {
 							return Promise.resolve(null); // No existing oauth record!
@@ -479,19 +492,33 @@ describe('Discord callback - additional branches', () => {
 		};
 
 		try {
+			const { createOAuthTransaction } = await import('../../src/lib/server/oauth-state');
+			const transaction = await createOAuthTransaction(
+				mockDB as any,
+				'discord',
+				'login',
+				undefined,
+				undefined,
+				'test-session-secret'
+			);
 			const { GET } = await import('../../src/routes/api/auth/discord/callback/+server');
 			const response = await GET({
-				url: new URL('http://localhost/api/auth/discord/callback?code=test-code&state=valid-state'),
-				platform: { env: { DB: mockDB, KV: mockKV } },
+				url: new URL(
+					`http://localhost/api/auth/discord/callback?code=test-code&state=${encodeURIComponent(transaction.state)}`
+				),
+				platform: { env: { DB: mockDB, KV: mockKV, SESSION_SECRET: 'test-session-secret' } },
 				locals: {},
 				cookies: {
-					get: vi.fn().mockReturnValue('valid-state'),
+					get: vi.fn((name: string) =>
+						name === 'oauth_state_discord' ? transaction.cookie : undefined
+					),
 					delete: vi.fn()
 				}
 			} as any);
 			// Should succeed (302 redirect) and insert oauth record
 			expect(response.status).toBe(302);
 			expect(insertCalls).toContain('oauth_insert');
+			expect(mockDB.prepare).not.toHaveBeenCalledWith(expect.stringContaining('lower(email)'));
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

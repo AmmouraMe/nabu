@@ -89,6 +89,13 @@
 				]
 			: []),
 		{
+			id: 'name',
+			label: 'Name Builder',
+			description: 'Generate brand names with domains checked',
+			action: () => goto('/name'),
+			icon: '🔤'
+		},
+		{
 			id: 'login',
 			label: 'Sign In',
 			description: 'Go to login page',

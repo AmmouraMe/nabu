@@ -125,6 +125,13 @@
 			<div class="nav-links" class:open={mobileMenuOpen}>
 				{#if user}
 					<a
+						href="/name"
+						class:active={$page.url.pathname.startsWith('/name')}
+						on:click={closeMobileMenu}
+					>
+						Name Builder
+					</a>
+					<a
 						href="/brand"
 						class:active={$page.url.pathname.startsWith('/brand')}
 						on:click={closeMobileMenu}
@@ -204,6 +211,13 @@
 						{/if}
 					</div>
 				{:else}
+					<a
+						href="/name"
+						class:active={$page.url.pathname.startsWith('/name')}
+						on:click={closeMobileMenu}
+					>
+						Name Builder
+					</a>
 					<a
 						href="/pricing"
 						class:active={$page.url.pathname === '/pricing'}

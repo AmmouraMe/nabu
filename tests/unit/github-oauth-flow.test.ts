@@ -91,6 +91,11 @@ describe('OAuth session finalization', () => {
 });
 
 describe('logout revocation', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		deleteSession.mockResolvedValue(undefined);
+	});
+
 	it.each(['GET', 'POST'] as const)('revokes the D1 session on %s', async (method) => {
 		const cookies = createOAuthCookies();
 		const db = createOAuthDb();
@@ -105,6 +110,25 @@ describe('logout revocation', () => {
 			} as any)
 		).rejects.toMatchObject({ status: 302, location: '/auth/login' });
 		expect(deleteSession).toHaveBeenCalledWith(db, 'session-token');
+		expect(cookies.delete).toHaveBeenCalledWith('session', { path: '/' });
+	});
+
+	it('clears the browser cookie even when D1 revocation fails', async () => {
+		deleteSession.mockRejectedValueOnce(new Error('D1 write failed'));
+		const cookies = createOAuthCookies();
+		const db = createOAuthDb();
+		const session = await import('../../src/lib/server/session');
+		cookies.get.mockReturnValue(
+			await session.signSession({ token: 'session-token' }, 'test-session-secret')
+		);
+		const { POST } = await import('../../src/routes/api/auth/logout/+server');
+
+		await expect(
+			POST({
+				cookies,
+				platform: { env: { DB: db, SESSION_SECRET: 'test-session-secret' } }
+			} as any)
+		).rejects.toThrow('D1 write failed');
 		expect(cookies.delete).toHaveBeenCalledWith('session', { path: '/' });
 	});
 });

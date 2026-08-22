@@ -3,19 +3,38 @@ import { requireOwner } from '$lib/server/auth-guards';
 import { AUTH_PROVIDERS, isAuthProvider } from '$lib/server/auth-provider-config';
 import type { RequestHandler } from './$types';
 
+interface AuthKeySummary {
+	id: string;
+	name: string;
+	provider: (typeof AUTH_PROVIDERS)[number];
+	type: 'oauth';
+	clientId: string;
+	createdAt: string;
+	isSetupKey: boolean;
+}
+
 // GET - List all auth keys
 export const GET: RequestHandler = async ({ platform, locals }) => {
 	requireOwner(locals);
 
 	try {
-		const keys: any[] = [];
+		const keys: AuthKeySummary[] = [];
 
 		// Fetch GitHub OAuth configuration from KV (saved during setup)
 		if (platform?.env?.KV) {
 			for (const provider of AUTH_PROVIDERS) {
 				const configString = await platform.env.KV.get(`auth_config:${provider}`);
 				if (!configString) continue;
-				const config = JSON.parse(configString);
+				const config = JSON.parse(configString) as Partial<
+					Pick<AuthKeySummary, 'id' | 'clientId' | 'createdAt'>
+				>;
+				if (
+					typeof config.id !== 'string' ||
+					typeof config.clientId !== 'string' ||
+					typeof config.createdAt !== 'string'
+				) {
+					throw new Error(`Invalid stored ${provider} OAuth configuration`);
+				}
 				keys.push({
 					id: config.id,
 					name: `${provider === 'github' ? 'GitHub' : 'Discord'} OAuth`,
@@ -26,45 +45,6 @@ export const GET: RequestHandler = async ({ platform, locals }) => {
 					isSetupKey: provider === 'github'
 				});
 			}
-			/*
-			try {
-				const authConfigStr = await platform.env.KV.get('auth_config:github');
-				if (authConfigStr) {
-					const authConfig = JSON.parse(authConfigStr);
-					// Add GitHub OAuth as a key in the list
-					keys.push({
-						id: authConfig.id,
-						name: 'GitHub OAuth (Setup)',
-						provider: authConfig.provider,
-						type: 'oauth',
-						clientId: authConfig.clientId,
-						createdAt: authConfig.createdAt,
-						isSetupKey: true // Mark as setup key (read-only)
-					});
-				}
-			} catch (err) {
-				console.error('Failed to parse GitHub OAuth config:', err);
-			}
-
-			// Fetch Discord OAuth configuration from KV
-			try {
-				const discordConfigStr = await platform.env.KV.get('auth_config:discord');
-				if (discordConfigStr) {
-					const discordConfig = JSON.parse(discordConfigStr);
-					keys.push({
-						id: discordConfig.id,
-						name: 'Discord OAuth (Setup)',
-						provider: discordConfig.provider,
-						type: 'oauth',
-						clientId: discordConfig.clientId,
-						createdAt: discordConfig.createdAt,
-						isSetupKey: true
-					});
-				}
-			} catch (err) {
-				console.error('Failed to parse Discord OAuth config:', err);
-			}
-			*/
 		}
 
 		return json({ keys });

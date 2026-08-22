@@ -153,7 +153,9 @@ export async function findValidSession(
 	sessionToken: string
 ): Promise<Session | null> {
 	const sessionId = await hashSessionToken(sessionToken);
-	const stmt = db.prepare('SELECT * FROM sessions WHERE id = ? AND expires_at > datetime("now")');
+	const stmt = db.prepare(
+		'SELECT * FROM sessions WHERE id = ? AND datetime(expires_at) > datetime("now")'
+	);
 	return await stmt.bind(sessionId).first<Session>();
 }
 
@@ -170,6 +172,6 @@ export async function deleteSession(db: D1Database, sessionToken: string): Promi
  * Clean up expired sessions
  */
 export async function cleanupExpiredSessions(db: D1Database): Promise<void> {
-	const stmt = db.prepare('DELETE FROM sessions WHERE expires_at < datetime("now")');
+	const stmt = db.prepare('DELETE FROM sessions WHERE datetime(expires_at) < datetime("now")');
 	await stmt.run();
 }

@@ -37,6 +37,7 @@ Other migration commands:
 ```bash
 npm run db:migrate        # Apply pending migrations to remote D1 (production)
 npm run db:migrate:list   # Check which migrations have been applied
+npx wrangler d1 migrations apply nabu-db --remote --preview  # Pages preview DB
 ```
 
 Verify tables were created locally:
@@ -160,21 +161,34 @@ Account quirks (details in `AGENTS.md`):
 - Queues are disabled (Pages can't run consumers) — background work uses the
   cron Worker at `workers/content-cron/` plus `waitUntil`.
 
-For production secrets, prefer `wrangler secret put` (or Cloudflare Pages
-settings) over plain env vars:
+For production Pages secrets, use `wrangler pages secret put` (or Cloudflare
+Pages settings) rather than the Worker-only `wrangler secret put` command:
 
 ```bash
-wrangler secret put GITHUB_CLIENT_ID
-wrangler secret put GITHUB_CLIENT_SECRET
-wrangler secret put GITHUB_OWNER_ID
-wrangler secret put SESSION_SECRET
-wrangler secret put SETUP_SECRET
-wrangler secret put TURNSTILE_SITE_KEY
-wrangler secret put TURNSTILE_SECRET_KEY
+wrangler pages secret put GITHUB_CLIENT_ID
+wrangler pages secret put GITHUB_CLIENT_SECRET
+wrangler pages secret put GITHUB_OWNER_ID
+wrangler pages secret put SESSION_SECRET
+wrangler pages secret put SETUP_SECRET
+wrangler pages secret put TURNSTILE_SITE_KEY
+wrangler pages secret put TURNSTILE_SECRET_KEY
 ```
 
 Alternatively, use the `/setup` page in production — credentials are saved to
 the production KV namespace (see [ZERO_ENV_SETUP.md](./ZERO_ENV_SETUP.md)).
+
+### Deploy the content cron Worker
+
+`npm run deploy` publishes the Pages application only. Weekly content automation
+also requires the separate Worker under `workers/content-cron/`. Give the Pages
+app and Worker the same independently generated `CRON_SECRET`, then deploy it:
+
+```bash
+wrangler pages secret put CRON_SECRET
+cd workers/content-cron
+wrangler secret put CRON_SECRET
+wrangler deploy
+```
 
 ## Related Documentation
 

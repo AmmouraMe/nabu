@@ -39,7 +39,7 @@ threshold cannot be skipped through the aggregate script.
 - E2E: first `npx playwright install chromium` (or full `npx playwright install`).
 - This machine's Playwright cache is partially corrupted (missing Framework dylibs for headless_shell). Workaround (no source change): set env var before running E2E:
   ```
-  PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Users/donaldfilimon/Library/Caches/ms-playwright/chromium-1228/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' npm run test:e2e
+  PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH='/Users/donaldfilimon/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' npm run test:e2e
   ```
 - Alternative: `rm -rf ~/Library/Caches/ms-playwright && npx playwright install` (re-downloads; may require network + time).
 - **Never** commit machine-specific paths, symlinks, or `launchOptions`/`executablePath` to `playwright.config.ts`. Use `PLAYWRIGHT_*_EXECUTABLE_PATH` env vars or external symlinks for local dev only.
@@ -94,8 +94,8 @@ Don't hand-edit PNGs. See `CLAUDE.md` for the full set in `static/`.
 
 ## Key env vars
 
-`.env.example` lists all required vars. `AUTH_SECRET` (openssl rand -base64 32) and
-OAuth keys are the main ones for local dev.
+`.env.example` lists all required vars. `SESSION_SECRET` (openssl rand -base64 32),
+the separate one-time `SETUP_SECRET`, and OAuth keys are the main ones for local dev.
 
 ## Key files
 

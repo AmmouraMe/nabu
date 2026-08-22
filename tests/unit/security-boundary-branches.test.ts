@@ -65,13 +65,16 @@ describe('OAuth provider configuration', () => {
 		).resolves.toEqual({ clientId: 'env-id', clientSecret: 'stored-secret' });
 	});
 
-	it.each([null, 'not-json'])('fails closed for unusable stored credentials', async (stored) => {
-		const KV = { get: vi.fn().mockResolvedValue(stored) };
-		await expect(getAuthProviderCredentials({ env: { KV } } as any, 'github')).resolves.toEqual({
-			clientId: undefined,
-			clientSecret: undefined
-		});
-	});
+	it.each([null, 'not-json', JSON.stringify({ clientId: 42, clientSecret: false })])(
+		'fails closed for unusable stored credentials',
+		async (stored) => {
+			const KV = { get: vi.fn().mockResolvedValue(stored) };
+			await expect(getAuthProviderCredentials({ env: { KV } } as any, 'github')).resolves.toEqual({
+				clientId: undefined,
+				clientSecret: undefined
+			});
+		}
+	);
 
 	it('fails closed when credential storage throws', async () => {
 		const KV = { get: vi.fn().mockRejectedValue(new Error('KV unavailable')) };

@@ -11,6 +11,12 @@ import { externalOrigin } from '$lib/server/origin';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
+function discordAvatarUrl(userId: string, avatar: unknown): string | null {
+	if (typeof avatar !== 'string' || !avatar) return null;
+	const extension = avatar.startsWith('a_') ? 'gif' : 'png';
+	return `https://cdn.discordapp.com/avatars/${encodeURIComponent(userId)}/${encodeURIComponent(avatar)}.${extension}`;
+}
+
 export const GET: RequestHandler = async ({ url, cookies, platform, locals }) => {
 	const code = url.searchParams.get('code');
 	const state = url.searchParams.get('state');
@@ -76,31 +82,52 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 		});
 		if (!userResponse.ok) throw redirect(302, '/auth/login?error=user_fetch_failed');
 		const discordUser = await userResponse.json();
+		if (
+			typeof discordUser.id !== 'string' ||
+			!/^\d+$/.test(discordUser.id) ||
+			typeof discordUser.username !== 'string' ||
+			!discordUser.username
+		)
+			throw redirect(302, '/auth/login?error=user_fetch_failed');
+		const displayName =
+			typeof discordUser.global_name === 'string' && discordUser.global_name
+				? discordUser.global_name
+				: discordUser.username;
+		const verifiedEmail =
+			discordUser.verified === true && typeof discordUser.email === 'string'
+				? discordUser.email.trim().toLowerCase() || null
+				: null;
+		const avatarUrl = discordAvatarUrl(discordUser.id, discordUser.avatar);
 		const result = await reconcileOAuthAccount({
 			db,
 			provider: 'discord',
 			providerAccountId: String(discordUser.id),
 			legacyUserId: `discord_${discordUser.id}`,
-			email: discordUser.verified === true ? discordUser.email : null,
+			email: verifiedEmail,
 			linkingUserId: transaction.intent === 'link' ? existingUser?.id : undefined,
 			createUser: async (id) => {
 				await db
 					.prepare(
-						'INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)'
+						`INSERT INTO users (id, email, name, profile_login, profile_avatar_url, created_at)
+						 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
 					)
 					.bind(
 						id,
-						discordUser.email || `${discordUser.username}@discord.local`,
-						discordUser.global_name || discordUser.username
+						verifiedEmail || `${id}@discord.local`,
+						displayName,
+						discordUser.username,
+						avatarUrl
 					)
 					.run();
 			},
-			updateUser: async (id, match) => {
-				if (match === 'legacy')
-					await db
-						.prepare('UPDATE users SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-						.bind(discordUser.global_name || discordUser.username, id)
-						.run();
+			updateUser: async (id) => {
+				await db
+					.prepare(
+						`UPDATE users SET name = ?, profile_login = ?, profile_avatar_url = ?,
+						 updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+					)
+					.bind(displayName, discordUser.username, avatarUrl, id)
+					.run();
 			}
 		});
 		return finalizeOAuthLogin({

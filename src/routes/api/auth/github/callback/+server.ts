@@ -80,27 +80,41 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 		});
 		if (!userResponse.ok) throw redirect(302, '/auth/login?error=user_fetch_failed');
 		const githubUser = await userResponse.json();
+		const validProviderId =
+			(typeof githubUser.id === 'number' &&
+				Number.isSafeInteger(githubUser.id) &&
+				githubUser.id > 0) ||
+			(typeof githubUser.id === 'string' && /^\d+$/.test(githubUser.id));
+		if (!validProviderId || typeof githubUser.login !== 'string' || !githubUser.login) {
+			throw redirect(302, '/auth/login?error=user_fetch_failed');
+		}
 		const providerAccountId = String(githubUser.id);
+		const verifiedEmail =
+			typeof githubUser.email === 'string' ? githubUser.email.trim().toLowerCase() || null : null;
+		const avatarUrl = typeof githubUser.avatar_url === 'string' ? githubUser.avatar_url : null;
 		const result = await reconcileOAuthAccount({
 			db,
 			provider: 'github',
 			providerAccountId,
 			legacyUserId: providerAccountId,
-			email: githubUser.email,
+			email: verifiedEmail,
 			linkingUserId: transaction.intent === 'link' ? existingUser?.id : undefined,
 			createUser: async (id) => {
 				const isOwner = await resolveOwnerStatus(platform, { id, github_login: githubUser.login });
 				await db
 					.prepare(
-						`INSERT INTO users (id, email, name, github_login, github_avatar_url, is_admin, created_at)
-					VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+						`INSERT INTO users (id, email, name, profile_login, profile_avatar_url,
+						 github_login, github_avatar_url, is_admin, created_at)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
 					)
 					.bind(
 						id,
-						githubUser.email || `${githubUser.login}@github.local`,
+						verifiedEmail || `${githubUser.login}@github.local`,
 						githubUser.name,
 						githubUser.login,
-						githubUser.avatar_url,
+						avatarUrl,
+						githubUser.login,
+						avatarUrl,
 						isOwner ? 1 : 0
 					)
 					.run();
@@ -108,13 +122,14 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 			updateUser: async (id, match) => {
 				await db
 					.prepare(
-						`UPDATE users SET github_login = ?, github_avatar_url = ?,
+						`UPDATE users SET profile_login = ?, profile_avatar_url = ?,
+						github_login = ?, github_avatar_url = ?,
 					${match === 'legacy' ? 'name = ?,' : ''} updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 					)
 					.bind(
 						...(match === 'legacy'
-							? [githubUser.login, githubUser.avatar_url, githubUser.name, id]
-							: [githubUser.login, githubUser.avatar_url, id])
+							? [githubUser.login, avatarUrl, githubUser.login, avatarUrl, githubUser.name, id]
+							: [githubUser.login, avatarUrl, githubUser.login, avatarUrl, id])
 					)
 					.run();
 			}

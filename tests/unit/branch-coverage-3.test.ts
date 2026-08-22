@@ -436,9 +436,10 @@ describe('Discord callback - additional branches', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: async () => ({
-					id: 'discord-123',
+					id: '123',
 					username: 'testuser',
 					email: 'test@discord.com',
+					verified: true,
 					global_name: 'Test User',
 					avatar: null
 				})

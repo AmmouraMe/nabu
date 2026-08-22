@@ -59,7 +59,7 @@ describe('OAuth owner identity', () => {
 		).resolves.toBe(true);
 	});
 
-	it('uses KV GitHub ID and username fallbacks independently', async () => {
+	it('uses an immutable KV GitHub ID through the canonical account link', async () => {
 		const db = createOAuthDb((query, bindings) => ({
 			first: query.includes('oauth_accounts') && bindings.at(-1) === '98765' ? { found: 1 } : null
 		}));
@@ -77,6 +77,23 @@ describe('OAuth owner identity', () => {
 		expect(KV.get).toHaveBeenCalledWith('github_owner_username');
 	});
 
+	it('does not grant ownership by a recycled username when an immutable ID exists', async () => {
+		const db = createOAuthDb();
+		const KV = {
+			get: vi.fn((key: string) => {
+				if (key === 'github_owner_id') return Promise.resolve('98765');
+				if (key === 'github_owner_username') return Promise.resolve('recycled-owner');
+				return Promise.resolve(null);
+			})
+		};
+		await expect(
+			resolveOwnerStatus({ env: { DB: db, KV } } as any, {
+				id: 'different-user',
+				github_login: 'recycled-owner'
+			})
+		).resolves.toBe(false);
+	});
+
 	it('returns false without a database binding', async () => {
 		await expect(resolveOwnerStatus(undefined, { id: 'user-1', github_login: null })).resolves.toBe(
 			false
@@ -89,5 +106,16 @@ describe('OAuth owner identity', () => {
 		await expect(
 			resolveOwnerStatus({ env: { DB: db, KV } } as any, { id: 'user-1', github_login: null })
 		).resolves.toBe(false);
+	});
+
+	it('retains a definitive environment owner ID when KV fallback reads fail', async () => {
+		const db = createOAuthDb();
+		const KV = { get: vi.fn().mockRejectedValue(new Error('KV unavailable')) };
+		await expect(
+			resolveOwnerStatus({ env: { DB: db, KV, GITHUB_OWNER_ID: '12345' } } as any, {
+				id: '12345',
+				github_login: 'owner'
+			})
+		).resolves.toBe(true);
 	});
 });

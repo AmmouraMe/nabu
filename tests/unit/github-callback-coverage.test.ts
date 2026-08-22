@@ -28,6 +28,7 @@ describe('GitHub OAuth callback', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		DB.calls.length = 0;
 		verifyOAuthTransaction.mockResolvedValue(oauthTransaction('github'));
 		consumeOAuthTransaction.mockResolvedValue(oauthTransaction('github'));
 		reconcileOAuthAccount.mockResolvedValue({ userId: 'user-1' });
@@ -98,6 +99,25 @@ describe('GitHub OAuth callback', () => {
 		expect(consumeOAuthTransaction).toHaveBeenCalledOnce();
 	});
 
+	it('rejects a malformed provider identity response', async () => {
+		vi.mocked(fetch)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: vi.fn().mockResolvedValue({ access_token: 'token' })
+			} as any)
+			.mockResolvedValueOnce({
+				ok: true,
+				json: vi.fn().mockResolvedValue({ id: null, login: '' })
+			} as any);
+		const { GET } = await import('../../src/routes/api/auth/github/callback/+server');
+
+		await expect(GET(event('code=code&state=login:test-state') as any)).rejects.toMatchObject({
+			status: 302,
+			location: '/auth/login?error=user_fetch_failed'
+		});
+		expect(reconcileOAuthAccount).not.toHaveBeenCalled();
+	});
+
 	it('reconciles a canonical account and delegates session finalization', async () => {
 		vi.mocked(fetch)
 			.mockResolvedValueOnce({
@@ -132,9 +152,7 @@ describe('GitHub OAuth callback', () => {
 		await reconciliation.updateUser('legacy-user', 'legacy');
 		await reconciliation.updateUser('email-user', 'email');
 		expect(DB.calls.some((call) => call.query.includes('INSERT INTO users'))).toBe(true);
-		expect(
-			DB.calls.filter((call) => call.query.includes('UPDATE users SET github_login'))
-		).toHaveLength(2);
+		expect(DB.calls.filter((call) => call.query.includes('github_login = ?'))).toHaveLength(2);
 	});
 
 	it('maps unexpected reconciliation errors to a generic OAuth failure', async () => {

@@ -12,30 +12,31 @@ export async function resolveOwnerStatus(
 	user: Pick<AuthIdentityRecord, 'id' | 'github_login'>
 ): Promise<boolean> {
 	if (!platform?.env?.DB) return false;
-	let githubOwnerId = platform.env.GITHUB_OWNER_ID;
-	let githubOwnerUsername: string | null = null;
-	let discordOwnerId = platform.env.DISCORD_OWNER_ID;
-	if (githubOwnerId && Number.isNaN(Number.parseInt(githubOwnerId, 10))) {
-		githubOwnerUsername = githubOwnerId;
-		githubOwnerId = undefined;
-	}
+	const githubOwnerSetting = platform.env.GITHUB_OWNER_ID?.trim();
+	let githubOwnerId =
+		githubOwnerSetting && /^\d+$/.test(githubOwnerSetting) ? githubOwnerSetting : undefined;
+	let githubOwnerUsername = githubOwnerId ? null : githubOwnerSetting || null;
+	let discordOwnerId = platform.env.DISCORD_OWNER_ID?.trim() || undefined;
 	if (platform.env.KV) {
 		try {
+			const githubOwnerConfigured = Boolean(githubOwnerId || githubOwnerUsername);
 			const values = await Promise.all([
-				githubOwnerId ? null : platform.env.KV.get('github_owner_id'),
-				githubOwnerUsername ? null : platform.env.KV.get('github_owner_username'),
+				githubOwnerConfigured ? null : platform.env.KV.get('github_owner_id'),
+				githubOwnerConfigured ? null : platform.env.KV.get('github_owner_username'),
 				discordOwnerId ? null : platform.env.KV.get('discord_owner_id')
 			]);
-			githubOwnerId ||= values[0] || undefined;
-			githubOwnerUsername ||= values[1];
-			discordOwnerId ||= values[2] || undefined;
+			if (!githubOwnerConfigured) {
+				const storedId = values[0]?.trim();
+				githubOwnerId = storedId && /^\d+$/.test(storedId) ? storedId : undefined;
+				githubOwnerUsername = githubOwnerId ? null : values[1]?.trim() || null;
+			}
+			discordOwnerId ||= values[2]?.trim() || undefined;
 		} catch {
-			return false;
+			// KV is only a fallback. Definitive environment IDs remain usable during
+			// a transient KV outage; missing fallback configuration still fails closed.
 		}
 	}
 	if (githubOwnerId && user.id === githubOwnerId) return true;
-	if (githubOwnerUsername && user.github_login?.toLowerCase() === githubOwnerUsername.toLowerCase())
-		return true;
 	const ownerLinks = [
 		githubOwnerId ? { provider: 'github', id: githubOwnerId } : null,
 		discordOwnerId ? { provider: 'discord', id: discordOwnerId } : null
@@ -47,6 +48,11 @@ export async function resolveOwnerStatus(
 			.bind(user.id, owner.provider, owner.id)
 			.first<{ found: number }>();
 		if (link) return true;
+	}
+	// A mutable username is a legacy fallback only. Once an immutable GitHub
+	// account ID exists, a recycled username must never be able to grant ownership.
+	if (!githubOwnerId && githubOwnerUsername) {
+		return user.github_login?.toLowerCase() === githubOwnerUsername.toLowerCase();
 	}
 	return false;
 }

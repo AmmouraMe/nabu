@@ -22,13 +22,15 @@ export const authHandler: Handle = async ({ event, resolve }) => {
 			if (!session) throw new Error('Session expired or revoked');
 			const user = await db
 				.prepare(
-					'SELECT id, email, name, github_login, github_avatar_url, is_admin, plan FROM users WHERE id = ?'
+					'SELECT id, email, name, profile_login, profile_avatar_url, github_login, github_avatar_url, is_admin, plan FROM users WHERE id = ?'
 				)
 				.bind(session.user_id)
 				.first<{
 					id: string;
 					email: string;
 					name: string | null;
+					profile_login: string | null;
+					profile_avatar_url: string | null;
 					github_login: string | null;
 					github_avatar_url: string | null;
 					is_admin: number;
@@ -38,10 +40,15 @@ export const authHandler: Handle = async ({ event, resolve }) => {
 			const isOwner = await resolveOwnerStatus(event.platform, user);
 			event.locals.user = {
 				id: user.id,
-				login: user.github_login || user.email.split('@')[0] || user.email,
+				login:
+					user.profile_login ||
+					user.github_login ||
+					user.name ||
+					user.email.split('@')[0] ||
+					user.email,
 				email: user.email,
 				name: user.name || undefined,
-				avatarUrl: user.github_avatar_url || undefined,
+				avatarUrl: user.profile_avatar_url || user.github_avatar_url || undefined,
 				isOwner,
 				// The owner is always an admin. Without `|| isOwner` a freshly created
 				// owner — identified by GITHUB_OWNER_ID / DISCORD_OWNER_ID rather than by

@@ -24,9 +24,11 @@ export async function getAuthProviderCredentials(
 		try {
 			const stored = await platform.env.KV.get(`auth_config:${provider}`);
 			if (stored) {
-				const config = JSON.parse(stored) as typeof credentials;
-				credentials.clientId ||= config.clientId;
-				credentials.clientSecret ||= config.clientSecret;
+				const config = JSON.parse(stored) as Record<string, unknown>;
+				if (typeof config.clientId === 'string') credentials.clientId ||= config.clientId;
+				if (typeof config.clientSecret === 'string') {
+					credentials.clientSecret ||= config.clientSecret;
+				}
 			}
 		} catch {
 			// Missing provider configuration fails closed below.

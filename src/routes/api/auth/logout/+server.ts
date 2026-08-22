@@ -12,8 +12,10 @@ async function logout(
 		cookies.get('session'),
 		platform?.env?.SESSION_SECRET
 	);
-	if (token && platform?.env?.DB) await deleteSession(platform.env.DB, token);
+	// Clear the browser credential before attempting server-side revocation. If D1
+	// rejects the delete, the error remains visible but this browser is still logged out.
 	cookies.delete('session', { path: '/' });
+	if (token && platform?.env?.DB) await deleteSession(platform.env.DB, token);
 	throw redirect(302, '/auth/login');
 }
 

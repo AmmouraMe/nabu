@@ -160,9 +160,10 @@ describe('Discord OAuth', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: vi.fn().mockResolvedValue({
-					id: 'discord-1',
+					id: '123456789',
 					username: 'tester',
-					email: 'tester@example.com'
+					email: 'tester@example.com',
+					verified: true
 				})
 			} as any);
 		const { GET } = await import('../../src/routes/api/auth/discord/callback/+server');
@@ -177,7 +178,7 @@ describe('Discord OAuth', () => {
 		expect(response.status).toBe(302);
 		expect(consumeOAuthTransaction).toHaveBeenCalled();
 		expect(reconcileOAuthAccount).toHaveBeenCalledWith(
-			expect.objectContaining({ provider: 'discord', providerAccountId: 'discord-1' })
+			expect.objectContaining({ provider: 'discord', providerAccountId: '123456789' })
 		);
 		expect(finalizeOAuthLogin).toHaveBeenCalledWith(
 			expect.objectContaining({ db: DB, userId: 'user-1' })

@@ -28,6 +28,7 @@ describe('Discord OAuth callback boundaries', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		DB.calls.length = 0;
 		verifyOAuthTransaction.mockResolvedValue(oauthTransaction('discord'));
 		consumeOAuthTransaction.mockResolvedValue(oauthTransaction('discord'));
 		reconcileOAuthAccount.mockResolvedValue({ userId: 'user-1' });
@@ -80,9 +81,12 @@ describe('Discord OAuth callback boundaries', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: vi.fn().mockResolvedValue({
-					id: 'discord-1',
+					id: '123',
 					username: 'tester',
-					email: 'tester@example.com'
+					global_name: 'Test User',
+					email: 'tester@example.com',
+					verified: true,
+					avatar: 'avatar-hash'
 				})
 			} as any);
 		reconcileOAuthAccount.mockResolvedValueOnce({
@@ -94,17 +98,24 @@ describe('Discord OAuth callback boundaries', () => {
 		const { GET } = await import('../../src/routes/api/auth/discord/callback/+server');
 		await GET(request as any);
 		expect(reconcileOAuthAccount).toHaveBeenCalledWith(
-			expect.objectContaining({ linkingUserId: 'user-1', legacyUserId: 'discord_discord-1' })
+			expect.objectContaining({ linkingUserId: 'user-1', legacyUserId: 'discord_123' })
 		);
 		expect(finalizeOAuthLogin).toHaveBeenCalledWith(
 			expect.objectContaining({ linkedProvider: 'discord', userId: 'user-1' })
 		);
 		const reconciliation = reconcileOAuthAccount.mock.calls[0][0];
-		await reconciliation.createUser('discord_discord-1');
-		await reconciliation.updateUser('discord_discord-1', 'legacy');
+		await reconciliation.createUser('discord_123');
+		await reconciliation.updateUser('discord_123', 'legacy');
 		await reconciliation.updateUser('user-1', 'link');
 		expect(DB.calls.some((call) => call.query.includes('INSERT INTO users'))).toBe(true);
-		expect(DB.calls.some((call) => call.query.includes('UPDATE users SET name'))).toBe(true);
+		expect(DB.calls.some((call) => call.query.includes('profile_login'))).toBe(true);
+		expect(DB.calls.find((call) => call.query.includes('INSERT INTO users'))?.bindings).toEqual([
+			'discord_123',
+			'tester@example.com',
+			'Test User',
+			'tester',
+			'https://cdn.discordapp.com/avatars/123/avatar-hash.png'
+		]);
 	});
 
 	it.each([
@@ -119,7 +130,7 @@ describe('Discord OAuth callback boundaries', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: vi.fn().mockResolvedValue({
-					id: 'discord-1',
+					id: '123',
 					username: 'tester',
 					email: 'tester@example.com',
 					verified
@@ -128,6 +139,12 @@ describe('Discord OAuth callback boundaries', () => {
 		const { GET } = await import('../../src/routes/api/auth/discord/callback/+server');
 		await GET(event() as any);
 		expect(reconcileOAuthAccount).toHaveBeenCalledWith(expect.objectContaining({ email }));
+		const reconciliation = reconcileOAuthAccount.mock.calls[0][0];
+		await reconciliation.createUser('discord_123');
+		const inserted = DB.calls.find((call) => call.query.includes('INSERT INTO users'));
+		expect(inserted?.bindings[1]).toBe(
+			verified ? 'tester@example.com' : 'discord_123@discord.local'
+		);
 	});
 
 	it('maps unexpected provider reconciliation errors to a generic failure', async () => {
@@ -138,7 +155,7 @@ describe('Discord OAuth callback boundaries', () => {
 			} as any)
 			.mockResolvedValueOnce({
 				ok: true,
-				json: vi.fn().mockResolvedValue({ id: 'discord-1', username: 'tester' })
+				json: vi.fn().mockResolvedValue({ id: '123', username: 'tester' })
 			} as any);
 		reconcileOAuthAccount.mockRejectedValueOnce(new Error('database unavailable'));
 		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

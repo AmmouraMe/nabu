@@ -27,7 +27,8 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 		cookie: string | undefined,
 		userId: string,
 		dbIsAdmin: number | null,
-		ownerId?: string
+		ownerId?: string,
+		profile?: { login?: string | null; avatarUrl?: string | null; name?: string | null }
 	) {
 		const deleted: string[] = [];
 		const prepare = vi.fn((query: string) => ({
@@ -42,7 +43,9 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 							: {
 									id: userId,
 									email: `${userId}@example.com`,
-									name: null,
+									name: profile?.name ?? null,
+									profile_login: profile?.login ?? null,
+									profile_avatar_url: profile?.avatarUrl ?? null,
 									github_login: null,
 									github_avatar_url: null,
 									is_admin: dbIsAdmin
@@ -107,6 +110,24 @@ describe('hooks.server - admin refresh must not demote the owner', () => {
 		await handle({ event, resolve } as any);
 
 		expect((event.locals as any).user.isAdmin).toBe(true);
+	});
+
+	it('restores provider-neutral login and avatar fields from the user row', async () => {
+		const cookie = await signSession({ token: 'discord-session-token' }, SECRET);
+		const { event } = buildEvent(cookie, 'discord_123', 0, undefined, {
+			login: 'discord-user',
+			avatarUrl: 'https://cdn.discordapp.com/avatar.png',
+			name: 'Discord User'
+		});
+		const { handle } = await import('../../src/hooks.server');
+
+		await handle({ event, resolve } as any);
+
+		expect((event.locals as any).user).toMatchObject({
+			login: 'discord-user',
+			avatarUrl: 'https://cdn.discordapp.com/avatar.png',
+			name: 'Discord User'
+		});
 	});
 
 	it('drops a forged cookie entirely', async () => {

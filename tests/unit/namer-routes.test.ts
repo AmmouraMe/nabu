@@ -23,7 +23,7 @@ import {
 const NOW = 1_700_000_000_000;
 const IP = '203.0.113.7';
 
-const ONE_NAME = JSON.stringify([
+const COMPLETE_SET = JSON.stringify([
 	{
 		name: 'Apex',
 		meaning: 'The summit.',
@@ -31,7 +31,11 @@ const ONE_NAME = JSON.stringify([
 		radio: 'Spells itself.',
 		translation: 'No collisions found in major languages.',
 		domain: 'apex.com'
-	}
+	},
+	{ name: 'Basil', meaning: 'A herb.' },
+	{ name: 'Cinder', meaning: 'A spark.' },
+	{ name: 'Delta', meaning: 'A change.' },
+	{ name: 'Ember', meaning: 'A glow.' }
 ]);
 
 function fakeKv(initial: Record<string, string> = {}) {
@@ -138,7 +142,7 @@ function event(body: unknown, over: Record<string, unknown> = {}) {
 			method: 'POST',
 			body: typeof body === 'string' ? body : JSON.stringify(body)
 		}),
-		platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } },
+		platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET) } },
 		locals: {},
 		getClientAddress: () => IP,
 		...over
@@ -244,7 +248,7 @@ describe('POST /api/namer/generate', () => {
 		// Parameters declared so `mock.calls` stays typed as a real two-argument run.
 		const streaming = {
 			run: vi.fn(async (_model: string, _inputs: Record<string, unknown>) =>
-				sseStream(['[{"name":"Apex","meaning":"The summit."}]'])
+				sseStream([COMPLETE_SET])
 			)
 		};
 		const response = (await generate(
@@ -253,6 +257,64 @@ describe('POST /api/namer/generate', () => {
 
 		expect(response.status).toBe(200);
 		expect(streaming.run.mock.calls[0][1]).toMatchObject({ stream: true });
+	});
+
+	it('charges one quota unit while internal retries replace rejected names', async () => {
+		const first = JSON.stringify(
+			['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta'].map((name) => ({ name }))
+		);
+		const second = JSON.stringify(
+			['Eta', 'Theta', 'Iota', 'Kappa', 'Lambda'].map((name) => ({ name }))
+		);
+		const replies = [first, second];
+		const ai = {
+			run: vi.fn(async (_model: string, _inputs: Record<string, unknown>) => ({
+				choices: [{ message: { content: replies.shift() ?? second } }]
+			}))
+		};
+		const taken = new Set([
+			'alpha.com',
+			'beta.com',
+			'gamma.com',
+			'delta.com',
+			'epsilon.com',
+			'zeta.com'
+		]);
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (input: RequestInfo | URL) => {
+				const domain = decodeURIComponent(String(input).split('/').at(-1) ?? '');
+				return new Response(null, { status: taken.has(domain) ? 200 : 404 });
+			})
+		);
+		const { kv, map } = fakeKv();
+
+		try {
+			await generate(
+				event(
+					{ ...VALID, requireTlds: ['com'] },
+					{ platform: { env: { KV: kv, AI: ai } } }
+				) as never
+			);
+			await settled(() => ai.run.mock.calls.length === 2);
+
+			expect(ai.run).toHaveBeenCalledTimes(2);
+			const retryInput = ai.run.mock.calls[1][1] as {
+				messages: { role: string; content: string }[];
+			};
+			expect(retryInput.messages[1].content).toContain(
+				'Alpha — taken: alpha.com already registered'
+			);
+			expect(retryInput.messages[1].content).toMatch(/different part of the naming space/i);
+
+			const rateEntries = [...map.entries()].filter(([key]) =>
+				key.startsWith(`namer:rl:ip:${IP}:`)
+			);
+			expect(rateEntries).toHaveLength(1);
+			expect(rateEntries[0][1]).toBe('1');
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 
 	it('saves the generation, owned by the signed-in user', async () => {
@@ -270,7 +332,7 @@ describe('POST /api/namer/generate', () => {
 		const { kv } = fakeKv();
 		await generate(
 			event(VALID, {
-				platform: { env: { KV: kv, AI: fakeAi(ONE_NAME), DB: db } },
+				platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET), DB: db } },
 				locals: { user: { id: 'user-1' } }
 			}) as never
 		);
@@ -294,7 +356,7 @@ describe('POST /api/namer/generate', () => {
 		};
 		const { kv } = fakeKv();
 		await generate(
-			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(ONE_NAME), DB: db } } }) as never
+			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET), DB: db } } }) as never
 		);
 
 		await settled(() => saved.length > 0);
@@ -321,7 +383,7 @@ describe('POST /api/namer/generate', () => {
 		await generate(
 			event(VALID, {
 				platform: {
-					env: { KV: kv, AI: fakeAi(ONE_NAME), DB: db },
+					env: { KV: kv, AI: fakeAi(COMPLETE_SET), DB: db },
 					context: { waitUntil: (p: Promise<unknown>) => kept.push(p) }
 				}
 			}) as never
@@ -336,7 +398,7 @@ describe('POST /api/namer/generate', () => {
 	it('still generates when there is no database, just without uniqueness', async () => {
 		const { kv } = fakeKv();
 		const response = (await generate(
-			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } } }) as never
+			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET) } } }) as never
 		)) as Response;
 		expect(response.status).toBe(200);
 	});
@@ -346,7 +408,7 @@ describe('POST /api/namer/generate', () => {
 		// visitor naming a brand must not spend a paying user's AI generations.
 		const { kv, map } = fakeKv();
 		const ev = event(VALID, {
-			platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } },
+			platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET) } },
 			locals: { user: { id: 'user-1' } }
 		});
 		await generate(ev as never);
@@ -359,7 +421,7 @@ describe('POST /api/namer/generate', () => {
 	it('counts a signed-in user against their own key', async () => {
 		const { kv, map } = fakeKv();
 		const ev = event(VALID, {
-			platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } },
+			platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET) } },
 			locals: { user: { id: 'user-1' } }
 		});
 		await generate(ev as never);
@@ -374,7 +436,7 @@ describe('POST /api/namer/generate', () => {
 		vi.spyOn(Date, 'now').mockReturnValue(NOW);
 
 		const response = (await generate(
-			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } } }) as never
+			event(VALID, { platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET) } } }) as never
 		)) as Response;
 
 		expect(response.status).toBe(429);
@@ -390,7 +452,7 @@ describe('POST /api/namer/generate', () => {
 
 		const response = (await generate(
 			event(VALID, {
-				platform: { env: { KV: kv, AI: fakeAi(ONE_NAME) } },
+				platform: { env: { KV: kv, AI: fakeAi(COMPLETE_SET) } },
 				locals: { user: { id: 'user-1' } }
 			}) as never
 		)) as Response;
@@ -403,7 +465,7 @@ describe('POST /api/namer/generate', () => {
 	});
 
 	it('does not spend a model call on an invalid request', async () => {
-		const ai = fakeAi(ONE_NAME);
+		const ai = fakeAi(COMPLETE_SET);
 		const { kv } = fakeKv();
 		const response = (await generate(
 			event({ description: 'hi' }, { platform: { env: { KV: kv, AI: ai } } }) as never
@@ -419,7 +481,7 @@ describe('POST /api/namer/generate', () => {
 
 	it('fails closed without KV, rather than serving an unmetered AI endpoint', async () => {
 		const response = (await generate(
-			event(VALID, { platform: { env: { AI: fakeAi(ONE_NAME) } } }) as never
+			event(VALID, { platform: { env: { AI: fakeAi(COMPLETE_SET) } } }) as never
 		)) as Response;
 		expect(response.status).toBe(503);
 	});

@@ -31,6 +31,12 @@ matured (noted inline).
 - [x] Clone NebulaKit base
 - [x] AI chat interface for brand assessment (the "Brand Architect")
 - [x] Brand profile creation (name, colors, voice; versioned fields)
+- [x] Public Name Builder delivers five checked names: it streams survivors,
+      shows every rejection, and uses bounded feedback-driven retries when a
+      required domain is taken. One click remains one hourly quota unit; retry
+      rounds are capped from Cloudflare's 50-subrequest request budget, and a
+      registry that cannot be verified stops the search rather than being
+      mistaken for availability.
 - [x] Style guide generation (Brand Book generator)
 - [x] Save to database (D1)
 

@@ -108,7 +108,12 @@ describe('createNameAccumulator', () => {
 describe('encodeEvent / createNdjsonReader', () => {
 	it('round-trips events, including across a split line', () => {
 		const events: NamerEvent[] = [
-			{ type: 'rejected', name: 'Ardor', reason: 'ardor.com already registered' },
+			{
+				type: 'rejected',
+				name: 'Ardor',
+				reason: 'ardor.com already registered',
+				kind: 'taken'
+			},
 			{ type: 'done', total: 1, remaining: 11, limit: 12 }
 		];
 		const wire = events.map(encodeEvent).join('');
@@ -134,7 +139,7 @@ describe('meetsDomainRequirement', () => {
 		return {
 			fetch: vi.fn(async (input: RequestInfo | URL) => {
 				const url = String(input);
-				const tld = Object.keys(status).find((t) => url.includes(`.${t}`));
+				const tld = Object.keys(status).find((t) => url.endsWith(`.${t}`));
 				return new Response(null, { status: tld ? status[tld] : 500 });
 			}) as unknown as typeof fetch
 		};
@@ -159,7 +164,11 @@ describe('meetsDomainRequirement', () => {
 
 	it('rejects a registered domain, naming it', async () => {
 		const verdict = await meetsDomainRequirement(deps({ com: 200 }), 'Ardor', ['com']);
-		expect(verdict).toEqual({ ok: false, reason: 'ardor.com already registered' });
+		expect(verdict).toEqual({
+			ok: false,
+			reason: 'ardor.com already registered',
+			kind: 'taken'
+		});
 	});
 
 	it('rejects when a registry did not answer, rather than assuming free', async () => {
@@ -169,6 +178,7 @@ describe('meetsDomainRequirement', () => {
 		expect(verdict.ok).toBe(false);
 		if (verdict.ok) return;
 		expect(verdict.reason).toMatch(/could not verify/);
+		expect(verdict.kind).toBe('unverifiable');
 	});
 
 	it('reports the taken one when a name fails on several counts', async () => {
@@ -180,5 +190,8 @@ describe('meetsDomainRequirement', () => {
 		if (verdict.ok) return;
 		// "Taken" is the more useful of the two, so it leads.
 		expect(verdict.reason).toContain('already registered');
+		// But retry orchestration must still learn that another required registry
+		// failed, or it will burn every round against the same outage.
+		expect(verdict.registryUnverifiable).toBe(true);
 	});
 });

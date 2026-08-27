@@ -18,7 +18,7 @@
  * be split from its comma.
  */
 
-import { parseNames, type GeneratedName } from './naming';
+import { parseNames, type GeneratedName, type NameRejectionKind } from './naming';
 import { checkDomain, type CheckDeps } from './availability';
 
 /**
@@ -115,8 +115,32 @@ export type NamerEvent =
 	 * and watching candidates get struck off is the clearest possible account of
 	 * what the wait is buying.
 	 */
-	| { type: 'rejected'; name: string; reason: string }
-	| { type: 'done'; total: number; remaining: number; limit: number }
+	| {
+			type: 'rejected';
+			name: string;
+			reason: string;
+			kind: NameRejectionKind;
+			/** Another required registry was uncertain even if this name was also taken. */
+			registryUnverifiable?: true;
+	  }
+	| {
+			type: 'status';
+			message: string;
+			round: number;
+			maxRounds: number;
+			delivered: number;
+			target: number;
+	  }
+	| {
+			type: 'done';
+			total: number;
+			remaining: number;
+			limit: number;
+			target?: number;
+			complete?: boolean;
+			rounds?: number;
+			message?: string;
+	  }
 	| { type: 'error'; error: string };
 
 /**
@@ -165,7 +189,15 @@ export function createNdjsonReader(): { push(chunk: string): NamerEvent[] } {
 }
 
 /** A name that passed the domain requirement, or why it did not. */
-export type Verdict = { ok: true } | { ok: false; reason: string };
+export type Verdict =
+	| { ok: true }
+	| {
+			ok: false;
+			reason: string;
+			kind: Extract<NameRejectionKind, 'taken' | 'unverifiable'>;
+			/** A required registry failed, even when a different TLD was definitively taken. */
+			registryUnverifiable?: true;
+	  };
 
 /**
  * Does this name meet the caller's domain requirement?
@@ -175,8 +207,10 @@ export type Verdict = { ok: true } | { ok: false; reason: string };
  * is free when we could not confirm it. Rejecting on a registry blip costs a
  * good candidate; accepting on one costs somebody a brand.
  *
- * Checks run concurrently and the first refusal decides, so a name failing on
- * .com does not wait on .net.
+ * Checks run concurrently, but the verdict inspects every required TLD. A taken
+ * domain remains the most useful rejection reason; a different registry that
+ * could not be verified is retained separately so retry orchestration can stop
+ * instead of repeatedly spending rounds against the same outage.
  */
 export async function meetsDomainRequirement(
 	deps: CheckDeps,
@@ -188,10 +222,22 @@ export async function meetsDomainRequirement(
 	const checks = await Promise.all(tlds.map((tld) => checkDomain(deps, name, tld)));
 
 	const taken = checks.filter((c) => c.state === 'taken').map((c) => c.label);
-	if (taken.length) return { ok: false, reason: `${taken.join(', ')} already registered` };
+	const unknown = checks.filter((c) => c.state === 'unchecked').map((c) => c.label);
+	if (taken.length)
+		return {
+			ok: false,
+			reason: `${taken.join(', ')} already registered`,
+			kind: 'taken',
+			...(unknown.length ? { registryUnverifiable: true as const } : {})
+		};
 
-	const unknown = checks.filter((c) => c.state !== 'available').map((c) => c.label);
-	if (unknown.length) return { ok: false, reason: `could not verify ${unknown.join(', ')}` };
+	if (unknown.length)
+		return {
+			ok: false,
+			reason: `could not verify ${unknown.join(', ')}`,
+			kind: 'unverifiable',
+			registryUnverifiable: true
+		};
 
 	return { ok: true };
 }
@@ -211,6 +257,14 @@ export interface NameEventOptions {
 	/** Reported on the closing `done` event, for the "n left this hour" counter. */
 	remaining: number;
 	limit: number;
+	/** Index offset when several model rounds feed one delivered set. */
+	startIndex?: number;
+	/** Stop accepting once the request-wide delivery floor is full. */
+	maxNames?: number;
+	/** Never spend domain lookups on more candidates than the budget allows. */
+	maxCandidates?: number;
+	/** Reject a candidate already attempted in an earlier model round. */
+	exclude?: (name: string) => boolean;
 }
 
 /**
@@ -233,12 +287,35 @@ export async function* streamNameEvents(
 	const sse = createSseReader();
 	const names = createNameAccumulator();
 	let sent = 0;
+	let considered = 0;
+	let unverifiable = 0;
 
 	/** Check the requirement, claim the name, then forward it or say why not. */
 	async function* offer(name: GeneratedName): AsyncGenerator<NamerEvent> {
+		if (sent >= (options.maxNames ?? Number.POSITIVE_INFINITY)) return;
+		if (considered >= (options.maxCandidates ?? Number.POSITIVE_INFINITY)) return;
+		considered += 1;
+
+		if (options.exclude?.(name.name)) {
+			yield {
+				type: 'rejected',
+				name: name.name,
+				reason: 'already considered in this request',
+				kind: 'duplicate'
+			};
+			return;
+		}
+
 		const verdict = await meetsDomainRequirement(deps, name.name, options.requireTlds);
 		if (!verdict.ok) {
-			yield { type: 'rejected', name: name.name, reason: verdict.reason };
+			if (verdict.registryUnverifiable) unverifiable += 1;
+			yield {
+				type: 'rejected',
+				name: name.name,
+				reason: verdict.reason,
+				kind: verdict.kind,
+				...(verdict.registryUnverifiable ? { registryUnverifiable: true as const } : {})
+			};
 			return;
 		}
 
@@ -250,11 +327,16 @@ export async function* streamNameEvents(
 		// say by whom or for what: the table being consulted does not know, and the
 		// message must not imply more than the check actually learned.
 		if (options.reserve && !(await options.reserve(name.name))) {
-			yield { type: 'rejected', name: name.name, reason: 'already suggested before' };
+			yield {
+				type: 'rejected',
+				name: name.name,
+				reason: 'already suggested before',
+				kind: 'duplicate'
+			};
 			return;
 		}
 
-		yield { type: 'name', index: sent++, name };
+		yield { type: 'name', index: (options.startIndex ?? 0) + sent++, name };
 	}
 
 	try {
@@ -279,13 +361,18 @@ export async function* streamNameEvents(
 	}
 
 	if (sent > 0) {
-		yield { type: 'done', total: sent, remaining: options.remaining, limit: options.limit };
+		yield {
+			type: 'done',
+			total: (options.startIndex ?? 0) + sent,
+			remaining: options.remaining,
+			limit: options.limit
+		};
 		return;
 	}
 
-	// Two failures that would otherwise look identical: nothing usable came back,
-	// or names came back and every one of them was already registered.
-	const produced = names.all().length;
+	// Failures that would otherwise look identical: nothing usable came back,
+	// every name was unavailable, or a required registry could not be verified.
+	const produced = considered;
 	if (!produced) {
 		yield {
 			type: 'error',
@@ -296,8 +383,10 @@ export async function* streamNameEvents(
 
 	yield {
 		type: 'error',
-		error: options.requireTlds.length
-			? `All ${produced} names were already taken on .${options.requireTlds.join(', .')}. Try again — or relax the domain requirement.`
-			: `All ${produced} names had been suggested before. Try again for a fresh set.`
+		error: unverifiable
+			? `Could not verify the required .${options.requireTlds.join(', .')} registry, so no unconfirmed names were shown.`
+			: options.requireTlds.length
+				? `All ${produced} names were already taken on .${options.requireTlds.join(', .')}. Try again — or relax the domain requirement.`
+				: `All ${produced} names had been suggested before. Try again for a fresh set.`
 	};
 }

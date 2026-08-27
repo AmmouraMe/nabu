@@ -10,7 +10,7 @@
 import type { PageServerLoad } from './$types';
 import { ARCHETYPES, NAMING_HEURISTICS } from '$lib/server/namer/naming';
 import { UNVERIFIABLE_TLDS, CHECKED_TLDS } from '$lib/server/namer/availability';
-import { NAMES_REQUESTED } from '$lib/server/namer/naming';
+import { NAMES_DELIVERY_TARGET } from '$lib/server/namer/delivery';
 import { ANON_HOURLY_LIMIT, SIGNED_IN_HOURLY_LIMIT } from '$lib/server/namer/rate-limit';
 
 export const load: PageServerLoad = async ({ locals }) => ({
@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ locals }) => ({
 	})),
 	heuristics: NAMING_HEURISTICS.map((h) => ({ label: h.label, guidance: h.guidance })),
 	checkedTlds: [...CHECKED_TLDS],
-	namesPerRound: NAMES_REQUESTED,
+	namesToDeliver: NAMES_DELIVERY_TARGET,
 	unverifiableTlds: [...UNVERIFIABLE_TLDS],
 	limit: locals.user ? SIGNED_IN_HOURLY_LIMIT : ANON_HOURLY_LIMIT,
 	anonLimit: ANON_HOURLY_LIMIT,

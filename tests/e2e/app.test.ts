@@ -80,6 +80,7 @@ test.describe('Name Builder', () => {
 		});
 
 		await page.goto('/name');
+		await page.waitForLoadState('networkidle');
 		await page.getByLabel('What are you building?').fill('A coffee subscription for home grinders');
 		await page.getByRole('button', { name: 'Generate names' }).click();
 

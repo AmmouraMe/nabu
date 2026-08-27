@@ -1,5 +1,5 @@
 /**
- * POST /api/namer/generate — six brand names, streamed as they are written.
+ * POST /api/namer/generate — five checked brand names, streamed as they survive.
  *
  * Deliberately reachable without an account: the generator is a way in, and a
  * login in front of it would defeat the point. That makes it the one AI endpoint
@@ -16,13 +16,18 @@
 
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { buildNamingPrompt, validateInput } from '$lib/server/namer/naming';
+import { buildNamingPrompt, MAX_AVOID, validateInput } from '$lib/server/namer/naming';
 import { AI_MODEL, MAX_TOKENS, TEMPERATURE, responseText } from '$lib/server/namer/ai';
 import type { AiResult } from '$lib/server/namer/ai';
 import { consume, rateLimitIdentity } from '$lib/server/namer/rate-limit';
-import { encodeEvent, streamNameEvents } from '$lib/server/namer/stream';
+import { encodeEvent } from '$lib/server/namer/stream';
+import { streamNameDelivery, type NameModelSource } from '$lib/server/namer/delivery';
 import { reserveName, saveGeneration } from '$lib/server/namer/history';
 import type { GeneratedName } from '$lib/server/namer/naming';
+
+function modelSource(result: AiResult | ReadableStream): NameModelSource {
+	return result instanceof ReadableStream ? result : responseText(result as AiResult);
+}
 
 export const POST: RequestHandler = async ({ request, platform, locals, getClientAddress }) => {
 	const kv = platform?.env?.KV;
@@ -67,11 +72,7 @@ export const POST: RequestHandler = async ({ request, platform, locals, getClien
 		cache: kv
 	};
 
-	const { system, user } = buildNamingPrompt(validated.value);
-	const messages = [
-		{ role: 'system', content: system },
-		{ role: 'user', content: user }
-	];
+	const prompt = buildNamingPrompt(validated.value);
 
 	// Cast rather than widening the platform binding's declared type: three other
 	// call sites take the narrow object-returning shape, and loosening it globally
@@ -79,7 +80,10 @@ export const POST: RequestHandler = async ({ request, platform, locals, getClien
 	let result: AiResult | ReadableStream;
 	try {
 		result = (await ai.run(AI_MODEL, {
-			messages,
+			messages: [
+				{ role: 'system', content: prompt.system },
+				{ role: 'user', content: prompt.user }
+			],
 			max_tokens: MAX_TOKENS,
 			temperature: TEMPERATURE,
 			stream: true
@@ -97,16 +101,35 @@ export const POST: RequestHandler = async ({ request, platform, locals, getClien
 	const stream = new ReadableStream<Uint8Array>({
 		async start(controller) {
 			const encoder = new TextEncoder();
-			const source = result instanceof ReadableStream ? result : responseText(result as AiResult);
 			const delivered: GeneratedName[] = [];
 
-			for await (const event of streamNameEvents(checkDeps, source, {
+			for await (const event of streamNameDelivery(checkDeps, modelSource(result), {
 				requireTlds,
 				remaining: limit.remaining,
 				limit: identity.limit,
-				// No database means no uniqueness rather than no generator. Names may
-				// then repeat, which is worse than the alternative but not broken.
-				reserve: db ? (name) => reserveName(db, name) : undefined
+				initialAvoid: validated.value.avoid,
+				// Request-local uniqueness is enforced by the delivery orchestrator even
+				// without D1; this optional reservation adds cross-request uniqueness.
+				reserve: db ? (name) => reserveName(db, name) : undefined,
+				async runRetry(feedback, avoid) {
+					const retryInput = {
+						...validated.value,
+						// Keep the newest evidence when a long session already supplied the
+						// maximum avoid list. The delivery budget bounds this to one request.
+						avoid: avoid.slice(-MAX_AVOID)
+					};
+					const retryPrompt = buildNamingPrompt(retryInput, feedback);
+					const retryResult = (await ai.run(AI_MODEL, {
+						messages: [
+							{ role: 'system', content: retryPrompt.system },
+							{ role: 'user', content: retryPrompt.user }
+						],
+						max_tokens: MAX_TOKENS,
+						temperature: TEMPERATURE,
+						stream: true
+					})) as unknown as AiResult | ReadableStream;
+					return modelSource(retryResult);
+				}
 			})) {
 				if (event.type === 'name') delivered.push(event.name);
 				controller.enqueue(encoder.encode(encodeEvent(event)));

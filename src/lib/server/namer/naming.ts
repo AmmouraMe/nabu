@@ -271,6 +271,16 @@ export interface NamingInput {
 	requireTlds?: string[];
 }
 
+/** Why a generated candidate did not make the delivered set. */
+export type NameRejectionKind = 'taken' | 'unverifiable' | 'duplicate';
+
+/** Bounded, server-derived evidence fed back to a retry prompt. */
+export interface RetryFeedback {
+	name: string;
+	reason: string;
+	kind: NameRejectionKind;
+}
+
 /**
  * The description is the whole input to a naming decision, and the page asks for
  * as much detail as the user can give. Capping it at 400 characters — barely two
@@ -300,7 +310,7 @@ const MIN_DESCRIPTION_LENGTH = 8;
  * dropped at the call site.
  */
 const MAX_LIKED = 12;
-const MAX_AVOID = 60;
+export const MAX_AVOID = 60;
 /** A single name, for the ranked/avoid lists. */
 const MAX_NAME_LENGTH = 60;
 
@@ -395,7 +405,10 @@ export function heuristicsAsPrompt(): string {
 	return NAMING_HEURISTICS.map((h, i) => `${i + 1}. **${h.label}** — ${h.guidance}`).join('\n');
 }
 
-export function buildNamingPrompt(input: NamingInput): { system: string; user: string } {
+export function buildNamingPrompt(
+	input: NamingInput,
+	retryFeedback: readonly RetryFeedback[] = []
+): { system: string; user: string } {
 	const archetype = input.archetype ? ARCHETYPES.find((a) => a.id === input.archetype) : undefined;
 
 	const system = `You are Nabu's Brand Architect — a brand strategist who combines consumer psychology, linguistics, and Jungian archetypes to name things well.
@@ -451,6 +464,22 @@ Prefer names that are genuinely ownable — invented words, unexpected compounds
 
 	if (input.avoid?.length) {
 		lines.push(`\nAlready shown, do not repeat any of these: ${input.avoid.join(', ')}.`);
+	}
+
+	if (retryFeedback.length) {
+		// At most one request's worth of candidates can reach this point. Trimming
+		// each line prevents a strange model-produced name from turning the feedback
+		// section into the whole prompt.
+		const evidence = retryFeedback.slice(-MAX_AVOID).map((item) => {
+			const name = item.name.replace(/\s+/g, ' ').trim().slice(0, MAX_NAME_LENGTH);
+			const reason = item.reason.replace(/\s+/g, ' ').trim().slice(0, MAX_FIELD_LENGTH);
+			return `- ${name} — ${item.kind}: ${reason}`;
+		});
+		lines.push(
+			'\nA previous round was checked live and rejected these candidates:',
+			...evidence,
+			'Treat registered domains and previously suggested names as evidence to move into a different part of the naming space. Do not return spelling variations of them. A “could not verify” result is uncertainty, never proof that a domain is free.'
+		);
 	}
 
 	lines.push(`\nGive me ${NAMES_REQUESTED} names as the JSON array described.`);

@@ -505,6 +505,17 @@ describe('buildNamingPrompt with preferences', () => {
 		expect(user).toMatch(/invented words/i);
 	});
 
+	it('feeds live rejection reasons back to a retry without confusing uncertainty with taken', () => {
+		const { user } = buildNamingPrompt(base, [
+			{ name: 'Ardor', reason: 'ardor.com already registered', kind: 'taken' },
+			{ name: 'Alba', reason: 'could not verify alba.net', kind: 'unverifiable' }
+		]);
+		expect(user).toContain('Ardor — taken: ardor.com already registered');
+		expect(user).toContain('Alba — unverifiable: could not verify alba.net');
+		expect(user).toMatch(/different part of the naming space/i);
+		expect(user).toMatch(/uncertainty, never proof/i);
+	});
+
 	it('says none of it when nothing was ranked or required', () => {
 		const { user } = buildNamingPrompt(base);
 		expect(user).not.toMatch(/favourite first|do not repeat|must be unregistered/i);

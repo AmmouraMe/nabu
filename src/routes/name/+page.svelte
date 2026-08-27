@@ -19,7 +19,7 @@
 	 * broken.
 	 *
 	 * **The order is the input.** Taste is far easier to demonstrate by arranging
-	 * six candidates than to describe in a brief, so the list is drag-rankable and
+	 * five candidates than to describe in a brief, so the list is drag-rankable and
 	 * "More like these" feeds that order back as the strongest signal available.
 	 *
 	 * Everything is real markup rather than DOM built in a handler: Svelte scopes
@@ -72,6 +72,7 @@
 	let loading = false;
 	let status = '';
 	let statusIsError = false;
+	let completionMessage = '';
 
 	let names: NameCard[] = [];
 	/** Struck off by the domain requirement, newest first. */
@@ -99,7 +100,7 @@
 	].filter(Boolean) as string[];
 
 	/** Empty slots still to fill, so the grid shows the shape of what is coming. */
-	$: pending = loading ? Math.max(0, data.namesPerRound - names.length) : 0;
+	$: pending = loading ? Math.max(0, data.namesToDeliver - names.length) : 0;
 	$: canRefine = names.length > 1 && !loading;
 	/**
 	 * Asking for a free .com throws most candidates away, so a round can end well
@@ -107,7 +108,10 @@
 	 * generator simply gave up.
 	 */
 	$: shortfall =
-		!loading && rejected.length > 0 && names.length > 0 && names.length < data.namesPerRound;
+		!loading &&
+		Boolean(completionMessage) &&
+		names.length > 0 &&
+		names.length < data.namesToDeliver;
 
 	function toggleTld(tld: string) {
 		requireTlds = requireTlds.includes(tld)
@@ -145,6 +149,7 @@
 
 		loading = true;
 		statusIsError = false;
+		completionMessage = '';
 		status = refine ? 'Reading your ranking…' : 'Reading your brief…';
 		names = [];
 		rejected = [];
@@ -197,16 +202,20 @@
 						const card = event.name as NameCard;
 						names = [...names, card];
 						seen = [...seen, card.name];
-						status = `${names.length} of ${data.namesPerRound}…`;
+						status = `${names.length} of ${data.namesToDeliver}…`;
 					} else if (event.type === 'rejected') {
 						rejected = [
 							{ name: event.name as string, reason: event.reason as string },
 							...rejected
 						];
 						seen = [...seen, event.name as string];
+					} else if (event.type === 'status') {
+						status = event.message as string;
+						statusIsError = false;
 					} else if (event.type === 'done') {
 						remaining = event.remaining as number;
 						hourlyLimit = event.limit as number;
+						completionMessage = typeof event.message === 'string' ? event.message : '';
 						status = '';
 					} else if (event.type === 'error') {
 						status = event.error as string;
@@ -308,7 +317,7 @@
 <Seo
 	path="/name"
 	title="Name your brand"
-	description="Six brand names generated against nine real naming heuristics — short, early in the alphabet, survives the radio test — then checked against the domains, the handles and the trademark register. Free, no account."
+	description="Five brand names generated against nine real naming heuristics, with rejected candidates replaced until the checked set is full or a live availability boundary stops the search. Free, no account."
 	image="name"
 />
 
@@ -320,9 +329,9 @@
 			Name your <span class="mark">brand</span>.
 		</h1>
 		<p class="lede">
-			Six names against nine real heuristics — short, early in the alphabet, survives being heard
-			once aloud, and actually means something. Then we check what is genuinely free, and say
-			plainly what we could not check.
+			Five names against nine real heuristics — short, early in the alphabet, survives being heard
+			once aloud, and actually means something. Rejected candidates are replaced within a bounded
+			search, and we say plainly when a registry cannot be verified.
 		</p>
 	</header>
 
@@ -454,7 +463,7 @@
 	     silently discards four of six looks stalled. -->
 	{#if rejected.length}
 		<ul class="rejected" aria-label="Discarded names">
-			{#each rejected.slice(0, 5) as item (item.name)}
+			{#each rejected.slice(0, 5) as item}
 				<li><s>{item.name}</s> <span>{item.reason}</span></li>
 			{/each}
 			{#if rejected.length > 5}
@@ -465,10 +474,7 @@
 
 	<!-- ── Results ───────────────────────────────────────────────────────── -->
 	{#if shortfall}
-		<p class="shortfall">
-			{names.length} of {data.namesPerRound} had a free .{activeRequire.join(', .')} — the rest are listed
-			above. Generate again for more.
-		</p>
+		<p class="shortfall" role="status" aria-live="polite">{completionMessage}</p>
 	{/if}
 
 	{#if names.length || pending}

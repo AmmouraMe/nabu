@@ -64,7 +64,12 @@ export function windowKey(identity: string, now: number): string {
 }
 
 /**
- * Count one request against the caller's window.
+ * Count one user action against the caller's window.
+ *
+ * The generation route calls this exactly once before any model work. A single
+ * action can use several bounded model rounds to replace rejected candidates,
+ * but those internal retries do not silently consume several user-visible quota
+ * units. Their cost is bounded separately by the Worker subrequest budget.
  *
  * Fails **open** on a KV error: a broken counter should not take the tool down,
  * and the cost of a brief unmetered window is some Workers AI neurons.

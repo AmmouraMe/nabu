@@ -22,9 +22,9 @@
 		{ id: 'support', label: 'Support & Infrastructure' }
 	];
 
-	function displayPrice(tier: (typeof PRICING_TIERS)[number]) {
+	function displayPrice(tier: (typeof PRICING_TIERS)[number], annualBilling: boolean) {
 		if (tier.monthlyPrice === 0) return 'Free';
-		return annual ? formatPrice(getAnnualPrice(tier)) : formatPrice(tier.monthlyPrice);
+		return annualBilling ? formatPrice(getAnnualPrice(tier)) : formatPrice(tier.monthlyPrice);
 	}
 
 	function tierValue(feature: PricingFeature, tierId: TierId): boolean | string {
@@ -90,7 +90,7 @@
 				</div>
 
 				<div class="tier-price">
-					<span class="price-amount">{displayPrice(tier)}</span>
+					<span class="price-amount">{displayPrice(tier, annual)}</span>
 					{#if tier.monthlyPrice > 0}
 						<span class="price-period">/ brand / month</span>
 					{:else}

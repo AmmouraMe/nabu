@@ -207,8 +207,10 @@ export type Verdict =
  * is free when we could not confirm it. Rejecting on a registry blip costs a
  * good candidate; accepting on one costs somebody a brand.
  *
- * Checks run concurrently and the first refusal decides, so a name failing on
- * .com does not wait on .net.
+ * Checks run concurrently, but the verdict inspects every required TLD. A taken
+ * domain remains the most useful rejection reason; a different registry that
+ * could not be verified is retained separately so retry orchestration can stop
+ * instead of repeatedly spending rounds against the same outage.
  */
 export async function meetsDomainRequirement(
 	deps: CheckDeps,

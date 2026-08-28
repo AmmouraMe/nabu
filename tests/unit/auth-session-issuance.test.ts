@@ -18,6 +18,13 @@
  * returns, decode it the way the hook really does, and look the session up the
  * way the hook really does. If issuance and acceptance ever drift apart again,
  * this fails.
+ *
+ * @vitest-environment node
+ *
+ * These are server-route tests with no DOM surface. They run in the `node`
+ * environment, not the shared `happy-dom` one, because happy-dom's `Response`
+ * drops `Set-Cookie` at construction (it is a forbidden response header there),
+ * which silently erases the exact header these tests exist to assert on.
  */
 
 import { describe, it, expect, vi } from 'vitest';

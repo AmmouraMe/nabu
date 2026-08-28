@@ -1,5 +1,3 @@
-import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/svelte';
 import { afterEach } from 'vitest';
 
 declare global {
@@ -7,10 +5,21 @@ declare global {
 	var __REAL_SUBTLE__: SubtleCrypto | undefined;
 }
 
-// Cleanup after each test
-afterEach(() => {
-	cleanup();
-});
+// This file is the setup for BOTH environments. Most suites run in `happy-dom`,
+// but the server-route suites opt into `node` with a `@vitest-environment node`
+// docblock — happy-dom's `Response` drops `Set-Cookie` at construction, which
+// erases the header those suites assert on. So everything DOM-shaped below is
+// loaded only when a `window` actually exists; importing `@testing-library/*`
+// eagerly would throw `ReferenceError: window is not defined` under `node`.
+const hasDom = typeof window !== 'undefined';
+
+if (hasDom) {
+	await import('@testing-library/jest-dom/vitest');
+	const { cleanup } = await import('@testing-library/svelte');
+	afterEach(() => {
+		cleanup();
+	});
+}
 
 // Setup global test utilities
 globalThis.ResizeObserver = class ResizeObserver {
@@ -30,7 +39,7 @@ globalThis.IntersectionObserver = class IntersectionObserver {
 // Working localStorage.
 //
 // Node 25 exposes its own global `localStorage`, which is an inert stub unless
-// the process was started with `--localstorage-file`. Vitest 1.6's happy-dom
+// the process was started with `--localstorage-file`. Vitest's happy-dom
 // bridge (`getWindowKeys`) skips any key that already exists on Node's global
 // unless the key is in its own hardcoded list — and `localStorage` is not on
 // that list — so happy-dom's real `Storage` never reaches the test global and
@@ -88,17 +97,19 @@ Object.defineProperty(globalThis, 'localStorage', {
 //   vi.stubGlobal('crypto', { ...realCrypto, randomUUID: () => 'fixed' })
 globalThis.__REAL_SUBTLE__ = globalThis.crypto?.subtle;
 
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-	writable: true,
-	value: (query: string) => ({
-		matches: false,
-		media: query,
-		onchange: null,
-		addListener: () => {},
-		removeListener: () => {},
-		addEventListener: () => {},
-		removeEventListener: () => {},
-		dispatchEvent: () => true
-	})
-});
+// Mock matchMedia (DOM-only; `node` suites have no window to define it on).
+if (hasDom) {
+	Object.defineProperty(window, 'matchMedia', {
+		writable: true,
+		value: (query: string) => ({
+			matches: false,
+			media: query,
+			onchange: null,
+			addListener: () => {},
+			removeListener: () => {},
+			addEventListener: () => {},
+			removeEventListener: () => {},
+			dispatchEvent: () => true
+		})
+	});
+}

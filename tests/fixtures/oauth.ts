@@ -47,7 +47,7 @@ export function createOAuthDb(
 	return {
 		calls,
 		prepare,
-		batch: vi.fn<[unknown[]], Promise<unknown[]>>(async (statements) =>
+		batch: vi.fn<(statements: unknown[]) => Promise<unknown[]>>(async (statements) =>
 			statements.map(() => ({ success: true }))
 		)
 	};

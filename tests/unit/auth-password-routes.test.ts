@@ -6,6 +6,13 @@
  * things worth asserting are the ones a stub could never get wrong — that an account
  * is actually written, that it lands on the free plan, that it cannot ask to be an
  * admin, and that every way of failing to log in looks the same from outside.
+ *
+ * @vitest-environment node
+ *
+ * These are server-route tests with no DOM surface. They run in the `node`
+ * environment, not the shared `happy-dom` one, because happy-dom's `Response`
+ * drops `Set-Cookie` at construction (it is a forbidden response header there),
+ * which silently erases the exact header these tests exist to assert on.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { D1Database, KVNamespace } from '@cloudflare/workers-types';

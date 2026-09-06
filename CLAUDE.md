@@ -2,28 +2,18 @@
 
 ## Contribution Workflow
 
-Every repository in the **AmmouraMe** organization follows the same four steps —
-`Ammoura-Svelte`, `nabu`, `teaser`, and anything added later. Humans and AI
-agents work the same way.
+The four-step workflow is mandatory and lives in `.github/copilot-instructions.md`: issue first, `feature/*` or `fix/*` branch, never commit to `main`, PR.
 
-1. **Start from an issue, and claim it.** Work is tracked in GitHub Issues.
-   Before writing code, take the issue: assign yourself, or comment that you
-   are picking it up. This is what stops two people — or two agents — landing
-   on the same work.
-2. **Work on a branch.** Never commit to `main`. Cut `feature/<short-name>` for
-   new work or `fix/<short-name>` for a bug. Include the issue number when it
-   helps: `fix/12-uspto-trademark-check`.
-3. **Open a draft PR early.** As soon as there is a first commit, open the pull
-   request **as a draft**. Do not wait until the work is done. An early draft
-   shows what is in flight, gives CI somewhere to run, and lets reviewers
-   comment before the design hardens. Link the issue in the body (`Closes #12`)
-   so it closes on merge.
-4. **Finish, then mark ready for review.** When the feature or fix is complete
-   and the quality gates are green, update the PR description to say what
-   actually landed, then take it out of draft and mark it **Ready for review**.
+## Stack and layout
 
-In short: the issue says _what_, the branch holds _how_, the draft PR shows
-_progress_, and "ready for review" means _done_.
+SvelteKit 2 (`@sveltejs/adapter-cloudflare`) deployed to Cloudflare Pages; build output is `.svelte-kit/cloudflare`. Routes live in `src/routes/` (`admin`, `api`, `auth`, `brand`, `chat`, `docs`, `name`, `onboarding`, `pricing`, `privacy`, `profile`, `reset`, `setup`, `terms`, `videos`, plus the `[contentType]` dynamic segment). `workers/content-cron/` is a separate Worker with its own `wrangler.toml` that deploys independently (Pages rejects `[triggers]`); it calls `GET /api/cron/content` with `Authorization: Bearer <CRON_SECRET>`. `wrangler.toml` bindings: `DB` (D1 `nabu-db`, with a separate `preview_database_id`, migrations in `./migrations`), `KV` (KV namespace, with a preview id), `BUCKET` (R2 `nabu-files`; the file's own comment says the bucket is not yet created), and `AI` (Workers AI). `account_id` cannot live in `wrangler.toml` for a Pages project; set `CLOUDFLARE_ACCOUNT_ID` in the environment.
+
+## Commands
+
+- `npm run dev` — dev server on port 4239.
+- `npm run validate:all` — the gate: `format:check` (Prettier) → `check` (`svelte-kit sync && svelte-check`) → `test:coverage` (Vitest, 95% threshold) → `validate:contrast` (WCAG AA theme check).
+- Single test: `npx vitest run tests/unit/seo.test.ts`.
+- npm only. `package-lock.json` is canonical; `bun.lock`, `bun.lockb`, `yarn.lock`, and `pnpm-lock.yaml` are gitignored.
 
 ## Database Migrations - MANDATORY RULES
 

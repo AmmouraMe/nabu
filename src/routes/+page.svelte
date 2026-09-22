@@ -104,6 +104,10 @@
 					<a href="/auth/login" class="btn btn-secondary btn-lg"> Sign In </a>
 				{/if}
 			</div>
+			<p class="hero-secondary">
+				No name yet? <a href="/name">Try our free brand naming tool</a> — six names, checked against
+				the domains and handles. No account needed.
+			</p>
 			<button
 				class="search-trigger"
 				on:click={() => openCommandPalette()}
@@ -752,6 +756,28 @@
 		gap: var(--spacing-md);
 		flex-wrap: wrap;
 		margin-bottom: var(--spacing-lg);
+	}
+
+	.hero-actions:has(+ .hero-secondary) {
+		margin-bottom: var(--spacing-md);
+	}
+
+	.hero-secondary {
+		margin: 0 0 var(--spacing-lg);
+		font-size: 0.9rem;
+		color: var(--color-text-secondary);
+	}
+
+	.hero-secondary a {
+		color: var(--color-primary);
+		font-weight: 600;
+		text-decoration: none;
+		border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+		transition: border-color var(--transition-fast);
+	}
+
+	.hero-secondary a:hover {
+		border-bottom-color: var(--color-primary);
 	}
 
 	/* ===== BUTTONS ===== */

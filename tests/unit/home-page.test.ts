@@ -71,6 +71,12 @@ describe('Home Page – Marketing Landing', () => {
 		expect(screen.getByText('Go to Dashboard')).toBeTruthy();
 	});
 
+	it('should link the free naming tool from the hero', () => {
+		render(Page, { props: { data: { user: undefined, hasAIProviders: false } } });
+		const link = screen.getByText('Try our free brand naming tool');
+		expect(link.getAttribute('href')).toBe('/name');
+	});
+
 	it('should render admin link for admin users', () => {
 		const user = { id: '1', login: 'admin', email: 'admin@test.com', isOwner: true, isAdmin: true };
 		render(Page, { props: { data: { user, hasAIProviders: false } } });

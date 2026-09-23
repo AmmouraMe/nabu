@@ -6,6 +6,7 @@
  */
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
+import { requireBrandAccess } from '$lib/server/brand-access';
 import { createFileArchiveEntry } from '$lib/services/file-archive';
 import { requireStorage, resolvePlan } from '$lib/server/entitlements';
 import { getAttachmentType } from '$lib/utils/attachments';
@@ -32,6 +33,10 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!fileType) {
 		throw error(400, `Unsupported file type: ${file.type}`);
 	}
+
+	// The key below is namespaced by this brand, and canReadR2Key serves it to the
+	// brand's members: writing into a brand you cannot write to is refused here.
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
 
 	// Same storage ceiling as /api/brand/assets/upload. Both doors have to be locked:
 	// a 100MB-per-file limit with no total means a free account on 1 GB can walk past

@@ -109,7 +109,7 @@ describe('GET /api/video/file/[...key]', () => {
 		} as any);
 
 		expect(response.headers.get('Content-Type')).toBe('video/mp4');
-		expect(response.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+		expect(response.headers.get('Cache-Control')).toBe('private, max-age=31536000, immutable');
 		expect(response.headers.get('Accept-Ranges')).toBe('bytes');
 		expect(response.headers.get('Content-Length')).toBe('12345');
 	});

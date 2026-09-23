@@ -31,7 +31,8 @@ export const GET: RequestHandler = async ({ params, platform, locals }) => {
 
 	const headers = new Headers();
 	headers.set('Content-Type', object.httpMetadata?.contentType || 'video/mp4');
-	headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+	// Private: served per user, so a shared cache must not hand it to anyone else.
+	headers.set('Cache-Control', 'private, max-age=31536000, immutable');
 	headers.set('Accept-Ranges', 'bytes');
 
 	if (object.size) {

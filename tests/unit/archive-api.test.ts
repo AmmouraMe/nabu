@@ -426,12 +426,79 @@ describe('DELETE /api/archive', () => {
 // GET /api/archive/file
 // ═══════════════════════════════════════════════════════════════
 describe('GET /api/archive/file', () => {
+	/** A DB whose brand_profiles lookup says the brand belongs to `ownerId`, with no grants. */
+	function brandOwnedBy(ownerId: string | null) {
+		return {
+			prepare: vi.fn((query: string) => ({
+				bind: () => ({
+					first: async () =>
+						query.includes('FROM brand_profiles') && ownerId ? { user_id: ownerId } : null
+				})
+			}))
+		};
+	}
+
+	// Regression guard: this route served any R2 key to any logged-in user.
+	it("should 404 on another user's brand archive without reading R2", async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = { get: vi.fn() };
+		await expect(
+			GET({
+				url: makeUrl('/api/archive/file', { key: 'archive/bp-1/onboarding/images/x.png' }),
+				platform: { env: { BUCKET: bucket, DB: brandOwnedBy('someone-else') } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(bucket.get).not.toHaveBeenCalled();
+	});
+
+	it("should 404 on another user's video key", async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = { get: vi.fn() };
+		await expect(
+			GET({
+				url: makeUrl('/api/archive/file', { key: 'videos/user-2/v.mp4' }),
+				platform: { env: { BUCKET: bucket, DB: brandOwnedBy(null) } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(bucket.get).not.toHaveBeenCalled();
+	});
+
+	it('should 404 on an unrecognised or climbing key', async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = { get: vi.fn() };
+		for (const key of ['secret.txt', 'archive/bp-1/../bp-2/x.png', 'other/user-1/x']) {
+			await expect(
+				GET({
+					url: makeUrl('/api/archive/file', { key }),
+					platform: { env: { BUCKET: bucket, DB: brandOwnedBy('user-1') } },
+					locals: authedLocals
+				} as any)
+			).rejects.toMatchObject({ status: 404 });
+		}
+		expect(bucket.get).not.toHaveBeenCalled();
+	});
+
+	it("should serve the caller's own video key", async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = {
+			get: vi.fn().mockResolvedValue({ body: new ReadableStream(), size: 1, httpMetadata: {} })
+		};
+		const res = await GET({
+			url: makeUrl('/api/archive/file', { key: 'videos/user-1/v.mp4' }),
+			platform: { env: { BUCKET: bucket, DB: brandOwnedBy(null) } },
+			locals: authedLocals
+		} as any);
+		expect(res.status).toBe(200);
+	});
+
 	it('should return 401 when not authenticated', async () => {
 		const { GET } = await import('../../src/routes/api/archive/file/+server');
 		try {
 			await GET({
 				url: makeUrl('/api/archive/file', { key: 'archive/bp-1/img.png' }),
-				platform: { env: { BUCKET: mockBucket } },
+				platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 				locals: noUser
 			} as any);
 			expect.fail('Should have thrown');
@@ -459,7 +526,7 @@ describe('GET /api/archive/file', () => {
 		try {
 			await GET({
 				url: makeUrl('/api/archive/file'),
-				platform: { env: { BUCKET: mockBucket } },
+				platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 				locals: authedLocals
 			} as any);
 			expect.fail('Should have thrown');
@@ -474,8 +541,8 @@ describe('GET /api/archive/file', () => {
 
 		try {
 			await GET({
-				url: makeUrl('/api/archive/file', { key: 'missing.png' }),
-				platform: { env: { BUCKET: mockBucket } },
+				url: makeUrl('/api/archive/file', { key: 'archive/bp-1/missing.png' }),
+				platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 				locals: authedLocals
 			} as any);
 			expect.fail('Should have thrown');
@@ -495,11 +562,11 @@ describe('GET /api/archive/file', () => {
 
 		const res = await GET({
 			url: makeUrl('/api/archive/file', { key: 'archive/bp-1/img.png' }),
-			platform: { env: { BUCKET: mockBucket } },
+			platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 			locals: authedLocals
 		} as any);
 		expect(res.headers.get('Content-Type')).toBe('image/png');
-		expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+		expect(res.headers.get('Cache-Control')).toBe('private, max-age=31536000, immutable');
 		expect(res.headers.get('Content-Length')).toBe('5000');
 	});
 
@@ -513,7 +580,7 @@ describe('GET /api/archive/file', () => {
 
 		const res = await GET({
 			url: makeUrl('/api/archive/file', { key: 'archive/bp-1/data.bin' }),
-			platform: { env: { BUCKET: mockBucket } },
+			platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 			locals: authedLocals
 		} as any);
 		expect(res.headers.get('Content-Type')).toBe('application/octet-stream');

@@ -1,6 +1,6 @@
 import type { RequestHandler } from './$types';
 import { error } from '@sveltejs/kit';
-import { ownerOfR2Key, resolveUserBrandRole } from '$lib/server/brand-access';
+import { canReadR2Key } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/assets/file?key=brands/xxx/image/yyy.png
@@ -22,13 +22,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	const key = url.searchParams.get('key');
 	if (!key) throw error(400, 'key required');
 
-	const owner = ownerOfR2Key(key);
-	if (!owner) throw error(404, 'File not found');
-
-	if (owner.kind === 'brand') {
-		const role = await resolveUserBrandRole(platform.env.DB, locals.user.id, owner.brandProfileId);
-		if (!role) throw error(404, 'File not found');
-	} else if (owner.userId !== locals.user.id) {
+	if (!(await canReadR2Key(platform.env.DB, locals.user.id, key))) {
 		throw error(404, 'File not found');
 	}
 

@@ -9,10 +9,13 @@
  * unsigned, tampered with, or signed by a different secret verifies as `null` and
  * the request proceeds anonymously.
  *
- * This authenticates the cookie's *contents* — it does not give revocation. A
- * signed cookie stays valid until `Max-Age` expires even if the user's rights are
- * later reduced. Server-side sessions (the unused `sessions` table + `createSession`
- * in `src/lib/utils/db.ts`) are the follow-up that fixes that.
+ * The signed payload is now only `{ token }`: an opaque random token whose
+ * SHA-256 keys a row in the D1 `sessions` table (`createSession` /
+ * `findValidSession` in `src/lib/utils/db.ts`). `hooks.server.ts` looks that row
+ * up and re-reads the user from `users` on every request, so a session is
+ * revocable (logout deletes the row) and a reduced admin flag or plan takes
+ * effect immediately. The signature only stops a forged cookie from costing a
+ * database lookup; the row is what authenticates.
  *
  * Uses Web Crypto only — no Node built-ins — so it runs on Workers.
  */

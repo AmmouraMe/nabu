@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { buildDatabaseSessionCookieHeader } from '$lib/server/session';
 import { createSession } from '$lib/utils/db';
+import { devUserId, isDevLoginEnabled } from '$lib/server/dev-auth';
 import type { RequestHandler } from './$types';
 
 /**
@@ -13,6 +14,11 @@ import type { RequestHandler } from './$types';
  * once deployed. A deployed dev/staging Worker can still opt in explicitly by
  * setting `ALLOW_DEV_LOGIN=true`.
  *
+ * The account is always `dev:<email>` (see `$lib/server/dev-auth`): the id is
+ * never read from the query string, so this cannot sign in as — or rewrite —
+ * a real user or the configured owner, and the hook stops honouring these
+ * sessions as soon as dev login is switched off.
+ *
  * Usage:
  *   /api/auth/dev                         → log in as an admin dev user
  *   /api/auth/dev?admin=0                 → log in as a regular (non-admin) user
@@ -20,8 +26,7 @@ import type { RequestHandler } from './$types';
  *   /api/auth/dev?redirect=/brand         → where to land after login
  */
 export const GET: RequestHandler = async ({ url, platform }) => {
-	const devAllowed = import.meta.env.DEV || platform?.env?.ALLOW_DEV_LOGIN === 'true';
-	if (!devAllowed) {
+	if (!isDevLoginEnabled(platform)) {
 		throw error(404, 'Not found');
 	}
 
@@ -30,9 +35,9 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		url.searchParams.get('email')?.trim() ||
 		(asAdmin ? 'dev-admin@nabu.local' : 'dev-user@nabu.local');
 	const name = url.searchParams.get('name')?.trim() || (asAdmin ? 'Dev Admin' : 'Dev User');
-	const login = url.searchParams.get('login')?.trim() || email.split('@')[0];
-	// Stable id per identity so repeated logins reuse the same user row.
-	const id = url.searchParams.get('id')?.trim() || `dev:${email.toLowerCase()}`;
+	// Stable id per identity so repeated logins reuse the same user row. Always
+	// derived, never caller-supplied — see the module comment in dev-auth.
+	const id = devUserId(email);
 	const redirectTo = url.searchParams.get('redirect') || (asAdmin ? '/admin' : '/');
 
 	const db = platform?.env?.DB;

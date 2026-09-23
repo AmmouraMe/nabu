@@ -3,6 +3,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import { findValidSession } from '$lib/utils/db';
 import { decodeDatabaseSessionCookie } from '$lib/server/session';
 import { resolveOwnerStatus } from '$lib/server/auth-identity';
+import { isDevLoginEnabled, isDevUserId } from '$lib/server/dev-auth';
 import { normalizeTier } from '$lib/utils/pricing';
 
 // Auth handling hook
@@ -37,6 +38,12 @@ export const authHandler: Handle = async ({ event, resolve }) => {
 					plan: string | null;
 				}>();
 			if (!user) throw new Error('Session user missing');
+			// A dev-login account authenticates only while dev login is enabled, so
+			// switching ALLOW_DEV_LOGIN off ends its sessions immediately and a dev
+			// row in a production database authenticates nobody.
+			if (isDevUserId(user.id) && !isDevLoginEnabled(event.platform)) {
+				throw new Error('Dev login is disabled');
+			}
 			const isOwner = await resolveOwnerStatus(event.platform, user);
 			event.locals.user = {
 				id: user.id,

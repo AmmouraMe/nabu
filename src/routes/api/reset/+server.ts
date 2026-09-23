@@ -28,7 +28,13 @@ export const POST: RequestHandler = async ({ platform, cookies, locals }) => {
 		// bootstrappable by design, so the check is scoped to "an owner has been
 		// established". An operator locked out of a half-configured instance can still
 		// clear these keys with `wrangler kv key delete`.
+		//
+		// An owner named in the environment (GITHUB_OWNER_ID / DISCORD_OWNER_ID)
+		// counts too: with no owner key in KV, an anonymous caller could otherwise
+		// delete the stored GitHub OAuth config and take sign-in down.
 		const ownerEstablished = !!(
+			platform.env.GITHUB_OWNER_ID?.trim() ||
+			platform.env.DISCORD_OWNER_ID?.trim() ||
 			(await platform.env.KV.get('github_owner_id')) ||
 			(await platform.env.KV.get('admin_first_login_completed'))
 		);

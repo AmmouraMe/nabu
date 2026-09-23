@@ -1,5 +1,6 @@
 import { requireOwner } from '$lib/server/auth-guards';
 import { error, isHttpError, json } from '@sveltejs/kit';
+import { bearerToken, secretsEqual } from '$lib/server/secret-compare';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ platform }) => {
@@ -40,7 +41,7 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 		}
 		const setupSecret = platform.env.SETUP_SECRET;
 		if (!setupSecret) throw error(503, 'SETUP_SECRET is not configured');
-		if (request.headers.get('authorization') !== `Bearer ${setupSecret}`) {
+		if (!(await secretsEqual(bearerToken(request.headers.get('authorization')), setupSecret))) {
 			throw error(401, 'Invalid setup credentials');
 		}
 		const data = await request.json();

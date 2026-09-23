@@ -697,7 +697,7 @@ describe('GET /api/brand/text-suggestions', () => {
 
 		const res = await GET({
 			url: makeUrl('/x', { brandProfileId: 'bp-1', fieldName: 'tagline' }),
-			platform: { env: { DB: mockDB } },
+			platform: { env: { DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 		const data = await res.json();
@@ -709,12 +709,25 @@ describe('GET /api/brand/text-suggestions', () => {
 		const { GET } = await import('../../src/routes/api/brand/text-suggestions/+server');
 		const res = await GET({
 			url: makeUrl('/x', { brandProfileId: 'bp-1', fieldName: 'unknownField' }),
-			platform: { env: { DB: mockDB } },
+			platform: { env: { DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 		const data = await res.json();
 		expect(data.hasMappedTexts).toBe(false);
 		expect(data.suggestions).toEqual([]);
+	});
+
+	it("should 404 on another brand's suggestions without reading them", async () => {
+		const { GET } = await import('../../src/routes/api/brand/text-suggestions/+server');
+		vi.mocked(getTextSuggestionsForField).mockClear();
+		await expect(
+			GET({
+				url: makeUrl('/x', { brandProfileId: 'someone-elses-brand', fieldName: 'tagline' }),
+				platform: { env: { DB: mockDB } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(getTextSuggestionsForField).not.toHaveBeenCalled();
 	});
 });
 

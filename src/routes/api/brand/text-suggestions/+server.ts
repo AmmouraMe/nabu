@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
 import { getTextSuggestionsForField, FIELD_TO_TEXT_MAPPING } from '$lib/services/brand';
+import { requireBrandAccess } from '$lib/server/brand-access';
 
 /**
  * GET /api/brand/text-suggestions
@@ -18,6 +19,9 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
 	if (!fieldName) throw error(400, 'fieldName required');
+	// brandProfileId is caller-supplied: without this, any signed-in user could read
+	// any brand's saved texts by id.
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'read');
 
 	// Check if this field has a text mapping
 	if (!FIELD_TO_TEXT_MAPPING[fieldName]) {

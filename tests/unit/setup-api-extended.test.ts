@@ -199,7 +199,7 @@ describe('Setup API', () => {
 				})
 			});
 
-			vi.stubGlobal('crypto', { randomUUID: () => 'config-uuid' });
+			vi.stubGlobal('crypto', { subtle: crypto.subtle, randomUUID: () => 'config-uuid' });
 
 			const { POST } = await import('../../src/routes/api/setup/+server');
 			const response = await POST({

@@ -115,7 +115,7 @@ GITHUB_OWNER_ID = "583231"  # Replace with your actual GitHub user ID
 3. **Callback**: GitHub redirects back to `/api/auth/github/callback` with an authorization code
 4. **Token Exchange**: The app exchanges the code for an access token
 5. **User Info**: The app fetches user details from GitHub API
-6. **Session**: A session cookie is created with user information
+6. **Session**: A row is written to the D1 `sessions` table, keyed by the SHA-256 of a random token; the browser gets only that opaque token, in a cookie signed with `SESSION_SECRET`. Identity, admin flag and plan are re-read from `users` on every request
 7. **Redirect**:
    - If user is the OAuth app owner → redirected to `/admin`
    - Otherwise → redirected to home page
@@ -136,14 +136,15 @@ GITHUB_OWNER_ID = "583231"  # Replace with your actual GitHub user ID
 
 - `/setup` - Initial setup page for GitHub OAuth configuration
 - `/auth/login` - Login page with GitHub OAuth button
-- `/auth/logout` - Logout endpoint (GET or POST)
+- `/api/auth/logout` - Logout endpoint (GET or POST); deletes the session row
 - `/api/auth/github` - OAuth initiation (redirects to GitHub)
 - `/api/auth/github/callback` - OAuth callback handler
 - `/admin` - Admin panel (owner-only)
 
 ## Security Features
 
-- **Session Cookies**: HTTP-only, secure (in production), SameSite=lax
+- **Session Cookies**: HTTP-only, secure (in production), SameSite=lax; the cookie carries an opaque token, never identity, and is useless once its `sessions` row expires or is deleted
+- **OAuth state**: each `state` is a one-time transaction in D1 (`oauth_transactions`), consumed atomically on callback
 - **Owner Verification**: Compares GitHub user ID with stored owner ID
 - **Server-Side Protection**: All admin routes protected by layout load function
 - **Token Security**: Access tokens never stored in browser

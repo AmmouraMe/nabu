@@ -69,6 +69,12 @@ Gated by `import.meta.env.DEV`, so it's compiled out (404) in production
 builds. A deployed dev/staging Worker can opt in with `ALLOW_DEV_LOGIN=true`
 (never set in prod).
 
+The account it signs in to is always `dev:<email>` — there is no `?id=`
+parameter, so it cannot sign in as (or overwrite) a real user or the owner.
+Those `dev:` accounts only authenticate while dev login is enabled: unset
+`ALLOW_DEV_LOGIN` and every dev session stops working on the next request
+(`src/lib/server/dev-auth.ts`, enforced in `src/hooks.server.ts`).
+
 ## KV Namespace Setup (persistent local storage)
 
 For local development with persistent KV storage (used by the `/setup`

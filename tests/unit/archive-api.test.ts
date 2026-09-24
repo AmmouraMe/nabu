@@ -48,7 +48,15 @@ function makeUrl(path: string, params: Record<string, string> = {}) {
 	return u;
 }
 
-const mockDB = { prepare: vi.fn() };
+/** `user-1` owns every brand this DB is asked about, so brand authorisation passes. */
+const brandLookup = (ownerId: string) => (sql: string) => ({
+	bind: () => ({
+		first: async () => (sql.includes('FROM brand_profiles') ? { user_id: ownerId } : null)
+	})
+});
+const mockDB = { prepare: vi.fn(brandLookup('user-1')) };
+/** Here the brand belongs to someone else and `user-1` holds no grant. */
+const foreignDB = { prepare: vi.fn(brandLookup('user-2')) };
 const mockBucket = { get: vi.fn(), put: vi.fn(), delete: vi.fn() };
 const authedLocals = { user: { id: 'user-1' } };
 const noUser = { user: null };
@@ -241,6 +249,7 @@ describe('PATCH /api/archive', () => {
 
 	it('should toggle star when action=star', async () => {
 		const { PATCH } = await import('../../src/routes/api/archive/+server');
+		vi.mocked(getFileArchiveEntry).mockResolvedValue({ id: 'f1', brandProfileId: 'bp-1' } as any);
 		vi.mocked(toggleFileStar).mockResolvedValue(true);
 
 		const res = await PATCH({
@@ -257,6 +266,7 @@ describe('PATCH /api/archive', () => {
 
 	it('should update file entry', async () => {
 		const { PATCH } = await import('../../src/routes/api/archive/+server');
+		vi.mocked(getFileArchiveEntry).mockResolvedValue({ id: 'f1', brandProfileId: 'bp-1' } as any);
 		vi.mocked(updateFileArchiveEntry).mockResolvedValue({
 			id: 'f1',
 			r2Key: 'archive/bp-1/img.png',
@@ -426,12 +436,79 @@ describe('DELETE /api/archive', () => {
 // GET /api/archive/file
 // ═══════════════════════════════════════════════════════════════
 describe('GET /api/archive/file', () => {
+	/** A DB whose brand_profiles lookup says the brand belongs to `ownerId`, with no grants. */
+	function brandOwnedBy(ownerId: string | null) {
+		return {
+			prepare: vi.fn((query: string) => ({
+				bind: () => ({
+					first: async () =>
+						query.includes('FROM brand_profiles') && ownerId ? { user_id: ownerId } : null
+				})
+			}))
+		};
+	}
+
+	// Regression guard: this route served any R2 key to any logged-in user.
+	it("should 404 on another user's brand archive without reading R2", async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = { get: vi.fn() };
+		await expect(
+			GET({
+				url: makeUrl('/api/archive/file', { key: 'archive/bp-1/onboarding/images/x.png' }),
+				platform: { env: { BUCKET: bucket, DB: brandOwnedBy('someone-else') } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(bucket.get).not.toHaveBeenCalled();
+	});
+
+	it("should 404 on another user's video key", async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = { get: vi.fn() };
+		await expect(
+			GET({
+				url: makeUrl('/api/archive/file', { key: 'videos/user-2/v.mp4' }),
+				platform: { env: { BUCKET: bucket, DB: brandOwnedBy(null) } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(bucket.get).not.toHaveBeenCalled();
+	});
+
+	it('should 404 on an unrecognised or climbing key', async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = { get: vi.fn() };
+		for (const key of ['secret.txt', 'archive/bp-1/../bp-2/x.png', 'other/user-1/x']) {
+			await expect(
+				GET({
+					url: makeUrl('/api/archive/file', { key }),
+					platform: { env: { BUCKET: bucket, DB: brandOwnedBy('user-1') } },
+					locals: authedLocals
+				} as any)
+			).rejects.toMatchObject({ status: 404 });
+		}
+		expect(bucket.get).not.toHaveBeenCalled();
+	});
+
+	it("should serve the caller's own video key", async () => {
+		const { GET } = await import('../../src/routes/api/archive/file/+server');
+		const bucket = {
+			get: vi.fn().mockResolvedValue({ body: new ReadableStream(), size: 1, httpMetadata: {} })
+		};
+		const res = await GET({
+			url: makeUrl('/api/archive/file', { key: 'videos/user-1/v.mp4' }),
+			platform: { env: { BUCKET: bucket, DB: brandOwnedBy(null) } },
+			locals: authedLocals
+		} as any);
+		expect(res.status).toBe(200);
+	});
+
 	it('should return 401 when not authenticated', async () => {
 		const { GET } = await import('../../src/routes/api/archive/file/+server');
 		try {
 			await GET({
 				url: makeUrl('/api/archive/file', { key: 'archive/bp-1/img.png' }),
-				platform: { env: { BUCKET: mockBucket } },
+				platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 				locals: noUser
 			} as any);
 			expect.fail('Should have thrown');
@@ -459,7 +536,7 @@ describe('GET /api/archive/file', () => {
 		try {
 			await GET({
 				url: makeUrl('/api/archive/file'),
-				platform: { env: { BUCKET: mockBucket } },
+				platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 				locals: authedLocals
 			} as any);
 			expect.fail('Should have thrown');
@@ -474,8 +551,8 @@ describe('GET /api/archive/file', () => {
 
 		try {
 			await GET({
-				url: makeUrl('/api/archive/file', { key: 'missing.png' }),
-				platform: { env: { BUCKET: mockBucket } },
+				url: makeUrl('/api/archive/file', { key: 'archive/bp-1/missing.png' }),
+				platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 				locals: authedLocals
 			} as any);
 			expect.fail('Should have thrown');
@@ -495,11 +572,11 @@ describe('GET /api/archive/file', () => {
 
 		const res = await GET({
 			url: makeUrl('/api/archive/file', { key: 'archive/bp-1/img.png' }),
-			platform: { env: { BUCKET: mockBucket } },
+			platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 			locals: authedLocals
 		} as any);
 		expect(res.headers.get('Content-Type')).toBe('image/png');
-		expect(res.headers.get('Cache-Control')).toBe('public, max-age=31536000, immutable');
+		expect(res.headers.get('Cache-Control')).toBe('private, max-age=31536000, immutable');
 		expect(res.headers.get('Content-Length')).toBe('5000');
 	});
 
@@ -513,7 +590,7 @@ describe('GET /api/archive/file', () => {
 
 		const res = await GET({
 			url: makeUrl('/api/archive/file', { key: 'archive/bp-1/data.bin' }),
-			platform: { env: { BUCKET: mockBucket } },
+			platform: { env: { BUCKET: mockBucket, DB: brandOwnedBy('user-1') } },
 			locals: authedLocals
 		} as any);
 		expect(res.headers.get('Content-Type')).toBe('application/octet-stream');
@@ -708,5 +785,89 @@ describe('POST /api/archive/ai-save', () => {
 		} finally {
 			mockFetch.mockRestore();
 		}
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Brand authorisation — regression guards for the archive IDOR
+// ═══════════════════════════════════════════════════════════════
+describe('archive routes authorise against the owning brand', () => {
+	it("GET refuses another brand's archive, including folders and stats", async () => {
+		const { GET } = await import('../../src/routes/api/archive/+server');
+		for (const action of [undefined, 'folders', 'stats']) {
+			const params: Record<string, string> = { brandProfileId: 'bp-9' };
+			if (action) params.action = action;
+			await expect(
+				GET({
+					url: makeUrl('/api/archive', params),
+					platform: { env: { DB: foreignDB } },
+					locals: authedLocals
+				} as any)
+			).rejects.toMatchObject({ status: 404 });
+		}
+		expect(listFileArchive).not.toHaveBeenCalled();
+		expect(getArchiveFolders).not.toHaveBeenCalled();
+		expect(getArchiveStats).not.toHaveBeenCalled();
+	});
+
+	it("PATCH refuses to star or edit another brand's entry", async () => {
+		const { PATCH } = await import('../../src/routes/api/archive/+server');
+		vi.mocked(getFileArchiveEntry).mockResolvedValue({ id: 'f9', brandProfileId: 'bp-9' } as any);
+		for (const body of [
+			{ id: 'f9', action: 'star' },
+			{ id: 'f9', description: 'mine now' }
+		]) {
+			await expect(
+				PATCH({
+					request: new Request('http://localhost', {
+						method: 'PATCH',
+						body: JSON.stringify(body)
+					}),
+					platform: { env: { DB: foreignDB } },
+					locals: authedLocals
+				} as any)
+			).rejects.toMatchObject({ status: 404 });
+		}
+		expect(toggleFileStar).not.toHaveBeenCalled();
+		expect(updateFileArchiveEntry).not.toHaveBeenCalled();
+	});
+
+	it('PATCH answers 404 for an entry that does not exist', async () => {
+		const { PATCH } = await import('../../src/routes/api/archive/+server');
+		vi.mocked(getFileArchiveEntry).mockResolvedValue(null);
+		await expect(
+			PATCH({
+				request: new Request('http://localhost', {
+					method: 'PATCH',
+					body: JSON.stringify({ id: 'nope', action: 'star' })
+				}),
+				platform: { env: { DB: mockDB } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+	});
+
+	it("ai-save refuses to write into another brand's archive", async () => {
+		const { POST } = await import('../../src/routes/api/archive/ai-save/+server');
+		const bucket = { put: vi.fn() };
+		const fetchSpy = vi.spyOn(globalThis, 'fetch');
+		await expect(
+			POST({
+				request: new Request('http://localhost', {
+					method: 'POST',
+					body: JSON.stringify({
+						brandProfileId: 'bp-9',
+						sourceUrl: 'https://example.com/x.png',
+						fileName: 'x.png',
+						fileType: 'image'
+					})
+				}),
+				platform: { env: { DB: foreignDB, BUCKET: bucket } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(bucket.put).not.toHaveBeenCalled();
+		expect(createFileArchiveEntry).not.toHaveBeenCalled();
 	});
 });

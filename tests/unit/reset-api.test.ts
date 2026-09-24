@@ -119,6 +119,29 @@ describe('Reset API', () => {
 				).rejects.toMatchObject({ status: 403 });
 			});
 
+			it.each([['GITHUB_OWNER_ID'], ['DISCORD_OWNER_ID']])(
+				'should reject an anonymous reset when %s names the owner in the environment',
+				async (variable) => {
+					// No owner key in KV, but the owner is configured by env var: the stored
+					// OAuth config must not be deletable by an anonymous caller.
+					const { POST } = await import('../../src/routes/api/reset/+server');
+					const kv = {
+						get: vi.fn().mockResolvedValue(null),
+						delete: vi.fn().mockResolvedValue(undefined)
+					};
+
+					await expect(
+						POST({
+							platform: { env: { KV: kv, [variable]: '12345' } },
+							cookies: { delete: vi.fn() },
+							locals: {}
+						} as any)
+					).rejects.toMatchObject({ status: 403 });
+
+					expect(kv.delete).not.toHaveBeenCalled();
+				}
+			);
+
 			it('should allow the owner to reset', async () => {
 				const { POST } = await import('../../src/routes/api/reset/+server');
 				const kv = ownerEstablishedKV();

@@ -101,7 +101,11 @@ See `CLAUDE.md` and `migrations/README.md` for full rules.
 
 - Local dev: `/api/auth/dev` — no OAuth keys needed (gated by `import.meta.env.DEV`).
   Targets: `/api/auth/dev` (admin), `?admin=0` (regular), `?email=&name=&redirect=` (custom).
-- Production: GitHub, Google, Discord OAuth via `@auth/sveltekit`.
+  The account is always `dev:<email>` (no `?id=`), and `dev:` accounts stop
+  authenticating as soon as dev login is off (`src/lib/server/dev-auth.ts`).
+- Production: GitHub and Discord OAuth (hand-rolled, no auth library; `src/routes/api/auth/{github,discord}`),
+  plus email/password (`api/auth/login`, `api/auth/signup`). Sessions are D1 rows keyed by the
+  SHA-256 of an opaque token; OAuth `state` is a one-time `oauth_transactions` row.
 - Owner IDs: `GITHUB_OWNER_ID=72961` (davis9001), `DISCORD_OWNER_ID=293484886726279168`.
 
 ## Code style

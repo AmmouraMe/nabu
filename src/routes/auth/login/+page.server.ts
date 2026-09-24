@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { configuredProviders } from '$lib/server/oauth-config';
+import { isDevLoginEnabled } from '$lib/server/dev-auth';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url, platform }) => {
@@ -21,7 +22,7 @@ export const load: PageServerLoad = async ({ locals, url, platform }) => {
 
 	// Dev-only virtual login: available under `vite dev` (import.meta.env.DEV),
 	// or on a deployed dev/staging Worker that opts in with ALLOW_DEV_LOGIN=true.
-	const devLoginEnabled = import.meta.env.DEV || platform?.env?.ALLOW_DEV_LOGIN === 'true';
+	const devLoginEnabled = isDevLoginEnabled(platform);
 
 	return {
 		configuredProviders: await configuredProviders(platform),

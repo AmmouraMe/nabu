@@ -2,8 +2,16 @@
  * GET /api/archive?brandProfileId=xxx&fileType=image&source=user_upload&...
  * List file archive entries with filters.
  *
+ * PATCH /api/archive  { id, action?: 'star', ...updates }
+ * Star or edit an entry.
+ *
  * DELETE /api/archive?id=xxx
  * Delete a file archive entry and its R2 object.
+ *
+ * Every method is authorised against the brand that owns the archive: listing
+ * needs any role on it, editing needs a role that can write. These took a
+ * caller-supplied brandProfileId / entry id on trust, so any signed-in user
+ * could list, star or rename any brand's archive.
  */
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
@@ -17,6 +25,7 @@ import {
 	updateFileArchiveEntry
 } from '$lib/services/file-archive';
 import type { FileType, FileSource, FileContext } from '$lib/services/file-archive';
+import { requireBrandAccess } from '$lib/server/brand-access';
 
 export const GET: RequestHandler = async ({ url, platform, locals }) => {
 	if (!locals.user) throw error(401, 'Unauthorized');
@@ -24,6 +33,7 @@ export const GET: RequestHandler = async ({ url, platform, locals }) => {
 
 	const brandProfileId = url.searchParams.get('brandProfileId');
 	if (!brandProfileId) throw error(400, 'brandProfileId required');
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'read');
 
 	const action = url.searchParams.get('action');
 
@@ -77,6 +87,10 @@ export const PATCH: RequestHandler = async ({ request, platform, locals }) => {
 	const { id, action: patchAction, ...updates } = body;
 
 	if (!id) throw error(400, 'id required');
+
+	const existing = await getFileArchiveEntry(platform.env.DB, id);
+	if (!existing) throw error(404, 'File not found');
+	await requireBrandAccess(platform.env.DB, locals.user.id, existing.brandProfileId, 'write');
 
 	if (patchAction === 'star') {
 		const isStarred = await toggleFileStar(platform.env.DB, id);

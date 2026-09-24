@@ -697,7 +697,7 @@ describe('GET /api/brand/text-suggestions', () => {
 
 		const res = await GET({
 			url: makeUrl('/x', { brandProfileId: 'bp-1', fieldName: 'tagline' }),
-			platform: { env: { DB: mockDB } },
+			platform: { env: { DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 		const data = await res.json();
@@ -709,12 +709,25 @@ describe('GET /api/brand/text-suggestions', () => {
 		const { GET } = await import('../../src/routes/api/brand/text-suggestions/+server');
 		const res = await GET({
 			url: makeUrl('/x', { brandProfileId: 'bp-1', fieldName: 'unknownField' }),
-			platform: { env: { DB: mockDB } },
+			platform: { env: { DB: ownerDB } },
 			locals: authedLocals
 		} as any);
 		const data = await res.json();
 		expect(data.hasMappedTexts).toBe(false);
 		expect(data.suggestions).toEqual([]);
+	});
+
+	it("should 404 on another brand's suggestions without reading them", async () => {
+		const { GET } = await import('../../src/routes/api/brand/text-suggestions/+server');
+		vi.mocked(getTextSuggestionsForField).mockClear();
+		await expect(
+			GET({
+				url: makeUrl('/x', { brandProfileId: 'someone-elses-brand', fieldName: 'tagline' }),
+				platform: { env: { DB: mockDB } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(getTextSuggestionsForField).not.toHaveBeenCalled();
 	});
 });
 
@@ -1304,7 +1317,7 @@ describe('POST /api/onboarding/attachments/upload', () => {
 
 		const res = await POST({
 			request: { formData: () => Promise.resolve(fd) },
-			platform: { env: { DB: mockDB, BUCKET: mockBucket } },
+			platform: { env: { DB: ownerDB, BUCKET: mockBucket } },
 			locals: authedLocals
 		} as any);
 		expect(res.status).toBe(201);
@@ -1313,7 +1326,7 @@ describe('POST /api/onboarding/attachments/upload', () => {
 		expect(data.url).toContain('/api/archive/file?key=');
 		expect(mockBucket.put).toHaveBeenCalled();
 		expect(createFileArchiveEntry).toHaveBeenCalledWith(
-			mockDB,
+			ownerDB,
 			expect.objectContaining({
 				brandProfileId: 'bp-1',
 				source: 'user_upload',
@@ -1321,6 +1334,25 @@ describe('POST /api/onboarding/attachments/upload', () => {
 				onboardingStep: 'visual_identity'
 			})
 		);
+	});
+
+	it('should refuse to write into a brand the caller cannot write to', async () => {
+		const { POST } = await import('../../src/routes/api/onboarding/attachments/upload/+server');
+		vi.mocked(getAttachmentType).mockReturnValue('image');
+		mockBucket.put.mockClear();
+		vi.mocked(createFileArchiveEntry).mockClear();
+		const fd = new FormData();
+		fd.set('file', new File(['image data'], 'logo.png', { type: 'image/png' }));
+		fd.set('brandProfileId', 'someone-elses-brand');
+		await expect(
+			POST({
+				request: { formData: () => Promise.resolve(fd) },
+				platform: { env: { DB: mockDB, BUCKET: mockBucket } },
+				locals: authedLocals
+			} as any)
+		).rejects.toMatchObject({ status: 404 });
+		expect(mockBucket.put).not.toHaveBeenCalled();
+		expect(createFileArchiveEntry).not.toHaveBeenCalled();
 	});
 
 	it('should return 400 when file exceeds size limit', async () => {

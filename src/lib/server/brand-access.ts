@@ -180,3 +180,19 @@ export function ownerOfR2Key(key: string): R2Owner | null {
 	}
 	return null;
 }
+
+/**
+ * Whether `userId` may read the R2 object at `key`: a brand key needs any role on
+ * that brand, a user key must be the caller's own, and a key `ownerOfR2Key` does
+ * not recognise is refused. Every route that serves a caller-supplied R2 key
+ * reads through this, so none of them can drift back to serving any key to any
+ * logged-in user.
+ */
+export async function canReadR2Key(db: D1Database, userId: string, key: string): Promise<boolean> {
+	const owner = ownerOfR2Key(key);
+	if (!owner) return false;
+	if (owner.kind === 'brand') {
+		return (await resolveUserBrandRole(db, userId, owner.brandProfileId)) !== null;
+	}
+	return owner.userId === userId;
+}

@@ -5,6 +5,7 @@
  */
 import type { RequestHandler } from './$types';
 import { json, error } from '@sveltejs/kit';
+import { requireBrandAccess } from '$lib/server/brand-access';
 import { createFileArchiveEntry } from '$lib/services/file-archive';
 import type { FileType, FileContext } from '$lib/services/file-archive';
 
@@ -34,6 +35,9 @@ export const POST: RequestHandler = async ({ request, platform, locals }) => {
 	if (!sourceUrl) throw error(400, 'sourceUrl required');
 	if (!fileName) throw error(400, 'fileName required');
 	if (!fileType) throw error(400, 'fileType required');
+	// The key below is namespaced by this brand, and canReadR2Key serves it to the
+	// brand's members: writing into a brand you cannot write to is refused here.
+	await requireBrandAccess(platform.env.DB, locals.user.id, brandProfileId, 'write');
 
 	// Fetch the generated content from the source URL
 	let contentBuffer: ArrayBuffer;

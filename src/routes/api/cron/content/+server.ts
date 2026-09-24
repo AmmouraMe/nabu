@@ -9,6 +9,7 @@
  */
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { bearerToken, secretsEqual } from '$lib/server/secret-compare';
 import { generateContentCalendar, type ContentBrand } from '$lib/services/content-generator';
 import {
 	consumeUsage,
@@ -37,10 +38,9 @@ const PLATFORM_TO_TYPE: Record<string, string> = {
 export const GET: RequestHandler = async ({ platform, request }) => {
 	// Bearer token auth check
 	const cronSecret = platform?.env?.CRON_SECRET;
-	const auth = request.headers.get('Authorization') ?? '';
-	const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+	const token = bearerToken(request.headers.get('Authorization'));
 
-	if (!cronSecret || token !== cronSecret) {
+	if (!(await secretsEqual(token, cronSecret))) {
 		throw error(401, 'Unauthorized');
 	}
 

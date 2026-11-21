@@ -1,5 +1,6 @@
 import { getAuthProviderCredentials } from '$lib/server/auth-provider-config';
 import { reconcileOAuthAccount } from '$lib/server/oauth-account';
+import { applyDiscordProfile } from '$lib/server/discord-profile';
 import { finalizeOAuthLogin } from '$lib/server/oauth-finalization';
 import {
 	consumeOAuthTransaction,
@@ -8,14 +9,14 @@ import {
 } from '$lib/server/oauth-state';
 import { decodeDatabaseSessionCookie } from '$lib/server/session';
 import { externalOrigin } from '$lib/server/origin';
+import {
+	DISCORD_PLACEHOLDER_DOMAIN,
+	discordAvatarUrl,
+	discordDisplayName,
+	discordEmailPolicy
+} from '$lib/utils/discord-identity';
 import { isRedirect, redirect } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-
-function discordAvatarUrl(userId: string, avatar: unknown): string | null {
-	if (typeof avatar !== 'string' || !avatar) return null;
-	const extension = avatar.startsWith('a_') ? 'gif' : 'png';
-	return `https://cdn.discordapp.com/avatars/${encodeURIComponent(userId)}/${encodeURIComponent(avatar)}.${extension}`;
-}
 
 export const GET: RequestHandler = async ({ url, cookies, platform, locals }) => {
 	const code = url.searchParams.get('code');
@@ -89,15 +90,12 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 			!discordUser.username
 		)
 			throw redirect(302, '/auth/login?error=user_fetch_failed');
-		const displayName =
-			typeof discordUser.global_name === 'string' && discordUser.global_name
-				? discordUser.global_name
-				: discordUser.username;
-		const verifiedEmail =
-			discordUser.verified === true && typeof discordUser.email === 'string'
-				? discordUser.email.trim().toLowerCase() || null
-				: null;
-		const avatarUrl = discordAvatarUrl(discordUser.id, discordUser.avatar);
+		const displayName = discordDisplayName(discordUser);
+		// Only a Discord-verified address may be stored as someone's email. An unverified one is
+		// ignored here, so nobody can park a victim's address on a new account.
+		const emailPolicy = discordEmailPolicy(discordUser);
+		const verifiedEmail = emailPolicy.matchEmail;
+		const avatarUrl = discordAvatarUrl(discordUser);
 		const result = await reconcileOAuthAccount({
 			db,
 			provider: 'discord',
@@ -105,21 +103,30 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 			legacyUserId: `discord_${discordUser.id}`,
 			linkingUserId: transaction.intent === 'link' ? existingUser?.id : undefined,
 			createUser: async (id) => {
-				const providerLocalEmail = `${id}-${crypto.randomUUID()}@discord.invalid`;
+				// No verified address (or it is taken): `username@discord.local`, never treated as
+				// verified. `email` is unique, so a taken placeholder falls back to a per-account one.
+				const placeholderEmail = `${discordUser.username.trim().toLowerCase()}@${DISCORD_PLACEHOLDER_DOMAIN}`;
+				const uniqueEmail = `${id}-${crypto.randomUUID()}@discord.invalid`;
 				await db
 					.prepare(
 						`INSERT INTO users (id, email, name, profile_login, profile_avatar_url, created_at)
 						 VALUES (?, CASE
 							WHEN ? IS NOT NULL AND NOT EXISTS (
 								SELECT 1 FROM users AS other WHERE lower(other.email) = lower(?)
-							) THEN ? ELSE ? END, ?, ?, ?, CURRENT_TIMESTAMP)`
+							) THEN ?
+							WHEN NOT EXISTS (
+								SELECT 1 FROM users AS other WHERE lower(other.email) = lower(?)
+							) THEN ?
+							ELSE ? END, ?, ?, ?, CURRENT_TIMESTAMP)`
 					)
 					.bind(
 						id,
 						verifiedEmail,
 						verifiedEmail,
 						verifiedEmail,
-						providerLocalEmail,
+						placeholderEmail,
+						placeholderEmail,
+						uniqueEmail,
 						displayName,
 						discordUser.username,
 						avatarUrl
@@ -131,29 +138,19 @@ export const GET: RequestHandler = async ({ url, cookies, platform, locals }) =>
 				// rename it, replace its avatar, or move its email onto the Discord one.
 				// The link itself is the whole change; `reconcileOAuthAccount` made it.
 				if (match === 'link') return;
+				// The email is not touched here: `applyDiscordProfile` swaps a placeholder for the
+				// verified address, and never replaces one the person chose.
 				await db
 					.prepare(
 						`UPDATE users SET name = ?, profile_login = ?, profile_avatar_url = ?,
-						 email = CASE
-							WHEN ? IS NOT NULL AND NOT EXISTS (
-								SELECT 1 FROM users AS other
-								WHERE lower(other.email) = lower(?) AND other.id <> ?
-							) THEN ? ELSE email END,
 						 updated_at = CURRENT_TIMESTAMP WHERE id = ?`
 					)
-					.bind(
-						displayName,
-						discordUser.username,
-						avatarUrl,
-						verifiedEmail,
-						verifiedEmail,
-						id,
-						verifiedEmail,
-						id
-					)
+					.bind(displayName, discordUser.username, avatarUrl, id)
 					.run();
 			}
 		});
+		// Linking Discord into an existing account changes nothing but the link itself.
+		if (!result.linkedProvider) await applyDiscordProfile(db, result.userId, discordUser);
 		return finalizeOAuthLogin({
 			db,
 			platform,

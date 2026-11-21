@@ -106,6 +106,8 @@ See `CLAUDE.md` and `migrations/README.md` for full rules.
 - Production: GitHub and Discord OAuth (hand-rolled, no auth library; `src/routes/api/auth/{github,discord}`),
   plus email/password (`api/auth/login`, `api/auth/signup`). Sessions are D1 rows keyed by the
   SHA-256 of an opaque token; OAuth `state` is a one-time `oauth_transactions` row.
+- Discord identity rules (verified-only addresses, placeholders, avatar, `email_verified_at`,
+  `last_login_at`): `docs/DISCORD_LOGIN.md`; the policy is `src/lib/utils/discord-identity.ts`.
 - Owner IDs: `GITHUB_OWNER_ID=72961` (davis9001), `DISCORD_OWNER_ID=293484886726279168`.
 
 ## Code style

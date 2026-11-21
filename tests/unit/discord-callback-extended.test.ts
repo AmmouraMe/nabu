@@ -81,12 +81,12 @@ describe('Discord OAuth callback boundaries', () => {
 			.mockResolvedValueOnce({
 				ok: true,
 				json: vi.fn().mockResolvedValue({
-					id: '123',
+					id: '12345678',
 					username: 'tester',
 					global_name: 'Test User',
 					email: 'tester@example.com',
 					verified: true,
-					avatar: 'avatar-hash'
+					avatar: 'abcdef0123456789'
 				})
 			} as any);
 		reconcileOAuthAccount.mockResolvedValueOnce({
@@ -98,14 +98,14 @@ describe('Discord OAuth callback boundaries', () => {
 		const { GET } = await import('../../src/routes/api/auth/discord/callback/+server');
 		await GET(request as any);
 		expect(reconcileOAuthAccount).toHaveBeenCalledWith(
-			expect.objectContaining({ linkingUserId: 'user-1', legacyUserId: 'discord_123' })
+			expect.objectContaining({ linkingUserId: 'user-1', legacyUserId: 'discord_12345678' })
 		);
 		expect(finalizeOAuthLogin).toHaveBeenCalledWith(
 			expect.objectContaining({ linkedProvider: 'discord', userId: 'user-1' })
 		);
 		const reconciliation = reconcileOAuthAccount.mock.calls[0][0];
-		await reconciliation.createUser('discord_123');
-		await reconciliation.updateUser('discord_123', 'legacy');
+		await reconciliation.createUser('discord_12345678');
+		await reconciliation.updateUser('discord_12345678', 'legacy');
 		await reconciliation.updateUser('user-1', 'link');
 		await reconciliation.updateUser('user-1', 'linked');
 		expect(DB.calls.some((call) => call.query.includes('INSERT INTO users'))).toBe(true);
@@ -113,27 +113,29 @@ describe('Discord OAuth callback boundaries', () => {
 		const insert = DB.calls.find((call) => call.query.includes('INSERT INTO users'));
 		expect(insert?.query).toContain('NOT EXISTS');
 		expect(insert?.bindings.slice(0, 4)).toEqual([
-			'discord_123',
+			'discord_12345678',
 			'tester@example.com',
 			'tester@example.com',
 			'tester@example.com'
 		]);
-		expect(insert?.bindings[4]).toMatch(/^discord_123-[0-9a-f-]+@discord\.invalid$/i);
-		expect(insert?.bindings.slice(5)).toEqual([
+		// No verified-address fallback is needed here, but the placeholders are still bound: the
+		// username one first, then a per-account one for when that is taken (email is unique).
+		expect(insert?.bindings[4]).toBe('tester@discord.local');
+		expect(insert?.bindings[5]).toBe('tester@discord.local');
+		expect(insert?.bindings[6]).toMatch(/^discord_12345678-[0-9a-f-]+@discord\.invalid$/i);
+		expect(insert?.bindings.slice(7)).toEqual([
 			'Test User',
 			'tester',
-			'https://cdn.discordapp.com/avatars/123/avatar-hash.png'
+			'https://cdn.discordapp.com/avatars/12345678/abcdef0123456789.png?size=128'
 		]);
 		expect(DB.calls.at(-1)?.bindings).toEqual([
 			'Test User',
 			'tester',
-			'https://cdn.discordapp.com/avatars/123/avatar-hash.png',
-			'tester@example.com',
-			'tester@example.com',
-			'user-1',
-			'tester@example.com',
+			'https://cdn.discordapp.com/avatars/12345678/abcdef0123456789.png?size=128',
 			'user-1'
 		]);
+		// Linking Discord into an existing account is not a Discord sign-in: no profile is applied.
+		expect(DB.calls.some((call) => call.query.includes('email_verified_at'))).toBe(false);
 	});
 
 	it.each([
@@ -167,7 +169,8 @@ describe('Discord OAuth callback boundaries', () => {
 				? ['tester@example.com', 'tester@example.com', 'tester@example.com']
 				: [null, null, null]
 		);
-		expect(inserted?.bindings[4]).toMatch(/^discord_123-[0-9a-f-]+@discord\.invalid$/i);
+		expect(inserted?.bindings[4]).toBe('tester@discord.local');
+		expect(inserted?.bindings[6]).toMatch(/^discord_123-[0-9a-f-]+@discord\.invalid$/i);
 	});
 
 	it('maps unexpected provider reconciliation errors to a generic failure', async () => {

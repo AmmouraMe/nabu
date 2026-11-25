@@ -101,7 +101,8 @@ describe('linking a second provider does not overwrite the account profile', () 
 			await reconciliation.updateUser('discord_123', match);
 			expect(DB.calls).toHaveLength(1);
 			expect(DB.calls[0].query).toContain('profile_login');
-			expect(DB.calls[0].query).toContain('email = CASE');
+			// The email is left to applyDiscordProfile, which only ever replaces a placeholder.
+			expect(DB.calls[0].query).not.toContain('email');
 		}
 	});
 
